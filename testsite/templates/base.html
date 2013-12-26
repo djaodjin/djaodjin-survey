@@ -1,0 +1,40 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="author" content="The DjaoDjin Team">
+	<title>{% block title %}DjaoDjin Survey{% endblock %}</title>
+	{% block localheader %}
+	<!-- Headers specific for the page -->
+	{% endblock %}
+</head>
+<body>
+	<div id="wrap">
+		<header>
+			<ul>
+			<li><a href="{% url 'survey_list' %}">survey list</a>
+			{% if user.is_authenticated %}
+			<li><a href="{% url 'logout' %}">sign out</a>
+			{% else %}
+			<li><a href="{% url 'login' %}">sign in</a>
+			{% endif %}
+			</ul>
+		</header>
+		<div id="messages">
+			{% for message in messages %}
+				<p>{{ message }}</p>
+			{% endfor %}
+		</div>
+		{% block content %}
+			<!-- Page content goes here -->
+		{% endblock %}
+	</div>
+	<footer>
+		<p>Provided by <a href="http://github.com/djaodjin/">DjaoDjin</a></p>
+	</footer>
+</body>
+{% block bodyscripts %}
+<!-- Javascript specific for the page -->
+{% endblock %}
+</html>

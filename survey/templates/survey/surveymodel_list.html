@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+	<h1>Surveys</h1>
+	<p>
+		<a href="{% url 'survey_create' %}">Add survey</a>
+	</p>
+	{% if surveymodel_list %}
+	<table>
+	<tbody>
+	{% for survey in surveymodel_list %}
+	<tr href="#{{survey}}">
+		<td>{{survey.name}}</td>
+		<td>{{survey.description}}</td>
+		<td><a {% if survey.published %}disabled="true"{% endif %} href="{% url 'survey_edit' survey %}">Edit</a></td>
+		<td><a href="{% url 'survey_question_list' survey %}" >Questions</a></td>
+		<td>
+			<form method="post" action="{% url 'survey_publish' survey %}">
+				<input type="submit" {% if not survey.has_questions %}disabled="true"{% endif %} value="{% if survey.published %}Unpublish{% else %}Publish{% endif %}" />
+				{% csrf_token %}
+			</form>
+		</td>
+		<td>
+			<a href="{% url 'survey_send' survey %}" {% if not survey.published %}disabled="true"{% endif %}>Send</a>
+		</td>
+		<td>
+			<a href="{% url 'survey_result' survey %}">Results</a>
+		</td>
+		<td>
+			<form method="post" action="{% url 'survey_delete' survey %}">
+				<input type="submit" {% if survey.published %}disabled="true"{% endif %} value="Delete" />
+				{% csrf_token %}
+			</form>
+		</td>
+	</tr>
+	{% endfor %}
+	</tbody>
+	</table>
+	{% else %}
+	<em>No survey</em>
+	{% endif %}
+</section>
+{% endblock %}
+

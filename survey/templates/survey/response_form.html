@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Welcome to {{survey.name|title}} survey</h1>
+<div>
+        {{survey.description|safe}}
+</div>
+
+<div>
+{% if survey.published %}
+<form method="post" action=".">
+        {% csrf_token %}
+        <div>
+            <input type="submit" name="submit" value="Start">
+        </div>
+</form>
+{% else %}
+<em>Sorry, this {% if survey.quizz_mode %}quizz{% else %}survey{% endif %} is no longer available. Thank you.</em>
+{% endif %}
+</div>
+{% endblock %}

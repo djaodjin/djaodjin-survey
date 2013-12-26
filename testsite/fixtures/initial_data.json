@@ -1,0 +1,76 @@
+[
+{ "fields": {
+	"country_name": "USA",
+	"created_at": "2014-01-10T00:00:00-09:00",
+	"email": "product@example.com",
+	"is_active": 1,
+	"locality": "San Francisco",
+	"slug": "product",
+	"phone": "555-555-5555",
+	"postal_code": 94102,
+	"region": "CA",
+	"street_address": "555 Infinite Loop"
+	},
+	"model": "saas.organization",
+	"pk": 1
+},
+{ "fields": {
+	"organization": 1,
+	"user": 1
+	},
+	"model": "saas.organization_managers",
+	"pk": 1
+},
+{ "fields" : {
+	"slug" : "survey-example",
+	"name" : "Test Survey",
+	"description" : "This is an example survey to test the app",
+	"organization" : 1,
+	"published": true
+	},
+	"model" : "survey.surveymodel",
+	"pk" : 1
+},
+{ "fields" : {
+	"text" : "Do you like the djaodjin-survey app...",
+	"survey" : 1,
+	"question_type" : "radio",
+	"choices" : "Somewhat\nYes\nAwesome",
+	"order" : 1,
+	"required" : true
+	},
+	"model" : "survey.question",
+	"pk" : 1
+},
+{ "fields" : {
+	"text" : "Which feature of the app do you use...",
+	"survey" : 1,
+	"question_type" : "checkbox",
+	"choices" : "Radio\nSelect Multiple\nFree form text\nInteger",
+	"order" : 2,
+	"required" : true
+	},
+	"model" : "survey.question",
+	"pk" : 2
+},
+{ "fields" : {
+	"text" : "Rate this app from 1 to 10...",
+	"survey" : 1,
+	"question_type" : "integer",
+	"order" : 3,
+	"required" : true
+	},
+	"model" : "survey.question",
+	"pk" : 3
+},
+{ "fields" : {
+	"text" : "Additional Comments...",
+	"survey" : 1,
+	"question_type" : "text",
+	"order" : 4,
+	"required" : true
+	},
+	"model" : "survey.question",
+	"pk" : 4
+}
+]

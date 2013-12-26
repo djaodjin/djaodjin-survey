@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div>
+	<h1>
+		{% if response.survey.quizz_mode %}
+		Results for {{response.survey.name}} quizz &dash; Your score : {{score}}%
+		{% else %}
+		Your Answers for {{response.survey.name}}
+		{% endif %}
+	</h1>
+	<h3>Description</h3>
+	<p>{{response.survey.description}}</p>
+</div>
+
+<div>
+	{% for answer in answers %}
+	<h1>{{answer.question.text}}</h1>
+		{% if answer.question.get_choices %}
+		{% for choice in answer.question.get_choices %}
+		<div>
+			<input type="{{ answer.question.question_type }}" disabled="true" {% if choice.0 in answer.body %}checked="true"{% endif %}>
+			<span>{{choice.0}}
+			{% if response.survey.quizz_mode %}
+				{% if choice.0 in answer.question.get_correct_answer %}
+					V
+				{% else %}
+					{% if choice.0 in answer.body %}
+					X
+					{% endif %}
+				{% endif %}
+			{% endif %}
+			</span>
+		</div>
+		{% endfor %}
+		{% else %}
+		{{answer.body}}
+		{% endif %}
+	{% endfor %}
+</div>
+{% endblock %}

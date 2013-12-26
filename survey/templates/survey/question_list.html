@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section>
+	<div>
+		<h1>Questions for {{survey.name}}</h1>
+	</div>
+
+	<p><a href="{% url 'survey_question_new' survey %}">Add a question</a></p>
+	<table>
+		<tr>
+			<th>Question</th>
+			<th>Type</th>
+			<th>Choices</th>
+			<th>Edit</th>
+			<th>Delete</th>
+			<th>Order up</th>
+			<th>Order down</th>
+			<th>Order</th>
+		</tr>
+		{% if question_list %}
+		{% for question in question_list %}
+		<tr>
+			<td>{{question.text}}</td>
+			<td>{{question.question_type}}</td>
+			<td>{% if question.choices %}{{question.choices}}{% else %}N/A{% endif %}</td>
+			<td><a href="{% url 'survey_question_edit' survey question.id %}" >Edit</a></td>
+			<td>
+				<form method="post" action="{% url 'survey_question_delete' survey question.id %}">
+					<input type="submit" value="Delete" />
+					{% csrf_token %}
+				</form>
+			</td>
+			<td>
+				<form method="post" action="{% url 'survey_question_up' survey question.id %}">
+					<input type="submit" value="Up" />
+					{% csrf_token %}
+				</form>
+			</td>
+			<td>
+				<form method="post" action="{% url 'survey_question_down' survey question.id %}">
+					<input type="submit" value="Down" />
+					{% csrf_token %}
+				</form>
+			</td>
+			<td>{{question.order}}</td>
+		</tr>
+		{% endfor %}
+	</table>
+	{% else %}
+		<em>No question for {{survey.name}} survey</em>
+	{% endif %}
+</section>
+{% endblock %}

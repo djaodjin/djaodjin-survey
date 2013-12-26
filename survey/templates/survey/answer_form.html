@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% with form.instance.question.survey as survey %}
+<h1>Welcome to {{survey.name|title}} survey</h1>
+<div>
+        {{survey.description|safe}}
+</div>
+
+<div>
+{% if survey.published %}
+#{{form.instance.question.order}}
+<form method="post" action=".">
+        {% csrf_token %}
+        {{ form }}
+        <div>
+                <input type="submit" name="submit" value="Next" id="submit-id-submit">
+        </div>
+</form>
+{% else %}
+<em>Sorry, this {% if survey.quizz_mode %}quizz{% else %}survey{% endif %} is no longer available. Thank you.</em>
+{% endif %}
+</div>
+{% endwith %}
+{% endblock %}
