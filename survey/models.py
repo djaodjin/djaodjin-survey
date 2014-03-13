@@ -117,11 +117,11 @@ class Question(models.Model):
 
 class ResponseManager(models.Manager):
 
-    def create(self, **kwargs):
+    def create(self, **kwargs): #pylint: disable=super-on-old-class
         return super(ResponseManager, self).create(
             slug=slugify(uuid.uuid4().hex), **kwargs)
 
-    def get_score(self, response):
+    def get_score(self, response): #pylint: disable=no-self-use
         answers = Answer.objects.populate(response)
         nb_correct_answers = 0
         nb_questions = len(answers)
