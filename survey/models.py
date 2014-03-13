@@ -22,9 +22,10 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime
+import datetime, uuid
 
 from django.db import models
+from django.template.defaultfilters import slugify
 from django.utils.timezone import utc
 from saas.models import Organization
 
@@ -114,11 +115,42 @@ class Question(models.Model):
         return self.text
 
 
+class ResponseManager(models.Manager):
+
+    def create(self, **kwargs):
+        return super(ResponseManager, self).create(
+            slug=slugify(uuid.uuid4().hex), **kwargs)
+
+    def get_score(self, response):
+        answers = Answer.objects.populate(response)
+        nb_correct_answers = 0
+        nb_questions = len(answers)
+        for answer in answers:
+            if answer.question.question_type == Question.RADIO:
+                if answer.body in answer.question.get_correct_answer():
+                    nb_correct_answers += 1
+            elif answer.question.question_type == Question.SELECT_MULTIPLE:
+                multiple_choices = answer.get_multiple_choices()
+                if len(set(multiple_choices)
+                       ^ set(answer.question.get_correct_answer())) == 0:
+                    # Perfect match
+                    nb_correct_answers += 1
+
+        # XXX Score will be computed incorrectly when some Answers are free
+        # form text.
+        if nb_questions > 0:
+            score = (nb_correct_answers * 100) / nb_questions
+        else:
+            score = None
+        return score, answers
+
+
 class Response(models.Model):
     """
     Response to a Survey. A Response is composed of multiple Answers
     to Questions.
     """
+    objects = ResponseManager()
 
     slug = models.SlugField()
     created_at = models.DateTimeField(auto_now_add=True)

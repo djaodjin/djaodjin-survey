@@ -82,26 +82,7 @@ class ResponseResultView(ResponseMixin, TemplateView):
         context = super(ResponseResultView, self).get_context_data(**kwargs)
         # XXX redirects if not all answers present.
         response = self.get_response()
-        answers = Answer.objects.populate(response)
-        nb_correct_answers = 0
-        nb_questions = len(answers)
-        for answer in answers:
-            if answer.question.question_type == Question.RADIO:
-                if answer.body in answer.question.get_correct_answer():
-                    nb_correct_answers += 1
-            elif answer.question.question_type == Question.SELECT_MULTIPLE:
-                multiple_choices = answer.get_multiple_choices()
-                if len(set(multiple_choices)
-                       ^ set(answer.question.get_correct_answer())) == 0:
-                    # Perfect match
-                    nb_correct_answers += 1
-
-        # XXX Score will be computed incorrectly when some Answers are free
-        # form text.
-        if nb_questions > 0:
-            score = (nb_correct_answers * 100) / nb_questions
-        else:
-            score = None
+        score, answers = Response.objects.get_score(response)
         context.update({'response': response,
                         'answers': answers,
                         'score': score})
