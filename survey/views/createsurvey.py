@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime, json
+import datetime, json, logging
 
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse, reverse_lazy
@@ -37,6 +37,9 @@ from django.conf import settings
 
 from survey.models import Answer, SurveyModel, Response, Question
 from survey.forms import SurveyForm, SendSurveyForm
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class SurveyCreateView(CreateView):
@@ -172,15 +175,24 @@ class SurveyResultView(DetailView):
             for answer in Answer.objects.filter(question=question):
                 if question.question_type == Question.INTEGER:
                     choice = answer.body
-                    aggregate[choice] = aggregate[choice] + 1
+                    if choice in aggregate:
+                        aggregate[choice] = aggregate[choice] + 1
+                    else:
+                        LOGGER.error("'%s' not found in %s", choice, aggregate)
 
                 elif question.question_type == Question.RADIO:
                     choice = answer.body
-                    aggregate[choice] = aggregate[choice] + 1
+                    if choice in aggregate:
+                        aggregate[choice] = aggregate[choice] + 1
+                    else:
+                        LOGGER.error("'%s' not found in %s", choice, aggregate)
 
                 elif question.question_type == Question.SELECT_MULTIPLE:
                     for choice in answer.get_multiple_choices():
+                    if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
+                    else:
+                        LOGGER.error("'%s' not found in %s", choice, aggregate)
 
             # Convert to json-ifiable format
             aggregates += [{
