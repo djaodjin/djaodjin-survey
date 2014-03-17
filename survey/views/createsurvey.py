@@ -189,10 +189,11 @@ class SurveyResultView(DetailView):
 
                 elif question.question_type == Question.SELECT_MULTIPLE:
                     for choice in answer.get_multiple_choices():
-                    if choice in aggregate:
-                        aggregate[choice] = aggregate[choice] + 1
-                    else:
-                        LOGGER.error("'%s' not found in %s", choice, aggregate)
+                        if choice in aggregate:
+                            aggregate[choice] = aggregate[choice] + 1
+                        else:
+                            LOGGER.error(
+                                "'%s' not found in %s", choice, aggregate)
 
             # Convert to json-ifiable format
             aggregates += [{
