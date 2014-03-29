@@ -30,6 +30,6 @@ from django.conf.urls import patterns, include, url
 
 urlpatterns = patterns(
     'survey.views',
-    url(r'^', include('survey.urls.manager')),
+    url(r'^manage/', include('survey.urls.manager')),
     url(r'^', include('survey.urls.interviewee')),
 )
