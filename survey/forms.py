@@ -23,6 +23,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pylint: disable=no-member
+#pylint: disable=super-on-old-class
 
 import uuid
 
@@ -35,7 +36,6 @@ class AnswerForm(forms.ModelForm):
     """
     Form used to submit an Answer to a Question as part of Response to a Survey.
     """
-    #pylint: disable=super-on-old-class
 
     class Meta:
         model = Answer
@@ -77,7 +77,6 @@ class AnswerForm(forms.ModelForm):
 
 
 class QuestionForm(forms.ModelForm):
-    #pylint: disable=super-on-old-class
 
     class Meta:
         model = Question
@@ -92,7 +91,6 @@ class QuestionForm(forms.ModelForm):
 
 
 class ResponseCreateForm(forms.ModelForm):
-    #pylint: disable=super-on-old-class
 
     class Meta:
         model = Response
@@ -108,7 +106,6 @@ class ResponseCreateForm(forms.ModelForm):
 
 
 class SurveyForm(forms.ModelForm):
-    #pylint: disable=super-on-old-class
 
     class Meta:
         model = SurveyModel
@@ -140,3 +137,4 @@ class SendSurveyForm(forms.Form):
         help_text="add email addresses separated by new line")
     message = forms.CharField(widget=forms.Textarea,
        help_text="You can explain the aim of this survey")
+

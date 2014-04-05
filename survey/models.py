@@ -156,6 +156,8 @@ class Response(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     survey = models.ForeignKey(SurveyModel, null=True)
     user = models.ForeignKey(User, null=True)
+    is_frozen = models.BooleanField(default=False,
+        help_text="When True, answers to that response cannot be updated.")
 
     def __unicode__(self):
         return self.slug
@@ -192,7 +194,7 @@ class Answer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     question = models.ForeignKey(Question)
-    response = models.ForeignKey(Response)
+    response = models.ForeignKey(Response, related_name='answers')
     index = models.IntegerField(help_text="Position in the response list.")
     body = models.TextField(blank=True, null=True)
 
