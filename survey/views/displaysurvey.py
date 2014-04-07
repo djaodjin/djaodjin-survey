@@ -158,7 +158,7 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
 
     model = Response
     form_class = ResponseCreateForm
-    next_step_url = 'survey_answer_update'
+    next_step_url = 'survey_answer_next'
 
     def __init__(self, *args, **kwargs):
         super(ResponseCreateView, self).__init__(*args, **kwargs)
