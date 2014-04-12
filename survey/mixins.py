@@ -34,11 +34,13 @@ class IntervieweeMixin(object):
     the request.user.
     """
 
+    interviewee_slug = 'interviewee'
+
     def get_interviewee(self):
         if self.request.user.is_authenticated():
             try:
                 interviewee = User.objects.get(
-                    username=self.kwargs.get('interviewee'))
+                    username=self.kwargs.get(self.interviewee_slug))
             except User.DoesNotExist:
                 interviewee = self.request.user
         else:

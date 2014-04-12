@@ -81,7 +81,7 @@ class AnswerUpdateView(ResponseMixin, UpdateView):
 
     def get_url_context(self):
         kwargs = {}
-        for key in ['interviewee', 'survey', 'response']:
+        for key in [self.interviewee_slug, 'survey', 'response']:
             if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
                 kwargs[key] = self.kwargs.get(key)
         return kwargs
@@ -128,7 +128,7 @@ class ResponseResultView(ResponseMixin, TemplateView):
 
     def get_url_context(self):
         kwargs = {}
-        for key in ['interviewee', 'survey', 'response']:
+        for key in [self.interviewee_slug, 'survey', 'response']:
             if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
                 kwargs[key] = self.kwargs.get(key)
         return kwargs
@@ -191,7 +191,7 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
 
     def get_success_url(self):
         kwargs = {}
-        for key in ['interviewee', 'survey']:
+        for key in [self.interviewee_slug, 'survey']:
             if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
                 kwargs[key] = self.kwargs.get(key)
         kwargs.update({'response': self.object.slug})
