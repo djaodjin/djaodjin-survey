@@ -24,7 +24,7 @@
 
 import datetime, uuid
 
-from django.db import models
+from django.db import models, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.timezone import utc
 from saas.models import Organization
@@ -33,6 +33,8 @@ from survey.compat import User
 
 
 class SurveyModel(models.Model):
+    #pylint: disable=super-on-old-class
+
     slug = models.SlugField(unique=True)
     start_date = models.DateTimeField(null=True)
     end_date = models.DateTimeField(null=True)
@@ -61,6 +63,32 @@ class SurveyModel(models.Model):
         if self.end_date:
             end_date = self.end_date
         return (end_date - start_date).days
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        #pylint: disable=catching-non-exception
+        """
+        Keep slug in sync with survey name.
+        """
+        slug = slugify(self.name)
+        self.slug = slug
+        for num in range(2, 10):
+            # XXX More than 8 chapters with the 50 first characters of
+            # title being identicals is already a problem in itself...
+            try:
+                return super(SurveyModel, self).save(
+                    force_insert=force_insert, force_update=force_update,
+                    using=using, update_fields=update_fields)
+            except IntegrityError:
+                prefix = '-%d' % num
+                self.slug = '%s%s' % (slug, prefix)
+                max_length = self._meta.get_field('slug').max_length
+                if len(self.slug) > max_length:
+                    self.slug = '%s-%d' % (
+                        slug[:(max_length-len(prefix))], num)
+        return super(SurveyModel, self).save(
+            force_insert=force_insert, force_update=force_update,
+            using=using, update_fields=update_fields)
 
 
 class Question(models.Model):
