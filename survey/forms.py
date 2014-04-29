@@ -89,6 +89,15 @@ class QuestionForm(forms.ModelForm):
             self.instance.order = self.initial['order']
         return super(QuestionForm, self).save(commit)
 
+    def clean_choices(self):
+        self.cleaned_data['choices'] = self.cleaned_data['choices'].strip()
+        return self.cleaned_data['choices']
+
+    def clean_correct_answer(self):
+        self.cleaned_data['correct_answer'] \
+            = self.cleaned_data['correct_answer'].strip()
+        return self.cleaned_data['correct_answer']
+
 
 class ResponseCreateForm(forms.ModelForm):
 
