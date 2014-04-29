@@ -33,7 +33,7 @@ from django.views.generic import (CreateView, DeleteView, DetailView,
 from django.views.generic.detail import SingleObjectMixin
 from django.template.defaultfilters import slugify
 from saas.models import Organization
-from django.conf import settings
+from survey import settings
 
 from survey.models import Answer, SurveyModel, Response, Question
 from survey.forms import SurveyForm, SendSurveyForm
@@ -196,13 +196,19 @@ class SurveyResultView(DetailView):
                                 "'%s' not found in %s", choice, aggregate)
 
             # Convert to json-ifiable format
+            values = []
+            for label, value in aggregate.items():
+                if self.object.quizz_mode and label == question.correct_answer:
+                    values += [{
+                        "label": "%s %s" % (label, settings.CORRECT_MARKER),
+                        "value": value}]
+                else:
+                    values += [{"label": label, "value": value}]
             aggregates += [{
-                 'key': slugify("%d" % question.order),
-# XXX Might be better
-#                'key': slugify("%s-%d"
-#                               % (question.survey.slug, question.order)),
-                'values': [{"label": label, "value": value}
-                            for label, value in aggregate.items()]}]
+                # XXX Might be better to use 'key': slugify("%s-%d"
+                #     % (question.survey.slug, question.order))
+                'key': slugify("%d" % question.order),
+                'values': values}]
 
         context.update({
                 'survey': self.object,
