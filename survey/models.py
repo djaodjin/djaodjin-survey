@@ -106,7 +106,7 @@ class Question(models.Model):
     )
 
     text = models.TextField(help_text="Enter your question here.")
-    survey = models.ForeignKey(SurveyModel)
+    survey = models.ForeignKey(SurveyModel, related_name='questions')
     question_type = models.CharField(
         max_length=9, choices=QUESTION_TYPES, default=TEXT,
         help_text="Choose the type of answser.")
