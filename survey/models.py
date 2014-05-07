@@ -24,7 +24,7 @@
 
 import datetime, uuid
 
-from django.db import models
+from django.db import models, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.timezone import utc
 from saas.models import Organization
@@ -73,19 +73,18 @@ class SurveyModel(models.Model):
         slug = slugify(self.name)
         self.slug = slug
         num = 1
-        while SurveyModel.objects.filter(slug=self.slug).exists():
-            # Implementation Note: it would be better to let the save
-            # go through and handle the IntegrityError exception but
-            # that would require a rollback that interferes
-            # with the atomic transaction.
-            prefix = '-%d' % num
-            self.slug = '%s%s' % (slug, prefix)
-            max_length = self._meta.get_field('slug').max_length
-            if len(self.slug) > max_length:
-                self.slug = '%s-%d' % (slug[:(max_length-len(prefix))], num)
-        return super(SurveyModel, self).save(
-            force_insert=force_insert, force_update=force_update,
-            using=using, update_fields=update_fields)
+        while True:
+            try:
+                return super(SurveyModel, self).save(
+                    force_insert=force_insert, force_update=force_update,
+                    using=using, update_fields=update_fields)
+            except IntegrityError:
+                prefix = '-%d' % num
+                self.slug = '%s%s' % (slug, prefix)
+                max_length = self._meta.get_field('slug').max_length
+                if len(self.slug) > max_length:
+                    self.slug = '%s-%d' % (slug[:(max_length-len(prefix))], num)
+                num = num + 1
 
 
 class Question(models.Model):
