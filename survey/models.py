@@ -40,7 +40,7 @@ class SurveyModel(models.Model):
     end_date = models.DateTimeField(null=True)
     name = models.CharField(max_length=150,
         help_text="Enter a survey name.")
-    description = models.TextField(
+    description = models.TextField(null=True, blank=True,
         help_text="This desciption will be displayed for interviewee.")
     published = models.BooleanField(default=False)
     quizz_mode = models.BooleanField(default=False,
