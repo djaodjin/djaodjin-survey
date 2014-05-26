@@ -23,10 +23,11 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from distutils.core import setup
+import survey
 
 setup(
     name='djaodjin-survey',
-    version='0.1',
+    version=survey.__version__,
     author='The DjaoDjin Team',
     author_email='support@djaodjin.com',
     packages=['survey',
@@ -36,6 +37,9 @@ setup(
     package_data={'survey': [
         'static/js/*', 'static/vendor/css/*', 'static/vendor/js/*',
         'templates/survey/*']},
+    url='https://github.com/djaodjin/djaodjin-survey/',
+    download_url='https://github.com/djaodjin/djaodjin-survey/tarball/%s' \
+        % survey.__version__,
     license='BSD',
     description='Survey Django app',
     long_description=open('README.md').read(),
