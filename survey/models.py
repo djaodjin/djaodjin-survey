@@ -70,8 +70,11 @@ class SurveyModel(models.Model):
         """
         Keep slug in sync with survey name.
         """
+        max_length = self._meta.get_field('slug').max_length
         slug = slugify(self.name)
         self.slug = slug
+        if len(self.slug) > max_length:
+            self.slug = slug[:max_length]
         num = 1
         while True:
             try:
@@ -81,7 +84,6 @@ class SurveyModel(models.Model):
             except IntegrityError:
                 prefix = '-%d' % num
                 self.slug = '%s%s' % (slug, prefix)
-                max_length = self._meta.get_field('slug').max_length
                 if len(self.slug) > max_length:
                     self.slug = '%s-%d' % (slug[:(max_length-len(prefix))], num)
                 num = num + 1
