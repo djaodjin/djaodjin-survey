@@ -26,4 +26,4 @@
 PEP 386-compliant version number for the survey django app.
 """
 
-__version__ = '0.1.2'
+__version__ = '0.1.3-beta'
