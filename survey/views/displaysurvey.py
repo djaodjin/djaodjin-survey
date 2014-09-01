@@ -94,7 +94,7 @@ class AnswerNextView(AnswerUpdateView):
     have been answered.
     """
 
-    next_step_url = 'survey_answer_next'
+    next_step_url = 'survey_answer_update'
 
     def get_object(self, queryset=None):
         # We always override the *index* by the latest unanswered question
@@ -158,7 +158,7 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
 
     model = Response
     form_class = ResponseCreateForm
-    next_step_url = 'survey_answer_next'
+    next_step_url = 'survey_answer_update'
 
     def __init__(self, *args, **kwargs):
         super(ResponseCreateView, self).__init__(*args, **kwargs)

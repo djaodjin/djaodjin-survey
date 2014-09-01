@@ -32,7 +32,7 @@ urlpatterns = patterns('',
        ResponseResultView.as_view(),
        name='survey_response_results'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/(?P<response>[a-zA-Z0-9-]+)/'\
-       r'((?P<index>\d+)/)?',
+       r'(?:(?P<index>\d+)/)?',
        AnswerUpdateView.as_view(),
        name='survey_answer_update'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/',
