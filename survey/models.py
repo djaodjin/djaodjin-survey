@@ -24,6 +24,7 @@
 
 import datetime, uuid
 
+from django.db import transaction
 from django.db import models, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.timezone import utc
@@ -77,16 +78,18 @@ class SurveyModel(models.Model):
             self.slug = slug[:max_length]
         num = 1
         while True:
-            try:
-                return super(SurveyModel, self).save(
-                    force_insert=force_insert, force_update=force_update,
-                    using=using, update_fields=update_fields)
-            except IntegrityError:
-                prefix = '-%d' % num
-                self.slug = '%s%s' % (slug, prefix)
-                if len(self.slug) > max_length:
-                    self.slug = '%s-%d' % (slug[:(max_length-len(prefix))], num)
-                num = num + 1
+            with transaction.atomic():
+                try:
+                    return super(SurveyModel, self).save(
+                        force_insert=force_insert, force_update=force_update,
+                        using=using, update_fields=update_fields)
+                except IntegrityError:
+                    prefix = '-%d' % num
+                    self.slug = '%s%s' % (slug, prefix)
+                    if len(self.slug) > max_length:
+                        self.slug = '%s-%d' % (
+                            slug[:(max_length-len(prefix))], num)
+                    num = num + 1
 
 
 class Question(models.Model):
