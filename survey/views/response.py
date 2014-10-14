@@ -22,12 +22,9 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.core.urlresolvers import reverse
-from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView
-from survey.forms import AnswerForm, ResponseCreateForm
 from survey.models import Response
-from survey.mixins import IntervieweeMixin, ResponseMixin, SurveyModelMixin
+from survey.mixins import SurveyModelMixin
 
 class RespondentListView(SurveyModelMixin, ListView):
 
