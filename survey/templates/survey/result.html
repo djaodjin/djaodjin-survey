@@ -9,6 +9,9 @@
 
 {% block content %}
 <div>
+	<p>
+		<a href="{% url 'survey_edit' survey %}">&laquo; All Questions</a>
+	</p>
 	<h1>Results for {{survey.name}} survey</h1>
 	<h3>Description</h3>
 	<p>{{survey.description}}</p>
@@ -31,6 +34,7 @@
 			<td>{{number_interviewees}}</td>
 		</tr>
 	</table>
+	<a href="{% url 'survey_respondent_list' survey %}">Respondents</a>
 </section>
 
 <section id="questions">

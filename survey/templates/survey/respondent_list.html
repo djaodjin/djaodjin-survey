@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<p>
+	<a href="{% url 'survey_edit' survey %}">&laquo; All Questions</a>
+	<a href="{% url 'survey_result' survey %}">&laquo; Answers Charts</a>
+</p>
+<h1>Respondent for {{survey.name|title}}</h1>
+<ul>
+{% for response in object_list %}
+	<li><a href="{% url 'survey_response_results' survey response %}">response.user.get_full_name</a></li>
+{% empty %}
+	<em>There are no respondent yet for this survey.</em>
+{% endfor %}
+</ul>
+{% endblock %}

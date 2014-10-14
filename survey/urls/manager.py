@@ -29,6 +29,7 @@ from survey.views.createsurvey import (SurveyCreateView, SurveyDeleteView,
     SurveyUpdateView)
 from survey.views.createquestion import (QuestionCreateView, QuestionDeleteView,
     QuestionListView, QuestionRankView, QuestionUpdateView)
+from survey.views.response import RespondentListView
 
 
 urlpatterns = patterns('',
@@ -38,6 +39,8 @@ urlpatterns = patterns('',
        SurveySendView.as_view(), name='survey_send'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/result/',
        SurveyResultView.as_view(), name='survey_result'),
+   url(r'^(?P<survey>[a-zA-Z0-9-]+)/respondents/',
+       RespondentListView.as_view(), name='survey_respondent_list'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/publish/',
        SurveyPublishView.as_view(), name='survey_publish'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/edit/',
