@@ -33,7 +33,7 @@ class RespondentListView(SurveyModelMixin, ListView):
 
     def get_queryset(self):
         return super(RespondentListView, self).get_queryset().filter(
-            survey=self.get_survey())
+            survey=self.get_survey(), is_frozen=True)
 
     def get_context_data(self, **kwargs):
         context = super(RespondentListView, self).get_context_data(**kwargs)
