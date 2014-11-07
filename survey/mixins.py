@@ -83,12 +83,14 @@ class ResponseMixin(IntervieweeMixin, SurveyModelMixin):
 
     response_url_kwarg = 'response'
 
-    def get_response(self):
+    def get_response(self, url_kwarg=None):
         """
         Returns the ``Response`` object associated with this URL.
         """
+        if not url_kwarg:
+            url_kwarg = self.response_url_kwarg
         response = None
-        response_slug = self.kwargs.get(self.response_url_kwarg)
+        response_slug = self.kwargs.get(url_kwarg)
         if response_slug:
             # We have an id for the response, let's get it and check
             # the user has rights to it.

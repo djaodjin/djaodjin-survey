@@ -28,6 +28,7 @@ from django.db import transaction
 from django.db import models, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.timezone import utc
+from durationfield.db.models.fields.duration import DurationField
 from saas.models import Organization
 
 from survey.compat import User
@@ -185,6 +186,8 @@ class Response(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     survey = models.ForeignKey(SurveyModel, null=True)
     user = models.ForeignKey(User, null=True)
+    time_spent = DurationField(default=0,
+        help_text="Total recorded time to complete the survey")
     is_frozen = models.BooleanField(default=False,
         help_text="When True, answers to that response cannot be updated.")
 

@@ -22,6 +22,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import datetime
+
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import CreateView, TemplateView, UpdateView
@@ -81,7 +83,7 @@ class AnswerUpdateView(ResponseMixin, UpdateView):
 
     def get_url_context(self):
         kwargs = {}
-        for key in [self.interviewee_slug, 'survey', 'response']:
+        for key in [self.interviewee_slug, 'survey', self.response_url_kwarg]:
             if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
                 kwargs[key] = self.kwargs.get(key)
         return kwargs
@@ -105,6 +107,7 @@ class AnswerNextView(AnswerUpdateView):
         next_answer = self.get_next_answer()
         if not next_answer:
             response = self.get_response()
+            response.time_spent = datetime.datetime.now() - response.created_at
             response.is_frozen = True
             response.save()
         return super(AnswerNextView, self).form_valid(form)
@@ -128,26 +131,31 @@ class ResponseResultView(ResponseMixin, TemplateView):
 
     def get_url_context(self):
         kwargs = {}
-        for key in [self.interviewee_slug, 'survey', 'response']:
+        for key in [self.interviewee_slug, 'survey', self.response_url_kwarg]:
             if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
                 kwargs[key] = self.kwargs.get(key)
         return kwargs
 
     def get_context_data(self, **kwargs):
         context = super(ResponseResultView, self).get_context_data(**kwargs)
-        response = self.get_response()
-        score, answers = Response.objects.get_score(response)
+        score, answers = Response.objects.get_score(self.response)
         context.update(self.get_url_context())
-        context.update({'response': response,
+        context.update({'response': self.response,
             # only response slug available through get_url_context()
             'answers': answers, 'score': score})
         return context
 
+    def get(self, request, *args, **kwargs):
+        self.response = self.get_response()
+        return super(ResponseResultView, self).get(request, *args, **kwargs)
+
     def post(self, request, *args, **kwargs):
         # The csrftoken in valid when we get here. That's all that matters.
-        response = self.get_response()
-        response.is_frozen = True
-        response.save()
+        self.response = self.get_response()
+        self.response.time_spent = (datetime.datetime.now()
+            - self.response.created_at)
+        self.response.is_frozen = True
+        self.response.save()
         return self.get(request, *args, **kwargs)
 
 
