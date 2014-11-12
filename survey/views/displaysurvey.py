@@ -27,9 +27,15 @@ import datetime
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import CreateView, TemplateView, UpdateView
+from django.utils.timezone import utc
+
 from survey.forms import AnswerForm, ResponseCreateForm
 from survey.models import Question, Response, Answer
 from survey.mixins import IntervieweeMixin, ResponseMixin, SurveyModelMixin
+
+
+def _datetime_now():
+    return datetime.datetime.utcnow().replace(tzinfo=utc)
 
 
 class AnswerUpdateView(ResponseMixin, UpdateView):
@@ -107,7 +113,7 @@ class AnswerNextView(AnswerUpdateView):
         next_answer = self.get_next_answer()
         if not next_answer:
             response = self.get_response()
-            response.time_spent = datetime.datetime.now() - response.created_at
+            response.time_spent = _datetime_now() - response.created_at
             response.is_frozen = True
             response.save()
         return super(AnswerNextView, self).form_valid(form)
@@ -152,8 +158,7 @@ class ResponseResultView(ResponseMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         # The csrftoken in valid when we get here. That's all that matters.
         self.response = self.get_response()
-        self.response.time_spent = (datetime.datetime.now()
-            - self.response.created_at)
+        self.response.time_spent = _datetime_now() - self.response.created_at
         self.response.is_frozen = True
         self.response.save()
         return self.get(request, *args, **kwargs)
