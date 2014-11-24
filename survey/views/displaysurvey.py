@@ -94,6 +94,12 @@ class AnswerUpdateView(ResponseMixin, UpdateView):
                 kwargs[key] = self.kwargs.get(key)
         return kwargs
 
+    def form_valid(self, form):
+        response = self.object.response
+        response.time_spent = _datetime_now() - response.created_at
+        response.save()
+        return super(AnswerUpdateView, self).form_valid(form)
+
 
 class AnswerNextView(AnswerUpdateView):
 
@@ -112,8 +118,7 @@ class AnswerNextView(AnswerUpdateView):
     def form_valid(self, form):
         next_answer = self.get_next_answer()
         if not next_answer:
-            response = self.get_response()
-            response.time_spent = _datetime_now() - response.created_at
+            response = self.object.response
             response.is_frozen = True
             response.save()
         return super(AnswerNextView, self).form_valid(form)
