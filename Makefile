@@ -31,8 +31,11 @@ binDir        ?= $(installTop)/bin
 PYTHON        := $(binDir)/python
 
 install::
-	cd $(srcDir) && $(PYTHON) ./setup.py install --quiet
+	cd $(srcDir) && $(PYTHON) ./setup.py --quiet \
+		build -b $(CURDIR)/build install
 
+# XXX Enter a superuser when asked otherwise the fixtures won't load
+# correctly.
 initdb:
 	-rm -f db.sqlite3
 	cd $(srcDir) && $(PYTHON) ./manage.py syncdb
