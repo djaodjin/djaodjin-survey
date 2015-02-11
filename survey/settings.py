@@ -1,4 +1,4 @@
-# Copyright (c) 2014, DjaoDjin inc.
+# Copyright (c) 2015, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,5 +29,17 @@ the appropriate settings.
 """
 from django.conf import settings
 
-DEFAULT_FROM_EMAIL = getattr(settings, 'DEFAULT_FROM_EMAIL')
-CORRECT_MARKER = getattr(settings, 'SURVEY_CORRECT_MARKER', '(correct)')
+_SETTINGS = {
+    'ACCOUNT_MODEL': getattr(
+        settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
+    'AUTH_USER_MODEL': getattr(
+        settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
+    'CORRECT_MARKER': '(correct)',
+    'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+}
+_SETTINGS.update(getattr(settings, 'SURVEY', {}))
+
+ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
+AUTH_USER_MODEL = _SETTINGS.get('AUTH_USER_MODEL')
+CORRECT_MARKER = _SETTINGS.get('CORRECT_MARKER')
+DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')

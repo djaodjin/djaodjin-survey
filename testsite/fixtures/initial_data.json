@@ -1,7 +1,7 @@
 [
 { "fields": {
 	"country": "US",
-	"created_at": "2014-01-10T00:00:00-09:00",
+	"created_at": "2015-01-10T00:00:00-09:00",
 	"email": "product@example.com",
 	"is_active": 1,
 	"locality": "San Francisco",

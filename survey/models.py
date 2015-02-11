@@ -1,4 +1,4 @@
-# Copyright (c) 2014, DjaoDjin inc.
+# Copyright (c) 2015, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,9 +29,8 @@ from django.db import models, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.timezone import utc
 from durationfield.db.models.fields.duration import DurationField
-from saas.models import Organization
 
-from survey.compat import User
+from .settings import AUTH_USER_MODEL, ACCOUNT_MODEL
 
 
 class SurveyModel(models.Model):
@@ -47,7 +46,7 @@ class SurveyModel(models.Model):
     published = models.BooleanField(default=False)
     quizz_mode = models.BooleanField(default=False,
         help_text="If checked, correct answser are required")
-    organization = models.ForeignKey(Organization)
+    organization = models.ForeignKey(ACCOUNT_MODEL, null=True)
 
     def __unicode__(self):
         return self.slug
@@ -185,7 +184,7 @@ class Response(models.Model):
     slug = models.SlugField()
     created_at = models.DateTimeField(auto_now_add=True)
     survey = models.ForeignKey(SurveyModel, null=True)
-    user = models.ForeignKey(User, null=True)
+    user = models.ForeignKey(AUTH_USER_MODEL, null=True)
     time_spent = DurationField(default=0,
         help_text="Total recorded time to complete the survey")
     is_frozen = models.BooleanField(default=False,
