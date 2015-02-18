@@ -25,13 +25,14 @@
 import datetime
 
 from django.core.urlresolvers import reverse
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import CreateView, TemplateView, UpdateView
 from django.utils.timezone import utc
 
-from survey.forms import AnswerForm, ResponseCreateForm
-from survey.models import Question, Response, Answer
+from survey.forms import AnswerForm, ResponseCreateForm, ResponseUpdateForm
 from survey.mixins import IntervieweeMixin, ResponseMixin, SurveyModelMixin
+from survey.models import Question, Response, Answer
 
 
 def _datetime_now():
@@ -177,6 +178,7 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
     model = Response
     form_class = ResponseCreateForm
     next_step_url = 'survey_answer_update'
+    template_name = 'survey/response_create.html'
 
     def __init__(self, *args, **kwargs):
         super(ResponseCreateView, self).__init__(*args, **kwargs)
@@ -184,13 +186,12 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
 
     def form_valid(self, form):
         # We are going to create all the Answer records for that Response here.
-        result = super(ResponseCreateView, self).form_valid(form)
-        response = self.object
-        for question in Question.objects.filter(survey=response.survey):
-            Answer.objects.create(response=response,
+        self.object = form.save()
+        for question in Question.objects.filter(survey=self.object.survey):
+            Answer.objects.create(response=self.object,
                                   question=question,
                                   index=question.order)
-        return result
+        return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
         context = super(ResponseCreateView, self).get_context_data(**kwargs)
@@ -202,6 +203,59 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
         Returns the initial data to use for forms on this view.
         """
         kwargs = super(ResponseCreateView, self).get_initial()
+        self.survey = self.get_survey()
+        kwargs.update({'survey': self.survey,
+                       'user': self.get_interviewee()})
+        return kwargs
+
+    def get_success_url(self):
+        kwargs = {}
+        for key in [self.interviewee_slug, 'survey']:
+            if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
+                kwargs[key] = self.kwargs.get(key)
+        kwargs.update({'response': self.object.slug,
+            'index': Answer.objects.filter(
+                response=self.object).order_by('index').first().index})
+        if self.survey and self.survey.defaults_single_page:
+            next_step_url = 'survey_response_update'
+        else:
+            next_step_url = self.next_step_url
+        return reverse(next_step_url, kwargs=kwargs)
+
+
+class ResponseUpdateView(SurveyModelMixin, IntervieweeMixin, UpdateView):
+    """
+    Updates all ``Answer`` of a ``Response`` from a ``User`` in a single shot.
+    """
+
+    model = Response
+    form_class = ResponseUpdateForm
+    slug_url_kwarg = 'response'
+    next_step_url = 'survey_response_results'
+    template_name = 'survey/response_update.html'
+
+    def __init__(self, *args, **kwargs):
+        super(ResponseUpdateView, self).__init__(*args, **kwargs)
+        self.survey = None
+
+    def form_valid(self, form):
+        # We are updating all ``Answer`` for the ``Response`` here.
+        for answer in self.object.answers.order_by('index'):
+            question = answer.question
+            answer.body = form.cleaned_data['question-%d' % answer.index]
+            answer.save()
+        return super(ResponseUpdateView, self).form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super(ResponseUpdateView, self).get_context_data(**kwargs)
+        context.update({'survey': self.survey})
+        return context
+
+    def get_initial(self):
+        """
+        Returns the initial data to use for forms on this view.
+        """
+        kwargs = super(ResponseUpdateView, self).get_initial()
         self.survey = self.get_survey()
         kwargs.update({'survey': self.survey,
                        'user': self.get_interviewee()})

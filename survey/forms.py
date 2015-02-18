@@ -32,6 +32,22 @@ from django.template.defaultfilters import slugify
 
 from survey.models import Answer, Question, Response, SurveyModel
 
+
+def _create_field(question_type, text, required=False, choices=None):
+    if question_type == Question.TEXT:
+        return forms.CharField(label=text, required=required,
+            widget=forms.Textarea)
+    elif question_type == Question.RADIO:
+        return forms.ChoiceField(label=text, required=required,
+            widget=forms.RadioSelect(), choices=choices)
+    elif question_type == Question.SELECT_MULTIPLE:
+        return forms.MultipleChoiceField(label=text, required=required,
+            widget=forms.CheckboxSelectMultiple, choices=choices)
+    elif question_type == Question.INTEGER:
+        return forms.IntegerField(label=text, required=required)
+    return None
+
+
 class AnswerForm(forms.ModelForm):
     """
     Form used to submit an Answer to a Question as part of Response to a Survey.
@@ -48,27 +64,10 @@ class AnswerForm(forms.ModelForm):
         if self.initial.has_key('response'):
             setattr(self.instance, 'response', self.initial['response'])
         question = self.instance.question
-        if question.question_type == Question.TEXT:
-            self.fields['body'] = forms.CharField(
-                label=question.text, required=question.required,
-                widget=forms.Textarea)
-        elif question.question_type == Question.RADIO:
-            question_choices = question.get_choices()
-            self.fields['body'] = forms.ChoiceField(
-                label=question.text, required=question.required,
-                widget=forms.RadioSelect(), choices=question_choices)
-            if question.has_other:
-                self.fields['other'] = forms.CharField(required=False)
-        elif question.question_type == Question.SELECT_MULTIPLE:
-            question_choices = question.get_choices()
-            self.fields['body'] = forms.MultipleChoiceField(
-                label=question.text, required=question.required,
-                widget=forms.CheckboxSelectMultiple, choices=question_choices)
-            if question.has_other:
-                self.fields['other'] = forms.CharField(required=False)
-        elif question.question_type == Question.INTEGER:
-            self.fields['body'] = forms.IntegerField(
-                label=question.text, required=question.required)
+        self.fields['body'] = _create_field(question.question_type,
+            question.text, question.required, question.get_choices())
+        if question.has_other:
+            self.fields['other'] = forms.CharField(required=False)
 
     def save(self, commit=True):
         if self.instance.question.has_other and self.cleaned_data['other']:
@@ -112,6 +111,25 @@ class ResponseCreateForm(forms.ModelForm):
             self.instance.survey = self.initial['survey']
         self.instance.slug = slugify(uuid.uuid4().hex)
         return super(ResponseCreateForm, self).save(commit)
+
+
+class ResponseUpdateForm(forms.ModelForm):
+    """
+    Auto-generated ``Form`` from a list of ``Question`` in a ``SurveyModel``.
+    """
+
+    class Meta:
+        model = Response
+        fields = []
+
+    def __init__(self, *args, **kwargs):
+        super(ResponseUpdateForm, self).__init__(*args, **kwargs)
+        for answer in self.instance.answers.order_by('index'):
+            question = answer.question
+            self.fields['question-%d' % answer.index] = _create_field(
+                question.question_type, question.text, question.required,
+                question.get_choices())
+
 
 
 class SurveyForm(forms.ModelForm):

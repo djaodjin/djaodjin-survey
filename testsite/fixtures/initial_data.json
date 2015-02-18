@@ -1,26 +1,4 @@
 [
-{ "fields": {
-	"country": "US",
-	"created_at": "2015-01-10T00:00:00-09:00",
-	"email": "product@example.com",
-	"is_active": 1,
-	"locality": "San Francisco",
-	"slug": "product",
-	"phone": "555-555-5555",
-	"postal_code": 94102,
-	"region": "CA",
-	"street_address": "555 Infinite Loop"
-	},
-	"model": "saas.organization",
-	"pk": 1
-},
-{ "fields": {
-	"organization": 1,
-	"user": 1
-	},
-	"model": "saas.organization_managers",
-	"pk": 1
-},
 { "fields" : {
 	"slug" : "survey-example",
 	"name" : "Test Survey",

@@ -47,6 +47,9 @@ class SurveyModel(models.Model):
     quizz_mode = models.BooleanField(default=False,
         help_text="If checked, correct answser are required")
     organization = models.ForeignKey(ACCOUNT_MODEL, null=True)
+    default_single_page = models.BooleanField(default=False,
+        help_text="If checked, will display all questions on a single page,"\
+" else there will be one question per page.")
 
     def __unicode__(self):
         return self.slug

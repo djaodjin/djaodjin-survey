@@ -24,18 +24,20 @@
 
 from django.conf.urls import patterns, url
 
-from survey.views.displaysurvey import (
-    AnswerUpdateView, ResponseResultView, ResponseCreateView)
+from survey.views.displaysurvey import (AnswerUpdateView,
+    ResponseCreateView, ResponseUpdateView, ResponseResultView)
+
+SLUG_RE = '[a-zA-Z0-9-]+'
+
 
 urlpatterns = patterns('',
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/(?P<response>[a-zA-Z0-9-]+)/results/',
-       ResponseResultView.as_view(),
-       name='survey_response_results'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/(?P<response>[a-zA-Z0-9-]+)/'\
-       r'(?:(?P<index>\d+)/)?',
-       AnswerUpdateView.as_view(),
-       name='survey_answer_update'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/',
-       ResponseCreateView.as_view(),
-       name='survey_response_new'),
+   url(r'^(?P<survey>%s)/(?P<response>%s)/results/' % (SLUG_RE, SLUG_RE),
+       ResponseResultView.as_view(), name='survey_response_results'),
+   url(r'^(?P<survey>%s)/(?P<response>%s)/(?:(?P<index>\d+)/)'
+       % (SLUG_RE, SLUG_RE),
+       AnswerUpdateView.as_view(), name='survey_answer_update'),
+   url(r'^(?P<survey>%s)/(?P<response>%s)/' % (SLUG_RE, SLUG_RE),
+       ResponseUpdateView.as_view(), name='survey_response_update'),
+   url(r'^(?P<survey>%s)/' % SLUG_RE,
+       ResponseCreateView.as_view(), name='survey_response_new'),
 )
