@@ -241,7 +241,6 @@ class ResponseUpdateView(SurveyModelMixin, IntervieweeMixin, UpdateView):
     def form_valid(self, form):
         # We are updating all ``Answer`` for the ``Response`` here.
         for answer in self.object.answers.order_by('index'):
-            question = answer.question
             answer.body = form.cleaned_data['question-%d' % answer.index]
             answer.save()
         return super(ResponseUpdateView, self).form_valid(form)
