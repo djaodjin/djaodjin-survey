@@ -26,15 +26,14 @@ import datetime, json, logging
 
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse, reverse_lazy
-from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.views.generic import (CreateView, DeleteView, DetailView,
     FormView, ListView, RedirectView, UpdateView)
 from django.views.generic.detail import SingleObjectMixin
 from django.template.defaultfilters import slugify
-from saas.models import Organization
 from survey import settings
 
+from survey.mixins import AccountMixin
 from survey.models import Answer, SurveyModel, Response, Question
 from survey.forms import SurveyForm, SendSurveyForm
 
@@ -42,7 +41,7 @@ from survey.forms import SurveyForm, SendSurveyForm
 LOGGER = logging.getLogger(__name__)
 
 
-class SurveyCreateView(CreateView):
+class SurveyCreateView(AccountMixin, CreateView):
     """
     Create a new survey
     """
@@ -57,16 +56,7 @@ class SurveyCreateView(CreateView):
         Returns the initial data to use for forms on this view.
         """
         kwargs = super(SurveyCreateView, self).get_initial()
-        if self.kwargs.has_key('organization'):
-            organization = get_object_or_404(
-                Organization, slug__exact=self.kwargs.get('organization'))
-        else:
-            managed = Organization.objects.find_managed(self.request.user)
-            if managed.exists():
-                organization = managed.first()
-            else:
-                raise Http404
-        kwargs.update({'organization': organization})
+        kwargs.update({'account': self.get_account()})
         return kwargs
 
 
@@ -79,18 +69,17 @@ class SurveyDeleteView(DeleteView):
     success_url = reverse_lazy('survey_list')
 
 
-class SurveyListView(ListView):
+class SurveyListView(AccountMixin, ListView):
     """
-    List of surveys for an organization.
+    List of surveys for an account.
     """
     model = SurveyModel
     slug_url_kwarg = 'survey'
 
     def get_queryset(self):
-        if self.kwargs.has_key('organization'):
-            organization = get_object_or_404(
-                Organization, slug__exact=self.kwargs.get('organization'))
-            queryset = SurveyModel.objects.filter(organization=organization)
+        account = self.get_account()
+        if account:
+            queryset = SurveyModel.objects.filter(account=account)
         else:
             queryset = SurveyModel.objects.all()
         return queryset
@@ -245,7 +234,7 @@ class SurveySendView(SingleObjectMixin, FormView):
 
     def form_valid(self, form):
         email_addresses = form.cleaned_data['to_addresses'].split('\r\n')
-        send_mail('Please complete %s' % self.object.name,
+        send_mail('Please complete %s' % self.object.title,
                   form.cleaned_data['message'],
                   form.cleaned_data['from_address'],
                   email_addresses, fail_silently=False)

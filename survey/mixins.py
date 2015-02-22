@@ -22,11 +22,29 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from django.db.models.loading import get_model
 from django.shortcuts import get_object_or_404
 from django.views.generic.detail import SingleObjectMixin
 
-from survey.compat import User
-from survey.models import Response, Question, SurveyModel
+from .compat import User
+from .models import Response, Question, SurveyModel
+from .settings import ACCOUNT_MODEL
+
+
+class AccountMixin(object):
+
+    account_kwarg_url = 'organization'
+
+    def get_account(self):
+        if self.kwargs.has_key(self.account_kwarg_url):
+            if isinstance(ACCOUNT_MODEL, str):
+                account_model = get_model(*ACCOUNT_MODEL.rsplit('.', 1))
+            else:
+                account_model = ACCOUNT_MODEL
+            return get_object_or_404(account_model,
+                slug__exact=self.kwargs.get(self.account_kwarg_url))
+        return None
+
 
 class IntervieweeMixin(object):
     """

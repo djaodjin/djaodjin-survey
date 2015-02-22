@@ -39,14 +39,14 @@ class SurveyModel(models.Model):
     slug = models.SlugField(unique=True)
     start_date = models.DateTimeField(null=True)
     end_date = models.DateTimeField(null=True)
-    name = models.CharField(max_length=150,
-        help_text="Enter a survey name.")
+    title = models.CharField(max_length=150,
+        help_text="Enter a survey title.")
     description = models.TextField(null=True, blank=True,
         help_text="This desciption will be displayed for interviewee.")
     published = models.BooleanField(default=False)
     quizz_mode = models.BooleanField(default=False,
         help_text="If checked, correct answser are required")
-    organization = models.ForeignKey(ACCOUNT_MODEL, null=True)
+    account = models.ForeignKey(ACCOUNT_MODEL, null=True)
     default_single_page = models.BooleanField(default=False,
         help_text="If checked, will display all questions on a single page,"\
 " else there will be one question per page.")
@@ -72,10 +72,10 @@ class SurveyModel(models.Model):
              update_fields=None):
         #pylint: disable=catching-non-exception
         """
-        Keep slug in sync with survey name.
+        Keep slug in sync with survey title.
         """
         max_length = self._meta.get_field('slug').max_length
-        slug = slugify(self.name)
+        slug = slugify(self.title)
         self.slug = slug
         if len(self.slug) > max_length:
             self.slug = slug[:max_length]

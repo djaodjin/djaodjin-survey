@@ -136,22 +136,22 @@ class SurveyForm(forms.ModelForm):
 
     class Meta:
         model = SurveyModel
-        fields = ['name', 'description', 'quizz_mode']
+        fields = ['title', 'description', 'quizz_mode']
 
-    def clean_name(self):
+    def clean_title(self):
         """
-        Creates a slug from the survey name and checks it does not yet exists.
+        Creates a slug from the survey title and checks it does not yet exists.
         """
-        slug = slugify(self.cleaned_data.get('name'))
+        slug = slugify(self.cleaned_data.get('title'))
         if SurveyModel.objects.filter(slug__exact=slug).exists():
             raise forms.ValidationError(
-                "Name conflicts with an existing survey.")
-        return self.cleaned_data['name']
+                "Title conflicts with an existing survey.")
+        return self.cleaned_data['title']
 
     def save(self, commit=True):
-        if self.initial.has_key('organization'):
-            self.instance.organization = self.initial['organization']
-        self.instance.slug = slugify(self.cleaned_data.get('name'))
+        if self.initial.has_key('account'):
+            self.instance.account = self.initial['account']
+        self.instance.slug = slugify(self.cleaned_data.get('title'))
         return super(SurveyForm, self).save(commit)
 
 

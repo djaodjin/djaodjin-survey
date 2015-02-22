@@ -42,7 +42,7 @@ class SurveyModelSerializer(ModelSerializer): #pylint: disable=no-init
 
     class Meta(object):
         model = SurveyModel
-        fields = ('slug', 'organization',
-                  'name', 'description', 'published', 'quizz_mode', 'questions')
+        fields = ('slug', 'account', 'title', 'description', 'published',
+            'quizz_mode', 'questions')
         read_only_fields = ('slug',)
 

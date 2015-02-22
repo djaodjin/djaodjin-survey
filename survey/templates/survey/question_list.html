@@ -3,7 +3,7 @@
 {% block content %}
 <section>
 	<div>
-		<h1>Questions for {{survey.name}}</h1>
+		<h1>Questions for {{survey.title}}</h1>
 	</div>
 
 	<p><a href="{% url 'survey_question_new' survey %}">Add a question</a></p>
@@ -48,7 +48,7 @@
 		{% endfor %}
 	</table>
 	{% else %}
-		<em>No question for {{survey.name}} survey</em>
+		<em>No question for {{survey.title}} survey</em>
 	{% endif %}
 </section>
 {% endblock %}

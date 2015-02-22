@@ -11,7 +11,7 @@
 	<tbody>
 	{% for survey in surveymodel_list %}
 	<tr href="#{{survey}}">
-		<td>{{survey.name}}</td>
+		<td>{{survey.title}}</td>
 		<td>{{survey.description}}</td>
 		<td><a {% if survey.published %}disabled="true"{% endif %} href="{% url 'survey_edit' survey %}">Edit</a></td>
 		<td><a href="{% url 'survey_question_list' survey %}" >Questions</a></td>

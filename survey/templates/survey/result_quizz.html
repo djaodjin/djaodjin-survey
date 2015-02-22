@@ -4,9 +4,9 @@
 <div>
 	<h1>
 		{% if response.survey.quizz_mode %}
-		Results for {{response.survey.name}} quizz &dash; Your score : {{score}}%
+		Results for {{response.survey.title}} quizz &dash; Your score : {{score}}%
 		{% else %}
-		Your Answers for {{response.survey.name}}
+		Your Answers for {{response.survey.title}}
 		{% endif %}
 	</h1>
 	<h3>Description</h3>

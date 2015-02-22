@@ -3,7 +3,7 @@
 	"slug" : "survey-example",
 	"name" : "Test Survey",
 	"description" : "This is an example survey to test the app",
-	"organization" : 1,
+	"account" : 1,
 	"published": true
 	},
 	"model" : "survey.surveymodel",
