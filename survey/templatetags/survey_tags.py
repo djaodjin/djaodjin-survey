@@ -41,4 +41,4 @@ def field_for(form, answer):
     Returns the form field matching an answer index.
     """
     key = 'question-%d' % answer.index
-    return { key: form.fields[key]}
+    return {key: form.fields[key]}
