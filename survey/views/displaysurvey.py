@@ -178,6 +178,8 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
     model = Response
     form_class = ResponseCreateForm
     next_step_url = 'survey_answer_update'
+    single_page_next_step_url = 'survey_response_update'
+
     template_name = 'survey/response_create.html'
 
     def __init__(self, *args, **kwargs):
@@ -213,12 +215,12 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
         for key in [self.interviewee_slug, 'survey']:
             if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
                 kwargs[key] = self.kwargs.get(key)
-        kwargs.update({'response': self.object.slug,
-            'index': Answer.objects.filter(
-                response=self.object).order_by('index').first().index})
+        kwargs.update({'response': self.object.slug})
         if self.survey and self.survey.defaults_single_page:
-            next_step_url = 'survey_response_update'
+            next_step_url = self.single_page_next_step_url
         else:
+            kwargs.update({'index': Answer.objects.filter(
+                response=self.object).order_by('index').first().index})
             next_step_url = self.next_step_url
         return reverse(next_step_url, kwargs=kwargs)
 

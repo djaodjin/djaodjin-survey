@@ -35,3 +35,10 @@ def by_key(items, key):
             return item['values']
     return []
 
+@register.filter()
+def field_for(form, answer):
+    """
+    Returns the form field matching an answer index.
+    """
+    key = 'question-%d' % answer.index
+    return { key: form.fields[key]}
