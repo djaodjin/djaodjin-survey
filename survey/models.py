@@ -197,7 +197,7 @@ class Response(models.Model):
         return self.slug
 
     def get_answers_by_rank(self):
-        return self.answers.all() #.order_by('index')
+        return self.answers.all().order_by('index') #pylint:disable=no-member
 
 
 class AnswerManager(models.Manager):
