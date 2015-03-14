@@ -42,3 +42,10 @@ def field_for(form, answer):
     """
     key = 'question-%d' % answer.index
     return {key: form.fields[key]}
+
+@register.filter()
+def answers_by_rank(response):
+    """
+    Returns the answers on a ``Response`` in a stable increasing order.
+    """
+    return response.get_answers_by_rank()

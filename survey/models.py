@@ -196,6 +196,9 @@ class Response(models.Model):
     def __unicode__(self):
         return self.slug
 
+    def get_answers_by_rank(self):
+        return self.answers.all() #.order_by('index')
+
 
 class AnswerManager(models.Manager):
 
