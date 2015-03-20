@@ -24,13 +24,15 @@
 
 from django.conf.urls import patterns, url
 
-from survey.views.displaysurvey import (AnswerUpdateView,
-    ResponseCreateView, ResponseUpdateView, ResponseResultView)
+from survey.views.displaysurvey import (AnswerUpdateView, ResponseCreateView,
+    ResponseResetView, ResponseResultView, ResponseUpdateView)
 
 SLUG_RE = '[a-zA-Z0-9-]+'
 
 
 urlpatterns = patterns('',
+   url(r'^(?P<survey>%s)/(?P<response>%s)/reset/' % (SLUG_RE, SLUG_RE),
+       ResponseResetView.as_view(), name='survey_response_reset'),
    url(r'^(?P<survey>%s)/(?P<response>%s)/results/' % (SLUG_RE, SLUG_RE),
        ResponseResultView.as_view(), name='survey_response_results'),
    url(r'^(?P<survey>%s)/(?P<response>%s)/(?:(?P<index>\d+)/)'

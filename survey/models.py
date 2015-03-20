@@ -50,6 +50,8 @@ class SurveyModel(models.Model):
     defaults_single_page = models.BooleanField(default=False,
         help_text="If checked, will display all questions on a single page,"\
 " else there will be one question per page.")
+    one_response_only = models.BooleanField(default=False,
+        help_text="Only allows to answer survey once.")
 
     def __unicode__(self):
         return self.slug

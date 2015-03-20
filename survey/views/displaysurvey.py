@@ -24,10 +24,12 @@
 
 import datetime
 
+from django.db import transaction
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
-from django.views.generic import CreateView, TemplateView, UpdateView
+from django.views.generic import (CreateView, RedirectView, TemplateView,
+    UpdateView)
 from django.utils.timezone import utc
 
 from survey.forms import AnswerForm, ResponseCreateForm, ResponseUpdateForm
@@ -223,6 +225,25 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
                 response=self.object).order_by('index').first().index})
             next_step_url = self.next_step_url
         return reverse(next_step_url, kwargs=kwargs)
+
+
+class ResponseResetView(ResponseMixin, RedirectView):
+    """
+    Resets all ``Answer`` of a ``Response`` from a ``User``.
+    """
+
+    pattern_name = 'survey_response_update'
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_response()
+        if self.object.survey and not self.object.survey.one_response_only:
+            with transaction.atomic():
+                for answer in self.object.answers.all():
+                    answer.body = None
+                    answer.save()
+                self.object.is_frozen = False
+                self.object.save()
+        return super(ResponseResetView, self).get(request, *args, **kwargs)
 
 
 class ResponseUpdateView(SurveyModelMixin, IntervieweeMixin, UpdateView):
