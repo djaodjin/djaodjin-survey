@@ -1,13 +1,27 @@
 [
+{
+    "fields": {
+      "date_joined": "2012-09-14T14:16:55-09:00",
+      "email": "donny@localhost.localdomain",
+      "first_name": "Donny",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "last_login": "2012-09-14T14:57:48-09:00",
+      "last_name": "Doe",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=", 
+      "username": "donny"
+    },
+    "model": "auth.User", "pk": 2
+},
 { "fields" : {
 	"slug" : "survey-example",
-	"name" : "Test Survey",
+	"title" : "Test Survey",
 	"description" : "This is an example survey to test the app",
-	"account" : 1,
+	"account" : 2,
 	"published": true
 	},
-	"model" : "survey.surveymodel",
-	"pk" : 1
+	"model" : "survey.surveymodel", "pk" : 1
 },
 { "fields" : {
 	"text" : "Do you like the djaodjin-survey app...",
@@ -17,8 +31,7 @@
 	"order" : 1,
 	"required" : true
 	},
-	"model" : "survey.question",
-	"pk" : 1
+	"model" : "survey.question", "pk" : 1
 },
 { "fields" : {
 	"text" : "Which feature of the app do you use...",
@@ -28,8 +41,7 @@
 	"order" : 2,
 	"required" : true
 	},
-	"model" : "survey.question",
-	"pk" : 2
+	"model" : "survey.question", "pk" : 2
 },
 { "fields" : {
 	"text" : "Rate this app from 1 to 10...",
@@ -38,8 +50,7 @@
 	"order" : 3,
 	"required" : true
 	},
-	"model" : "survey.question",
-	"pk" : 3
+	"model" : "survey.question", "pk" : 3
 },
 { "fields" : {
 	"text" : "Additional Comments...",
@@ -48,7 +59,6 @@
 	"order" : 4,
 	"required" : true
 	},
-	"model" : "survey.question",
-	"pk" : 4
+	"model" : "survey.question", "pk" : 4
 }
 ]
