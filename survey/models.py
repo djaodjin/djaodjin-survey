@@ -217,8 +217,10 @@ class AnswerManager(models.Manager):
             # XXX check this is True (1.6) JOIN these tables on these fields
             #pylint: disable=protected-access
             connection = (None, Answer._meta.db_table, (("id", "question_id"),))
-            questions.query.join(connection,
-                outer_if_first=True)    # as LEFT OUTER JOIN
+            # Django 1.7 (see commit ba6c9fae452d3e4260ed0c1c74230da74f74f665)
+            # removed outer_if_first, and instead always create new joins
+            # as OUTER.
+            questions.query.join(connection)    # as LEFT OUTER JOIN
             for question in questions:
                 answers += [Answer(question=question)]
         return answers
