@@ -65,6 +65,24 @@ class IntervieweeMixin(object):
             interviewee = None
         return interviewee
 
+    def get_reverse_kwargs(self):
+        """
+        List of kwargs taken from the url that needs to be passed through
+        to ``get_success_url``.
+        """
+        return [self.interviewee_slug, 'survey']
+
+    def get_url_context(self):
+        """
+        Returns ``kwargs`` value to use when calling ``reverse``
+        in ``get_success_url``.
+        """
+        kwargs = {}
+        for key in self.get_reverse_kwargs():
+            if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
+                kwargs[key] = self.kwargs.get(key)
+        return kwargs
+
 
 class QuestionMixin(SingleObjectMixin):
 
@@ -121,4 +139,10 @@ class ResponseMixin(IntervieweeMixin, SurveyModelMixin):
                 survey=self.get_survey(), user=interviewee)
         return response
 
+    def get_reverse_kwargs(self):
+        """
+        List of kwargs taken from the url that needs to be passed through
+        to ``get_success_url``.
+        """
+        return [self.interviewee_slug, 'survey', self.response_url_kwarg]
 

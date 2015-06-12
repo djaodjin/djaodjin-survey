@@ -90,13 +90,6 @@ class AnswerUpdateView(ResponseMixin, UpdateView):
         kwargs.update({'index': next_answer.index})
         return reverse(self.next_step_url, kwargs=kwargs)
 
-    def get_url_context(self):
-        kwargs = {}
-        for key in [self.interviewee_slug, 'survey', self.response_url_kwarg]:
-            if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
-                kwargs[key] = self.kwargs.get(key)
-        return kwargs
-
     def form_valid(self, form):
         response = self.object.response
         response.time_spent = _datetime_now() - response.created_at
@@ -142,13 +135,6 @@ class ResponseResultView(ResponseMixin, TemplateView):
     """
 
     template_name = 'survey/result_quizz.html'
-
-    def get_url_context(self):
-        kwargs = {}
-        for key in [self.interviewee_slug, 'survey', self.response_url_kwarg]:
-            if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
-                kwargs[key] = self.kwargs.get(key)
-        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super(ResponseResultView, self).get_context_data(**kwargs)
@@ -213,10 +199,7 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
         return kwargs
 
     def get_success_url(self):
-        kwargs = {}
-        for key in [self.interviewee_slug, 'survey']:
-            if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
-                kwargs[key] = self.kwargs.get(key)
+        kwargs = self.get_url_context()
         kwargs.update({'response': self.object.slug})
         if self.survey and self.survey.defaults_single_page:
             next_step_url = self.single_page_next_step_url
@@ -284,9 +267,6 @@ class ResponseUpdateView(SurveyModelMixin, IntervieweeMixin, UpdateView):
         return kwargs
 
     def get_success_url(self):
-        kwargs = {}
-        for key in [self.interviewee_slug, 'survey']:
-            if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
-                kwargs[key] = self.kwargs.get(key)
+        kwargs = self.get_url_context()
         kwargs.update({'response': self.object.slug})
         return reverse(self.next_step_url, kwargs=kwargs)
