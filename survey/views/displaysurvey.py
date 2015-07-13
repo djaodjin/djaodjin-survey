@@ -175,12 +175,17 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
         self.survey = None
 
     def form_valid(self, form):
-        # We are going to create all the Answer records for that Response here.
+        # We are going to create all the Answer records for that Response here,
+        # initialize them with a body when present in the submitted form.
         self.object = form.save()
         for question in Question.objects.filter(survey=self.object.survey):
-            Answer.objects.create(response=self.object,
-                                  question=question,
-                                  index=question.order)
+            kwargs = {'response': self.object,
+                'question': question, 'index': question.order}
+            answer_body = form.cleaned_data.get(
+                'question-%d' % question.order, None)
+            if answer_body:
+                kwargs.update({'body': answer_body})
+            Answer.objects.create(**kwargs)
         return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):

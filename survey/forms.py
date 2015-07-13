@@ -33,19 +33,31 @@ from django.template.defaultfilters import slugify
 from survey.models import Answer, Question, Response, SurveyModel
 
 
-def _create_field(question_type, text, required=False, choices=None):
+def _create_field(question_type, text,
+                  has_other=False, required=False, choices=None):
+    fields = (None, None)
     if question_type == Question.TEXT:
-        return forms.CharField(label=text, required=required,
-            widget=forms.Textarea)
+        fields = (forms.CharField(label=text, required=required,
+            widget=forms.Textarea), None)
     elif question_type == Question.RADIO:
-        return forms.ChoiceField(label=text, required=required,
+        radio = forms.ChoiceField(label=text, required=required,
             widget=forms.RadioSelect(), choices=choices)
+        if has_other:
+            fields = (radio, forms.CharField(required=False,
+                label="Please could you specify?"))
+        else:
+            fields = (radio, None)
     elif question_type == Question.SELECT_MULTIPLE:
-        return forms.MultipleChoiceField(label=text, required=required,
+        multiple = forms.MultipleChoiceField(label=text, required=required,
             widget=forms.CheckboxSelectMultiple, choices=choices)
+        if has_other:
+            fields = (multiple, forms.CharField(required=False,
+                label="Please could you specify?"))
+        else:
+            fields = (multiple, None)
     elif question_type == Question.INTEGER:
-        return forms.IntegerField(label=text, required=required)
-    return None
+        fields = (forms.IntegerField(label=text, required=required), None)
+    return fields
 
 
 class AnswerForm(forms.ModelForm):
@@ -64,10 +76,12 @@ class AnswerForm(forms.ModelForm):
         if self.initial.has_key('response'):
             setattr(self.instance, 'response', self.initial['response'])
         question = self.instance.question
-        self.fields['body'] = _create_field(question.question_type,
-            question.text, question.required, question.get_choices())
-        if question.has_other:
-            self.fields['other'] = forms.CharField(required=False)
+        fields = _create_field(question.question_type, question.text,
+            has_other=question.has_other, required=question.required,
+            choices=question.get_choices())
+        self.fields['body'] = fields[0]
+        if fields[1]:
+            self.fields['other'] = fields[1]
 
     def save(self, commit=True):
         if self.instance.question.has_other and self.cleaned_data['other']:
@@ -104,6 +118,28 @@ class ResponseCreateForm(forms.ModelForm):
         model = Response
         fields = []
 
+    def __init__(self, *args, **kwargs):
+        super(ResponseCreateForm, self).__init__(*args, **kwargs)
+        for idx, question in enumerate(self.initial.get('questions', [])):
+            key = 'question-%d' % (idx + 1)
+            fields = _create_field(question.question_type, question.text,
+                has_other=question.has_other, required=question.required,
+                choices=question.get_choices())
+            self.fields[key] = fields[0]
+            if fields[1]:
+                self.fields[key.replace('question-', 'other-')] = fields[1]
+
+    def clean(self):
+        super(ResponseCreateForm, self).clean()
+        items = self.cleaned_data.items()
+        for key, value in items:
+            if key.startswith('other-'):
+                if value:
+                    self.cleaned_data[key.replace(
+                        'other-', 'question-')] = value
+                del self.cleaned_data[key]
+        return self.cleaned_data
+
     def save(self, commit=True):
         if self.initial.has_key('user'):
             self.instance.user = self.initial['user']
@@ -126,10 +162,13 @@ class ResponseUpdateForm(forms.ModelForm):
         super(ResponseUpdateForm, self).__init__(*args, **kwargs)
         for answer in self.instance.answers.order_by('index'):
             question = answer.question
-            self.fields['question-%d' % answer.index] = _create_field(
-                question.question_type, question.text, question.required,
-                question.get_choices())
-
+            fields = _create_field(question.question_type, question.text,
+                has_other=question.has_other, required=question.required,
+                choices=question.get_choices())
+            # XXX set value.
+            self.fields['question-%d' % answer.index] = fields[0]
+            if fields[1]:
+                self.fields['other-%d' % answer.index] = fields[1]
 
 
 class SurveyForm(forms.ModelForm):
