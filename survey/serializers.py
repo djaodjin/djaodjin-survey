@@ -24,14 +24,20 @@
 
 from rest_framework.serializers import ModelSerializer
 
-from survey.models import Question, SurveyModel
+from survey.models import Answer, Question, SurveyModel
+
+
+class AnswerSerializer(ModelSerializer): #pylint: disable=no-init
+
+    class Meta(object):
+        model = Answer
+        fields = ('created_at', 'body')
 
 
 class QuestionSerializer(ModelSerializer): #pylint: disable=no-init
 
     class Meta(object):
         model = Question
-
         fields = ('text', 'question_type', 'choices',
                   'order', 'correct_answer', 'required')
 
