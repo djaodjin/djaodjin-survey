@@ -44,7 +44,8 @@ def _create_field(question_type, text,
             widget=forms.RadioSelect(), choices=choices)
         if has_other:
             fields = (radio, forms.CharField(required=False,
-                label="Please could you specify?"))
+                label="Please could you specify?",
+                widget=forms.TextInput(attrs={'class':'other-input'})))
         else:
             fields = (radio, None)
     elif question_type == Question.SELECT_MULTIPLE:
@@ -52,7 +53,8 @@ def _create_field(question_type, text,
             widget=forms.CheckboxSelectMultiple, choices=choices)
         if has_other:
             fields = (multiple, forms.CharField(required=False,
-                label="Please could you specify?"))
+                label="Please could you specify?",
+                widget=forms.TextInput(attrs={'class':'other-input'})))
         else:
             fields = (multiple, None)
     elif question_type == Question.INTEGER:

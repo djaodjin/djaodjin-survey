@@ -22,9 +22,18 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#pylint: disable=invalid-name,unused-import
+
+try:
+    from django.apps import apps
+    get_model = apps.get_model
+except ImportError: # django < 1.8
+    from django.db.models.loading import get_model
+
+
 try:
     from django.contrib.auth import get_user_model
 except ImportError: # django < 1.5
-    from django.contrib.auth.models import User #pylint: disable=unused-import
+    from django.contrib.auth.models import User
 else:
-    User = get_user_model()                     #pylint: disable=invalid-name
+    User = get_user_model()

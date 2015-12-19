@@ -22,11 +22,10 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.db.models.loading import get_model
 from django.shortcuts import get_object_or_404
 from django.views.generic.detail import SingleObjectMixin
 
-from .compat import User
+from .compat import get_model, User
 from .models import Response, Question, SurveyModel
 from .settings import ACCOUNT_MODEL
 
