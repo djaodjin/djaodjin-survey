@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -101,12 +101,14 @@ class Question(models.Model):
 
     INTEGER = 'integer'
     RADIO = 'radio'
+    DROPDOWN = 'select'
     SELECT_MULTIPLE = 'checkbox'
     TEXT = 'text'
 
     QUESTION_TYPES = (
             (TEXT, 'text'),
             (RADIO, 'radio'),
+            (DROPDOWN, 'dropdown'),
             (SELECT_MULTIPLE, 'Select Multiple'),
             (INTEGER, 'integer'),
     )

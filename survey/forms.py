@@ -48,6 +48,15 @@ def _create_field(question_type, text,
                 widget=forms.TextInput(attrs={'class':'other-input'})))
         else:
             fields = (radio, None)
+    elif question_type == Question.DROPDOWN:
+        radio = forms.ChoiceField(label=text, required=required,
+            widget=forms.Select(), choices=choices)
+        if has_other:
+            fields = (radio, forms.CharField(required=False,
+                label="Please could you specify?",
+                widget=forms.TextInput(attrs={'class':'other-input'})))
+        else:
+            fields = (radio, None)
     elif question_type == Question.SELECT_MULTIPLE:
         multiple = forms.MultipleChoiceField(label=text, required=required,
             widget=forms.CheckboxSelectMultiple, choices=choices)
