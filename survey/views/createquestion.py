@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,15 +22,15 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.core.context_processors import csrf
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404
 from django.views.generic import (CreateView, DeleteView, ListView,
     RedirectView, UpdateView)
 
-from survey.forms import QuestionForm
-from survey.models import Question, SurveyModel
-from survey.mixins import QuestionMixin, SurveyModelMixin
+from ..compat import csrf
+from ..forms import QuestionForm
+from ..models import Question, SurveyModel
+from ..mixins import QuestionMixin, SurveyModelMixin
 
 class QuestionFormMixin(QuestionMixin):
 

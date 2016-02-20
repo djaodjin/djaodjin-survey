@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pylint: disable=invalid-name,unused-import
+#pylint: disable=invalid-name,no-name-in-module,unused-import
 
 try:
     from django.apps import apps
@@ -37,3 +37,9 @@ except ImportError: # django < 1.5
     from django.contrib.auth.models import User
 else:
     User = get_user_model()
+
+
+try:
+    from django.template.context_processors import csrf
+except ImportError: # django < 1.8
+    from django.core.context_processors import csrf
