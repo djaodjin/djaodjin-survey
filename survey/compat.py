@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#pylint: disable=invalid-name,no-name-in-module,unused-import
+#pylint: disable=invalid-name,no-name-in-module,unused-import,import-error
 
 try:
     from django.apps import apps

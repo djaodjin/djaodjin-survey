@@ -28,8 +28,6 @@ from django.db import transaction
 from django.db import models, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.timezone import utc
-from django.db.models.sql.datastructures import Join
-from django.db.models.sql.constants import LOUTER
 
 from durationfield.db.models.fields.duration import DurationField
 
@@ -215,17 +213,11 @@ class AnswerManager(models.Manager):
         associated to a *response* even when there are no such record
         in the db.
         """
-        answers = list(self.filter(response=response))
+        answers = self.filter(response=response)
         if response.survey:
-            questions = Question.objects.filter(survey=response.survey).extra(
-                where=["(survey_answer.question_id IS NULL "\
-                       "AND survey_answer.response_id = %d)" % response.id])
-            #pylint: disable=protected-access
-            # Django1.9-style LEFT OUTER JOIN
-            connection = Join(Answer._meta.db_table,
-                Question._meta.db_table, None, LOUTER,
-                Answer.question.field.remote_field, True)
-            questions.query.join(connection)
+            questions = Question.objects.filter(survey=response.survey).exclude(
+                pk__in=answers.values('question'))
+            answers = list(answers)
             for question in questions:
                 answers += [Answer(question=question)]
         return answers
