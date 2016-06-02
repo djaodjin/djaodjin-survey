@@ -204,6 +204,9 @@ class SurveyResultView(DetailView):
                 'questions': questions,
                 'number_interviewees': number_interviewees,
                 'individuals': individuals,
+                ## Careful! Allowing user generated text in this object
+                ## would allow XSS attacks
+                ## https://code.djangoproject.com/ticket/17419
                 'aggregates': json.dumps(aggregates)})
         return context
 
