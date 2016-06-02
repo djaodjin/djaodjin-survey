@@ -22,15 +22,16 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-URLs for djaodjin-survey django app
-"""
+from django.conf.urls import patterns, url
 
-from django.conf.urls import patterns, include, url
+from survey.views.matrix import MatrixView,MatrixApi
 
-urlpatterns = patterns(
-    'survey.views',
-    url(r'^manage/', include('survey.urls.manager')),
-    url(r'^matrix/', include('survey.urls.matrix')),
-    url(r'^', include('survey.urls.interviewee')),
+
+urlpatterns = patterns('',
+   url(r'^api/survey',
+       MatrixApi.as_view(), name='matrix_api'),
+   url(r'^',
+       MatrixView.as_view(), name='matrix_View'),
+
+
 )

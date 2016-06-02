@@ -1,0 +1,10 @@
+.nvd3 .nv-aggLine line {
+    fill: none;
+    stroke: black;
+    shape-rendering: crispEdges;
+}
+
+#chart {
+    width : 600px;
+    height: 600px;
+}
