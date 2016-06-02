@@ -30,6 +30,8 @@ binDir        ?= $(installTop)/bin
 
 PYTHON        := $(binDir)/python
 
+RUNSYNCDB     = $(if $(findstring --run-syncdb,$(shell cd $(srcDir) && $(PYTHON) manage.py migrate --help 2>/dev/null)),--run-syncdb,)
+
 install::
 	cd $(srcDir) && $(PYTHON) ./setup.py --quiet \
 		build -b $(CURDIR)/build install
@@ -38,4 +40,7 @@ install::
 # correctly.
 initdb:
 	-rm -f db.sqlite3
-	cd $(srcDir) && $(PYTHON) ./manage.py syncdb
+	cd $(srcDir) && $(PYTHON) ./manage.py migrate $(RUNSYNCDB) --noinput
+	cd $(srcDir) && $(PYTHON) ./manage.py loaddata \
+						testsite/fixtures/initial_data.json
+
