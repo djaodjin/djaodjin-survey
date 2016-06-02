@@ -113,10 +113,6 @@ EMAIL_HOST_PASSWORD = ""
 # Continuous build settings
 # -------------------------
 
-FIXTURE_DIRS = (
-    BASE_DIR + '/testsite/fixtures',
-)
-
 # Application definition
 
 INSTALLED_APPS = (
