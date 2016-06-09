@@ -30,11 +30,14 @@ from django.http import HttpResponse
 import django.db.models.manager
 import django.db.models.query
 import django.contrib.auth.models
+from django.apps import apps as django_apps
 
 from ..compat import csrf
 from ..forms import QuestionForm
 from ..models import Question, SurveyModel,Response, Answer
 from ..mixins import QuestionMixin, SurveyModelMixin
+from ..settings import AUTH_USER_MODEL, ACCOUNT_MODEL
+
 
 import json
 import datetime
@@ -114,4 +117,28 @@ class MatrixApi(View):
     def get(self, request):
         responses = Response.objects.filter(survey__id=2).all()
         return HttpResponse(pretty_json(responses,default=encode_json), content_type='application/json')
+
+
+class CategorizeView(TemplateView):
+    template_name = "survey/categorize.html"
+
+
+def get_account_model():
+    """
+    Returns the ``Account`` model that is active in this project.
+    """
+    try:
+        return django_apps.get_model(ACCOUNT_MODEL)
+    except ValueError:
+        raise ImproperlyConfigured(
+            "ACCOUNT_MODEL must be of the form 'app_label.model_name'")
+    except LookupError:
+        raise ImproperlyConfigured("ACCOUNT_MODEL refers to model '%s'"\
+" that has not been installed" % ACCOUNT_MODEL)
+
+
+class CategorizeApi(View):
+    def get(self, request):
+        accounts = get_account_model().objects.all()
+        return HttpResponse(pretty_json(accounts,default=encode_json), content_type='application/json')    
 
