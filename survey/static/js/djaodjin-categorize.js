@@ -124,24 +124,6 @@ if (!Array.prototype.filter) {
             }
         }
     }
-    
-
-    function predicateFromString(predicateExpression){
-        var predicate;
-        if ( predicateExpression != '' ){
-            var fnStr = '(function(x){ console.log(x + " " + (' + predicateExpression + '));return (' + predicateExpression + ');})';
-            try{
-                predicate = eval(fnStr);
-            }catch(e){
-                console.log(e);
-                predicate = function(){ return true };
-            }
-        }else{
-            predicate = function(){ return true };
-        }
-
-        return predicate
-    }
 
     function Djcategorize(el, options){
         this.element = $(el);
@@ -271,7 +253,6 @@ if (!Array.prototype.filter) {
                     var $operators = $elem.find('.operator');
                     for ( var j = 0; j < operators.length; j ++){
                         var operator = operators[j];
-                        console.log(operator)
                         var $option = $('<option/>');
                         $option.text(operator.name);
                         $operators.append($option);                        
@@ -302,8 +283,6 @@ if (!Array.prototype.filter) {
                 if ( filterType == 'removematching'){
 
                     var toRemove = data.array().filter(predicate);
-                    console.log('to remove');
-                    console.log(toRemove);
                     for ( var j = 0; j < toRemove.length; j ++){
                         data.remove(toRemove[j]);
                     }
@@ -317,7 +296,7 @@ if (!Array.prototype.filter) {
                 }else if ( filterType == 'removeall'){
                     data = new DjSet(self.options.data_key);
                 }else{
-                    console.log('unknown filter type ' + filterType );
+                    // console.log('unknown filter type ' + filterType );
                 }
 
             }
