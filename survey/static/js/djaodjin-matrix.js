@@ -35,8 +35,6 @@ jQuery(document).ready(function($) {
             }];
 
             updateChart(chartData);
-            console.log('chartData');
-            console.log(chartData)
         }
     });
 });
