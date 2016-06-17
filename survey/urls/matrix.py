@@ -24,7 +24,12 @@
 
 from django.conf.urls import patterns, url
 
-from survey.views.matrix import MatrixView,MatrixApi,PortfolioView, PortfolioApi, QuestionCategoryApi,QuestionCategoryView
+from survey.views.matrix import (MatrixView,
+                                 MatrixApi,
+                                 PortfolioView,
+                                 PortfolioApi,
+                                 QuestionCategoryApi,
+                                 QuestionCategoryView)
 
 
 urlpatterns = patterns('',

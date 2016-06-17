@@ -22,8 +22,10 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import json
+import datetime
+
 from django.core.urlresolvers import reverse
-from django.shortcuts import get_object_or_404
 from django.views.generic import (View, TemplateView)
 
 from django.http import HttpResponse
@@ -33,14 +35,16 @@ import django.contrib.auth.models
 from django.apps import apps as django_apps
 
 from ..compat import csrf
-from ..forms import QuestionForm
-from ..models import Question, SurveyModel,Response, Answer, Portfolio, QuestionCategory, PortfolioPredicate, QuestionCategoryPredicate
+from ..models import (Question,
+                      Response,
+                      Answer,
+                      Portfolio,
+                      QuestionCategory,
+                      PortfolioPredicate,
+                      QuestionCategoryPredicate)
 from ..mixins import QuestionMixin, SurveyModelMixin
-from ..settings import AUTH_USER_MODEL, ACCOUNT_MODEL
+from ..settings import ACCOUNT_MODEL
 from ..compat import csrf
-
-import json
-import datetime
 
 class MatrixView(TemplateView):
     template_name = "survey/matrix.html"
@@ -154,14 +158,15 @@ def encode_json(obj):
     else:
         return obj
 
-def pretty_json(obj,*args, **kw):
-    return json.dumps(obj, sort_keys=True,indent=4, separators=(',', ': '), *args, **kw)
+def pretty_json(obj, *args, **kw):
+    return json.dumps(obj, sort_keys=True, indent=4, separators=(',', ': '), *args, **kw)
 
 class MatrixApi(View):
     def get(self, request):
         responses = Response.objects.all()
 
-        return HttpResponse(pretty_json(responses,default=encode_json), content_type='application/json')
+        return HttpResponse(pretty_json(responses, default=encode_json),
+                            content_type='application/json')
 
 
 class PortfolioView(TemplateView):
@@ -220,7 +225,8 @@ class CategoryApi(View):
             'objects': objects,
         }
 
-        return HttpResponse(pretty_json(data,default=encode_json), content_type='application/json')
+        return HttpResponse(pretty_json(data, default=encode_json),
+                            content_type='application/json')
 
 
     def post(self, request):
@@ -239,7 +245,7 @@ class CategoryApi(View):
 
         # always update predicates
         c.predicates.all().delete()
-        for i,predicateData in enumerate(category['predicates']):
+        for i, predicateData in enumerate(category['predicates']):
             predicate = self.predicateModel(operator=predicateData['operator'],
                                             operand=predicateData['operand'],
                                             property=predicateData['property'],
@@ -249,7 +255,7 @@ class CategoryApi(View):
             predicate.save()
 
 
-        return HttpResponse(pretty_json(c,default=encode_json), content_type='application/json')
+        return HttpResponse(pretty_json(c, default=encode_json), content_type='application/json')
 
 class PortfolioApi(CategoryApi):
     categoryModel = Portfolio
