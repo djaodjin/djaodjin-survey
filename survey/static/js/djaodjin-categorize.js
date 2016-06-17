@@ -139,26 +139,6 @@ if (!Array.prototype.filter) {
             var self = this;
             return self.categories[self.selectedCategoryIndex];
         },
-        getPredicates: function(){
-            var self = this;
-            var predicates = [];
-
-            var $predicateElems = self.predicateContainer.children('.predicate');
-            for ( var i = 0; i < self.selectedCategory().predicates.length; i ++){
-                var operator_name = $elem.find('.operator').val();
-
-                var operand =  $elem.find('.operand').val();
-                var property = $elem.find('.property').val();
-
-                var filterType = $elem.find('.filterType').val()
-                predicates.push([operator_name, operand, property, filterType]);
-            }
-            return predicates;
-
-        },
-        setPredicates: function(predicates){
-
-        },
         save: function(){
             var self = this;
 

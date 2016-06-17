@@ -6,7 +6,7 @@ jQuery(document).ready(function($) {
     var accounts = [];
     var questions = [];
     var questioncategories = [];
-    // var responses = [];
+
     function updateOptions(){
         var $questioncategories = $('#questioncategory');
         $questioncategories.empty();
@@ -57,7 +57,6 @@ jQuery(document).ready(function($) {
         method: "GET",
         url: "/matrix/api/survey",
         datatype: "json",
-        // contentType: "application/json; charset=utf-8",
         success: function(_responses) {
             responses = _responses;
 
