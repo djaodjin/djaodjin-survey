@@ -34,10 +34,10 @@ from django.apps import apps as django_apps
 
 from ..compat import csrf
 from ..forms import QuestionForm
-from ..models import Question, SurveyModel,Response, Answer
+from ..models import Question, SurveyModel,Response, Answer, Portfolio, QuestionCategory, PortfolioPredicate, QuestionCategoryPredicate
 from ..mixins import QuestionMixin, SurveyModelMixin
 from ..settings import AUTH_USER_MODEL, ACCOUNT_MODEL
-
+from ..compat import csrf
 
 import json
 import datetime
@@ -46,29 +46,34 @@ class MatrixView(TemplateView):
     template_name = "survey/matrix.html"
 
     def get_context_data(self):
-        return {}
+        return {
+            'portfolio_api' :reverse('portfolio_api'),
+            'questioncategory_api': reverse('questioncategory_api'),
+        }
 
 def select_keys(obj, ks):
     d = {}
     for k in ks:
         d[k] = getattr(obj, k)
-    print d
     return d
 
 
 def encode_json(obj):
-    print obj,type(obj)
 
     if isinstance(obj, django.contrib.auth.models.User):
-        return select_keys(obj, [
+        d = select_keys(obj, [
             'first_name',
             'last_name',
             'email',
-            'username',            
+            'username',
         ])
+        d.update({
+            'id': obj.email
+        })
+        return d
     if isinstance(obj, Response):
         return select_keys(obj, [
-            'survey', 
+            'survey',
             'answers',
             'user',
         ])
@@ -92,7 +97,7 @@ def encode_json(obj):
             'questions',
         ])
     elif isinstance(obj, Question):
-        return select_keys(obj, [
+        d = select_keys(obj, [
             'text',
             'question_type',
             'has_other',
@@ -101,6 +106,45 @@ def encode_json(obj):
             'correct_answer',
             'required',
         ])
+        d.update({
+            'id': ':'.join([obj.survey.slug, str(obj.order)])
+        })
+        return d
+
+
+    elif isinstance(obj, Portfolio):
+        d = select_keys(obj, [
+            'title',
+            'slug',
+        ])
+        d.update({
+            'predicates': obj.predicates.order_by('order')
+        })
+        return d
+    elif isinstance(obj, QuestionCategory):
+        d = select_keys(obj, [
+            'title',
+            'slug',
+        ])
+        d.update({
+            'predicates': obj.predicates.order_by('order')
+        })
+        return d
+    elif isinstance(obj, PortfolioPredicate):
+        return select_keys(obj, [
+            'operator',
+            'operand',
+            'property',
+            'filterType',
+        ])
+    elif isinstance(obj, QuestionCategoryPredicate):
+        return select_keys(obj, [
+            'operator',
+            'operand',
+            'property',
+            'filterType',
+        ])
+
     elif isinstance(obj, datetime.datetime):
         return obj.isoformat()
     elif isinstance(obj, django.db.models.manager.Manager):
@@ -115,12 +159,35 @@ def pretty_json(obj,*args, **kw):
 
 class MatrixApi(View):
     def get(self, request):
-        responses = Response.objects.filter(survey__id=2).all()
+        responses = Response.objects.all()
+
         return HttpResponse(pretty_json(responses,default=encode_json), content_type='application/json')
 
 
-class CategorizeView(TemplateView):
+class PortfolioView(TemplateView):
     template_name = "survey/categorize.html"
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(PortfolioView, self).get_context_data(
+            *args, **kwargs)
+        context.update(csrf(self.request))
+        context.update({
+            'category_api': reverse('portfolio_api'),
+        })
+        return context
+
+class QuestionCategoryView(TemplateView):
+    template_name = "survey/categorize.html"
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(QuestionCategoryView, self).get_context_data(
+            *args, **kwargs)
+        context.update(csrf(self.request))
+        context.update({
+            'category_api': reverse('questioncategory_api'),
+        })
+        return context
+
 
 
 def get_account_model():
@@ -136,9 +203,62 @@ def get_account_model():
         raise ImproperlyConfigured("ACCOUNT_MODEL refers to model '%s'"\
 " that has not been installed" % ACCOUNT_MODEL)
 
+class CategoryApi(View):
+    # override in subclasses
+    categoryModel = None
+    predicateModel = None
+    objectModel = None
 
-class CategorizeApi(View):
     def get(self, request):
-        accounts = get_account_model().objects.all()
-        return HttpResponse(pretty_json(accounts,default=encode_json), content_type='application/json')    
+
+        categories = list(self.categoryModel.objects.all())
+        # accounts = get_account_model().objects.all()
+        objects = self.objectModel.objects.all()
+
+        data = {
+            'categories': categories,
+            'objects': objects,
+        }
+
+        return HttpResponse(pretty_json(data,default=encode_json), content_type='application/json')
+
+
+    def post(self, request):
+        category = json.loads(request.body)
+
+        if category['slug'] is None:
+            # create
+            c = self.categoryModel(title=category['title'])
+            c.save()
+        else:
+            # update
+            c = self.categoryModel.objects.get(slug=category['slug'])
+            c.title = category['title']
+            c.save()
+
+
+        # always update predicates
+        c.predicates.all().delete()
+        for i,predicateData in enumerate(category['predicates']):
+            predicate = self.predicateModel(operator=predicateData['operator'],
+                                            operand=predicateData['operand'],
+                                            property=predicateData['property'],
+                                            filterType=predicateData['filterType'],
+                                            order=i,
+                                            category=c)
+            predicate.save()
+
+
+        return HttpResponse(pretty_json(c,default=encode_json), content_type='application/json')
+
+class PortfolioApi(CategoryApi):
+    categoryModel = Portfolio
+    predicateModel = PortfolioPredicate
+    objectModel = get_account_model()
+
+class QuestionCategoryApi(CategoryApi):
+    categoryModel = QuestionCategory
+    predicateModel = QuestionCategoryPredicate
+    objectModel = Question
+
 

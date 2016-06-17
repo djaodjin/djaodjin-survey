@@ -24,16 +24,20 @@
 
 from django.conf.urls import patterns, url
 
-from survey.views.matrix import MatrixView,MatrixApi,CategorizeView, CategorizeApi
+from survey.views.matrix import MatrixView,MatrixApi,PortfolioView, PortfolioApi, QuestionCategoryApi,QuestionCategoryView
 
 
 urlpatterns = patterns('',
    url(r'^api/survey',
        MatrixApi.as_view(), name='matrix_api'),
-   url(r'^categorize',
-       CategorizeView.as_view(), name='categorize_View'),
-   url(r'^api/categorize',
-       CategorizeApi.as_view(), name='categorize_api'),
+   url(r'^portfolios',
+       PortfolioView.as_view(), name='portfolio_view'),
+   url(r'^questions',
+       QuestionCategoryView.as_view(), name='portfolio_view'),
+   url(r'^api/portfolio',
+       PortfolioApi.as_view(), name='portfolio_api'),
+   url(r'^api/question',
+       QuestionCategoryApi.as_view(), name='questioncategory_api'),
    url(r'^',
        MatrixView.as_view(), name='matrix_View'),
 
