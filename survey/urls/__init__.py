@@ -31,5 +31,6 @@ from django.conf.urls import patterns, include, url
 urlpatterns = patterns(
     'survey.views',
     url(r'^manage/', include('survey.urls.manager')),
+    url(r'^matrix/', include('survey.urls.matrix')),
     url(r'^', include('survey.urls.interviewee')),
 )

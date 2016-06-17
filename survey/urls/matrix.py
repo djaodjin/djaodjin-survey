@@ -22,25 +22,29 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
--include $(buildTop)/share/dws/prefix.mk
+from django.conf.urls import patterns, url
 
-srcDir        ?= .
-installTop    ?= $(VIRTUAL_ENV)
-binDir        ?= $(installTop)/bin
+from survey.views.matrix import (MatrixView,
+                                 MatrixApi,
+                                 PortfolioView,
+                                 PortfolioApi,
+                                 QuestionCategoryApi,
+                                 QuestionCategoryView)
 
-PYTHON        := $(binDir)/python
 
-RUNSYNCDB     = $(if $(findstring --run-syncdb,$(shell cd $(srcDir) && $(PYTHON) manage.py migrate --help 2>/dev/null)),--run-syncdb,)
+urlpatterns = patterns('',
+   url(r'^api/survey',
+       MatrixApi.as_view(), name='matrix_api'),
+   url(r'^portfolios',
+       PortfolioView.as_view(), name='portfolio_view'),
+   url(r'^questions',
+       QuestionCategoryView.as_view(), name='portfolio_view'),
+   url(r'^api/portfolio',
+       PortfolioApi.as_view(), name='portfolio_api'),
+   url(r'^api/question',
+       QuestionCategoryApi.as_view(), name='questioncategory_api'),
+   url(r'^',
+       MatrixView.as_view(), name='matrix_View'),
 
-install::
-	cd $(srcDir) && $(PYTHON) ./setup.py --quiet \
-		build -b $(CURDIR)/build install
 
-# XXX Enter a superuser when asked otherwise the fixtures won't load
-# correctly.
-initdb:
-	-rm -f db.sqlite3
-	cd $(srcDir) && $(PYTHON) ./manage.py migrate $(RUNSYNCDB) --noinput
-	cd $(srcDir) && $(PYTHON) ./manage.py loaddata \
-						testsite/fixtures/initial_data.json
-
+)

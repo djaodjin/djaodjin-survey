@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+
+{% block content %}
+
+<div id="categorize">
+
+
+
+  
+</div>
+{% endblock %}
+
+{% block bodyscripts %}
+
+
+
+
+<link rel="stylesheet" type="text/css" href="{% static 'vendor/css/bootstrap.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'vendor/css/nv.d3.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'css/matrix-chart.css' %}" />
+<script type="text/javascript" src="{% static 'vendor/js/jquery.js'%}"></script>
+<script type="text/javascript" src="{% static 'vendor/js/bootstrap.js' %}"></script>
+<script type="text/javascript" charset="utf-8"
+        src="{% static 'vendor/js/d3.js' %}"></script>
+<script type="text/javascript" src="{% static 'vendor/js/nv.d3.js' %}"></script>
+<script type="text/javascript"
+        src="{% static 'js/djaodjin-set.js' %}"></script>
+
+<script type="text/javascript"
+        src="{% static 'js/djaodjin-categorize.js' %}"></script>
+
+<script type="text/javascript">
+
+
+jQuery(document).ready(function($) {
+  var csrf_token = "{{csrf_token}}";
+  function csrfSafeMethod(method) {
+      // these HTTP methods do not require CSRF protection
+      return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+  }
+  $.ajaxSetup({
+      beforeSend: function(xhr, settings) {
+          if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+              xhr.setRequestHeader("X-CSRFToken", csrf_token);
+          }
+      }
+  });
+
+
+  $('#categorize').djcategorize({
+     api: "{{category_api}}"
+  });
+
+});
+
+
+
+
+</script>
+
+{% endblock %}
