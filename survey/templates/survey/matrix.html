@@ -5,7 +5,11 @@
 
 <div>
 
+  <select id="portfolio" multiple="multiple">
+  </select>
+  <select id="questioncategory">
 
+  </select>
   <div id="chart">
     <svg></svg>
 
@@ -15,6 +19,12 @@
 {% endblock %}
 
 {% block bodyscripts %}
+
+<script type="text/javascript">
+  var portfolio_api = '{{portfolio_api}}';
+  var questioncategory_api = '{{questioncategory_api}}';
+</script>
+
 
 <link rel="stylesheet" type="text/css" href="{% static 'vendor/css/nv.d3.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'css/matrix-chart.css' %}" />
@@ -26,6 +36,10 @@
         src="{% static 'js/matrix-chart.js' %}"></script>
 
 <script type="text/javascript"
+        src="{% static 'js/djaodjin-set.js' %}"></script>
+
+<script type="text/javascript"
         src="{% static 'js/djaodjin-matrix.js' %}"></script>
+
 
 {% endblock %}

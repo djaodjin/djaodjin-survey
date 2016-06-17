@@ -36,94 +36,11 @@ if (!Array.prototype.filter) {
 (function ($) {
     "use strict";
 
-    var operators = [
-        {'name': 'equals'     , 'fn': function (a , b) { return a == b }}         ,
-        {'name': 'startsWith' , 'fn': function (a , b){ return a.startsWith(b) }} ,
-        {'name': 'endsWith'   , 'fn': function (a , b){ return a.endsWith(b) }}   ,
-        {'name': 'contains'   , 'fn': function (a , b) { return a.indexOf(b) != -1 }}
-    ];
-
-
-    function DjSet(k, l){
-        this.key = k;
-        this.items = {};
-        if ( l ){
-            for ( var i = 0; i < l.length; i ++){
-                this.add(l[i]);
-            }
-        }
-    }
-
-    DjSet.prototype.add = function(obj){
-        this.items[obj[this.key]] = obj;
-    }
-
-    DjSet.prototype.remove = function(obj){
-        delete this.items[obj[this.key]];
-    }
-
-    DjSet.prototype.array = function(){
-        var l = [];
-        for ( var k in this.items ){
-            l.push(this.items[k]);
-        }
-        return l;
-    }    
-
-    DjSet.prototype.union = function(other){
-        if ( $.isArray(other) ){
-            for ( var i = 0 ; i < other.length; i ++){
-                this.add(other[i]);
-            }
-        }else{
-            // assume DjSet
-            for ( var k in other){
-                this.add(other[k]);
-            }
-        }
-    }
-
-    DjSet.prototype.clone = function(){
-        var clone = new DjSet(this.key);
-        clone.items = jQuery.extend({}, this.items);
-        return clone;
-    };
-
-    DjSet.prototype.contains = function(obj){
-        return this.items[obj[this.key]];
-    }
-
-    DjSet.prototype.difference = function(other){
-        var otherSet;
-        if ( $.isArray(other) ){
-            otherSet = new DjSet(other);
-        }else{
-            // assume DjSet
-            otherSet = other;
-
-        }
-        for ( var k in this.items){
-            if ( otherSet.contains(this.items[k]) ){
-                delete this.items[k];
-            }
-        }
-    }
-
-    DjSet.prototype.intersect = function(other){
-        var otherSet;
-        if ( $.isArray(other) ){
-            otherSet = new DjSet(other);
-        }else{
-            // assume DjSet
-            otherSet = other;
-
-        }
-        for ( var k in this.items){
-            if ( !otherSet.contains(this.items[k]) ){
-                delete this.items[k];
-            }
-        }
-    }
+    var DjSet = DjaoDjinSet.DjSet;
+    var operators = DjaoDjinSet.operators;
+    var Category = DjaoDjinSet.Category;
+    var Predicate = DjaoDjinSet.Predicate;
+    var fromPredicate = DjaoDjinSet.fromPredicate;
 
     function Djcategorize(el, options){
         this.element = $(el);
@@ -135,51 +52,156 @@ if (!Array.prototype.filter) {
         init: function(){
             var self = this;
 
-            self.steps = [];
+            self.data = [];
 
 
-            self.addStepButton = $('<button/>');
-            self.addStepButton.text('Add Step');
-            self.element.append(self.addStepButton);
-            self.addStepButton.on('click', function(){
-                self.steps.push('');
+            self.categories = [new Category('title', null, [])];
+            self.selectedCategoryIndex = 0;
+
+            self.$addCategoryButton = $('<button/>');
+            self.$addCategoryButton.text('New');
+            self.$addCategoryButton.on('click', function(){
+                self.categories.push(new Category('title', null, []));
+                self.selectedCategoryIndex = self.categories.length - 1;
+                self.update();
+            })
+            self.element.append(self.$addCategoryButton);
+
+
+            self.$categories = $('<select></select>');
+            self.$categories.on('input', function(e){
+                self.selectedCategoryIndex=parseInt($(e.target).val(),10);
+                self.update();
+            });
+            self.element.append(self.$categories);
+
+            self.element.append('<br/>');
+            self.$categoryTitle = $('<input type="text" />');
+            self.$categoryTitle.on('input', function(e){
+                self.selectedCategory().title = $(e.target).val();
+                self.update();
+                return false;
+            });
+            self.element.append(self.$categoryTitle);
+
+            self.$saveButton = $('<button>Save</button>');
+            self.$saveButton.on('click', function(){
+                self.save();
+            });
+            self.element.append(self.$saveButton);
+            self.$saveButton.wrap('<div/>')
+
+            self.addPredicateButton = $('<button/>');
+            self.addPredicateButton.text('Add Predicate');
+            self.element.append(self.addPredicateButton);
+            self.addPredicateButton.on('click', function(){
+                self.selectedCategory().predicates.push(new Predicate('equals', '', self.dataProperties[0] || '', 'removematching'));
                 self.update();
             });
 
-            self.stepContainer = $('<div/>');
-            self.element.append(self.stepContainer);
+            self.predicateContainer = $('<div/>');
+            self.element.append(self.predicateContainer);
 
             self.dataProperties = [];
+            self.updateDataProperties();
+
+            self.$tableContainer = $('<div/>');
+            self.element.append(self.$tableContainer);
+
+            self.resultData = new DjSet(self.data);
+            self.updateTable();
+
+
+
+
+            $.ajax({
+                method: "GET",
+                url: self.options.api,
+                datatype: "json",
+                contentType: "application/json; charset=utf-8",
+                success: function(response) {
+                    self.data = response['objects'];
+
+                    self.resultData = new DjSet(self.data);
+                    if (response.categories.length > 0){
+                        self.categories = response['categories'];
+                    }
+
+                    self.updateDataProperties();
+                    self.update();
+                }
+            });
+
+
+
+        },
+        selectedCategory: function (){
+            var self = this;
+            return self.categories[self.selectedCategoryIndex];
+        },
+        getPredicates: function(){
+            var self = this;
+            var predicates = [];
+
+            var $predicateElems = self.predicateContainer.children('.predicate');
+            for ( var i = 0; i < self.selectedCategory().predicates.length; i ++){
+                var operator_name = $elem.find('.operator').val();
+
+                var operand =  $elem.find('.operand').val();
+                var property = $elem.find('.property').val();
+
+                var filterType = $elem.find('.filterType').val()
+                predicates.push([operator_name, operand, property, filterType]);
+            }
+            return predicates;
+
+        },
+        setPredicates: function(predicates){
+
+        },
+        save: function(){
+            var self = this;
+
+            var category = self.selectedCategory();
+            $.ajax({
+                method: "POST",
+                url: self.options.api,
+                data: JSON.stringify(category),
+                datatype: "json",
+                contentType: "application/json; charset=utf-8",
+                success: function(category,response){
+                    if ( !category.slug ){
+                        category.slug = response.slug;
+                    }
+                }.bind(null, category)
+            });
+
+        },
+        updateDataProperties: function(){
+            var self = this;
+            self.dataProperties = [];
             var propSet = {};
-            for ( var i = 0 ; i < self.options.data.length; i ++){
-                var datum = self.options.data[i];
+            for ( var i = 0 ; i < self.data.length; i ++){
+                var datum = self.data[i];
                 for (var k in datum){
-                    if ( !propSet[k] ){
+                    if ( !propSet[k] && k != DjSet.CATEGORIZATION_ID ){
                         self.dataProperties.push(k);
                         propSet[k] = true;
                     }
                 }
             }
-
-            self.$tableContainer = $('<div/>');
-            self.element.append(self.$tableContainer);
-
-            self.resultData = new DjSet(self.options.data_key, self.options.data);
-            self.updateTable();
-
-        },
-
-        stringifyData: function(data){
-            var self = this;
-            var ss = [];
-            for ( var i = 0; i < data.length; i ++){
-                ss.push(data[i][self.options.name_key]);
-            }
-            return ss.join(', ');
         },
         updateTable: function(){
             var self = this;
-            // expects self.resultData to be set
+
+            var originalData = new DjSet(self.data);
+            var resultData = originalData.clone();
+
+            for ( var i = 0; i < self.selectedCategory().predicates.length; i ++){
+                resultData = fromPredicate(originalData, resultData, self.selectedCategory().predicates[i]);
+
+            }
+
             var $table = $('<table/>');
             $table.addClass('table');
             $table.addClass('table-striped');
@@ -205,36 +227,71 @@ if (!Array.prototype.filter) {
                 return $tr;
             }
 
-            var dataArray = self.options.data;
-            var data = new DjSet(self.options.data_key, self.options.data);
+            var dataArray = self.data;
             for ( var j = 0 ; j < dataArray.length; j ++){
                 var datum = dataArray[j];
                 var $tr = addRow(datum);
-                if ( data.contains(datum) && !self.resultData.contains(datum) ){
+                if ( originalData.contains(datum) && !resultData.contains(datum) ){
                     $tr.addClass('danger');
                 }
             }
-            
+
             self.$tableContainer.html($table);
-            
+
         },
         update: function(){
             var self = this;
-            
-            var $stepElems = self.stepContainer.children('.step');
-            var data = new DjSet(self.options.data_key, self.options.data);
-            for ( var i = 0; i < self.steps.length; i ++){
+
+            var $categoryElems = self.$categories.children('option');
+            for (var i = 0; i < self.categories.length; i ++){
+                var category = self.categories[i];
                 var $elem;
-                if ( i >= $stepElems.length ){
-                    $elem = $('<div class="step"><select class="addorsubtract"><option value="removematching">Remove matching</option><option value="reinclude">Include matching full set</option><option value="keepmatching">Keep Matching</option><option value="includeall">Include all</option><option value="removeall">Remove all</option></select><select class="property" ></select><select class="operator" ></select><input class="operand" type="text"/><button>Remove</button><br/>');
-                    self.stepContainer.append($elem);
+                if ( i >= $categoryElems.length ){
+                    $elem = $('<option/>');
+                    $elem.attr('value', i);
+
+                    self.$categories.append($elem);
+                }else{
+                    $elem = $categoryElems.eq(i);
+                }
+
+                $elem.text(category.title);
+            }
+            for ( var i = self.categories.length; i < $categoryElems.length ; i ++){
+                $categoryElems.get(i).remove();
+            }
+
+            self.$categories.val(self.selectedCategoryIndex);
+            self.$categoryTitle.val(self.selectedCategory().title);
+
+            var $predicateElems = self.predicateContainer.children('.predicate');
+            var data = new DjSet(self.data);
+            for ( var i = 0; i < self.selectedCategory().predicates.length; i ++){
+                var predicate = self.selectedCategory().predicates[i];
+                var $elem;
+                if ( i >= $predicateElems.length ){
+                    $elem = $('<div class="predicate"><select class="filterType"><option value="removematching">Remove matching</option><option value="reinclude">Reinclude matching from full set</option><option value="keepmatching">Keep Matching</option><option value="includeall">Include all</option><option value="removeall">Remove all</option></select><select class="property" ></select><select class="operator" ></select><input class="operand" type="text"/><button>Remove</button><br/>');
+                    self.predicateContainer.append($elem);
 
                     $elem.find('button').on('click', function(i,$elem){
 
-                        self.steps.splice(i,1);
+                        self.selectedCategory().predicates.splice(i,1);
                         $elem.remove();
-                        
+                        self.update();
+
                     }.bind(null,i, $elem));
+
+                    var onUpdate = function(predicate, prop){
+                        return function(e){
+                            predicate[prop] = $(e.target).val();
+                            return false;
+                        };
+                    };
+
+                    $elem.find('.operator').on('input', onUpdate(predicate,'operator'));
+                    $elem.find('.operand').on('input', onUpdate(predicate,'operand'));
+                    $elem.find('.property').on('input', onUpdate(predicate,'property'));
+                    $elem.find('.filterType').on('input', onUpdate(predicate,'filterType'));
 
                     $elem.find('input').on('input', function(){
                         self.update();
@@ -255,58 +312,30 @@ if (!Array.prototype.filter) {
                         var operator = operators[j];
                         var $option = $('<option/>');
                         $option.text(operator.name);
-                        $operators.append($option);                        
+                        $operators.append($option);
                     }
 
-                         
+
 
                 }else{
-                    $elem = $stepElems.eq(i);
-                }
-                
-                var operator_name = $elem.find('.operator').val();
-                var operator_fn;
-                for ( var j = 0; j < operators.length; j ++){
-                    if ( operator_name == operators[j].name ){
-                        operator_fn = operators[j].fn;
-                    }
+                    $elem = $predicateElems.eq(i);
                 }
 
-                var operand =  $elem.find('.operand').val();
-                var property = $elem.find('.property').val();
-                var predicate = function(x){
-                    return operator_fn(x[property], operand);
-                }
+                $elem.find('.operator').val(predicate.operator);
+                $elem.find('.operand').val(predicate.operand);
+                $elem.find('.property').val(predicate.property);
+                $elem.find('.filterType').val(predicate.filterType);
 
-                var previousData = data.clone();
-                var filterType = $elem.find('.addorsubtract').val()
-                if ( filterType == 'removematching'){
 
-                    var toRemove = data.array().filter(predicate);
-                    for ( var j = 0; j < toRemove.length; j ++){
-                        data.remove(toRemove[j]);
-                    }
-                }else if (filterType == 'reinclude'){
-                    data.union(self.options.data.filter(predicate));
 
-                }else if ( filterType == 'keepmatching'){
-                    data= new DjSet(data.key, data.array().filter(predicate));
-                }else if ( filterType == 'includeall'){
-                    data = new DjSet(self.options.data_key, self.options.data);
-                }else if ( filterType == 'removeall'){
-                    data = new DjSet(self.options.data_key);
-                }else{
-                    // console.log('unknown filter type ' + filterType );
-                }
 
             }
 
-            for ( var i = self.steps.length; i < $stepElems.length ; i ++){
-                $stepElems.get(i).remove();
+            for ( var i = self.selectedCategory().predicates.length; i < $predicateElems.length ; i ++){
+                $predicateElems.get(i).remove();
             }
-            self.resultData = data;
             self.updateTable();
-            
+
         }
 
     }

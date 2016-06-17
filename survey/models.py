@@ -34,7 +34,35 @@ from durationfield.db.models.fields.duration import DurationField
 from .settings import AUTH_USER_MODEL, ACCOUNT_MODEL
 
 
-class SurveyModel(models.Model):
+class SlugTitleMixin(object):
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        #pylint: disable=catching-non-exception
+        """
+        Keep slug in sync with survey title.
+        """
+        max_length = self._meta.get_field('slug').max_length
+        slug = slugify(self.title)
+        self.slug = slug
+        if len(self.slug) > max_length:
+            self.slug = slug[:max_length]
+        num = 1
+        while True:
+            with transaction.atomic():
+                try:
+                    return models.Model.save(self,
+                        force_insert=force_insert, force_update=force_update,
+                        using=using, update_fields=update_fields)
+                except IntegrityError:
+                    prefix = '-%d' % num
+                    self.slug = '%s%s' % (slug, prefix)
+                    if len(self.slug) > max_length:
+                        self.slug = '%s-%d' % (
+                            slug[:(max_length-len(prefix))], num)
+                    num = num + 1
+
+
+class SurveyModel(SlugTitleMixin, models.Model):
     #pylint: disable=super-on-old-class
 
     slug = models.SlugField(unique=True)
@@ -70,32 +98,6 @@ class SurveyModel(models.Model):
         if self.end_date:
             end_date = self.end_date
         return (end_date - start_date).days
-
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        #pylint: disable=catching-non-exception
-        """
-        Keep slug in sync with survey title.
-        """
-        max_length = self._meta.get_field('slug').max_length
-        slug = slugify(self.title)
-        self.slug = slug
-        if len(self.slug) > max_length:
-            self.slug = slug[:max_length]
-        num = 1
-        while True:
-            with transaction.atomic():
-                try:
-                    return super(SurveyModel, self).save(
-                        force_insert=force_insert, force_update=force_update,
-                        using=using, update_fields=update_fields)
-                except IntegrityError:
-                    prefix = '-%d' % num
-                    self.slug = '%s%s' % (slug, prefix)
-                    if len(self.slug) > max_length:
-                        self.slug = '%s-%d' % (
-                            slug[:(max_length-len(prefix))], num)
-                    num = num + 1
 
 
 class Question(models.Model):
@@ -246,3 +248,43 @@ class Answer(models.Model):
         text = str(self.body)
         return text.replace('[', '').replace(']', '').replace(
             'u\'', '').replace('\'', '').split(', ')
+
+
+class Portfolio(SlugTitleMixin, models.Model):
+    """
+    A model type and list of predicates to create a subset of the
+    of the rows of a model type
+    """
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(unique=True)
+
+class QuestionCategory(SlugTitleMixin, models.Model ):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(unique=True)
+
+
+class PortfolioPredicate(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    order = models.IntegerField()
+    category = models.ForeignKey(Portfolio,related_name='predicates')
+    operator=models.CharField(max_length=255)
+    operand=models.CharField(max_length=255)
+    property=models.CharField(max_length=255)
+    filterType=models.CharField(max_length=255)
+
+class QuestionCategoryPredicate(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    order = models.IntegerField()
+    category = models.ForeignKey(QuestionCategory,related_name='predicates')
+    operator=models.CharField(max_length=255)
+    operand=models.CharField(max_length=255)
+    property=models.CharField(max_length=255)
+    filterType=models.CharField(max_length=255)
+

@@ -99,9 +99,7 @@ nv.models.matrixChart = function() {
                 .append('g').attr('class', 'nv-zeroLine')
                 .append('line');
             
-            console.log(data)
-            console.log(data[0].aggregates)
-            var aggGroup = gEnter.selectAll('g.nv-aggLine').data(data[0].aggregates);
+            var aggGroup = g.selectAll('g.nv-aggLine').data(data[0].aggregates);
             var aggGroupEnter = aggGroup.enter().append('g').attr('class','nv-aggLine');
             aggGroupEnter.append('text');
             aggGroupEnter.append('line');
@@ -204,12 +202,11 @@ nv.models.matrixChart = function() {
                 .attr("y2", y(0))
             ;
             
-
             // Agg Line
             aggGroup.select("line")
                 .attr("x1",0)
                 .attr("x2",(rightAlignYAxis) ? -availableWidth : availableWidth)
-                .attr("y1", function(d){console.log('y1');console.log(y(d.value));return y(d.value)})
+                .attr("y1", function(d){return y(d.value)})
                 .attr("y2", function(d){return y(d.value)})
             ;
             aggGroup.select("text")

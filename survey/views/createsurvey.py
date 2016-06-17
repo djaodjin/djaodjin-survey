@@ -98,7 +98,7 @@ class SurveyPublishView(RedirectView):
     slug_url_kwarg = 'survey'
 
     def post(self, request, *args, **kwargs):
-        survey = get_object_or_404(SurveyModel, slug__exact=kwargs.get('slug'))
+        survey = get_object_or_404(SurveyModel, slug__exact=kwargs.get('survey'))
         if survey.published:
             survey.published = False
             survey.end_date = datetime.datetime.now()
