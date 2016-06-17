@@ -261,7 +261,10 @@ class Portfolio(SlugTitleMixin, models.Model):
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
 
-class QuestionCategory(SlugTitleMixin, models.Model ):
+class QuestionCategory(SlugTitleMixin, models.Model):
+    """
+    Model for a subset of the all the available questions.
+    """
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     title = models.CharField(max_length=255)
@@ -269,22 +272,30 @@ class QuestionCategory(SlugTitleMixin, models.Model ):
 
 
 class PortfolioPredicate(models.Model):
+    """
+    A predicate describing a step to narrow or enlarge
+    a set of accounts in a portfolio.
+    """
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     order = models.IntegerField()
-    category = models.ForeignKey(Portfolio,related_name='predicates')
-    operator=models.CharField(max_length=255)
-    operand=models.CharField(max_length=255)
-    property=models.CharField(max_length=255)
-    filterType=models.CharField(max_length=255)
+    category = models.ForeignKey(Portfolio, related_name='predicates')
+    operator = models.CharField(max_length=255)
+    operand = models.CharField(max_length=255)
+    property = models.CharField(max_length=255)
+    filterType = models.CharField(max_length=255)
 
 class QuestionCategoryPredicate(models.Model):
+    """
+    A predicate describing a step to narrow or elarge
+    a set of questions in a in question category.
+    """
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     order = models.IntegerField()
     category = models.ForeignKey(QuestionCategory,related_name='predicates')
-    operator=models.CharField(max_length=255)
-    operand=models.CharField(max_length=255)
-    property=models.CharField(max_length=255)
-    filterType=models.CharField(max_length=255)
+    operator = models.CharField(max_length=255)
+    operand = models.CharField(max_length=255)
+    property = models.CharField(max_length=255)
+    filterType = models.CharField(max_length=255)
 
