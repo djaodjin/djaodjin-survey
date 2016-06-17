@@ -61,6 +61,7 @@ jQuery(document).ready(function($) {
             responses = _responses;
 
             updateChart();
+            $('#status').remove();
         }
     });
 

@@ -39,6 +39,7 @@ from ..models import (Question,
                       Response,
                       Answer,
                       Portfolio,
+                      SurveyModel,
                       QuestionCategory,
                       PortfolioPredicate,
                       QuestionCategoryPredicate)
