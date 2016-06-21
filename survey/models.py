@@ -261,14 +261,22 @@ class Portfolio(SlugTitleMixin, models.Model):
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
 
+    def __unicode__(self):
+        return self.slug
+
+
 class QuestionCategory(SlugTitleMixin, models.Model):
     """
     Model for a subset of the all the available questions.
     """
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
+
+    def __unicode__(self):
+        return self.slug
 
 
 class PortfolioPredicate(models.Model):
@@ -285,6 +293,10 @@ class PortfolioPredicate(models.Model):
     property = models.CharField(max_length=255)
     filterType = models.CharField(max_length=255)
 
+    def __unicode__(self):
+        return '%s-%d' % (self.category.slug, self.order)
+
+
 class QuestionCategoryPredicate(models.Model):
     """
     A predicate describing a step to narrow or elarge
@@ -293,9 +305,11 @@ class QuestionCategoryPredicate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     order = models.IntegerField()
-    category = models.ForeignKey(QuestionCategory,related_name='predicates')
+    category = models.ForeignKey(QuestionCategory, related_name='predicates')
     operator = models.CharField(max_length=255)
     operand = models.CharField(max_length=255)
     property = models.CharField(max_length=255)
     filterType = models.CharField(max_length=255)
 
+    def __unicode__(self):
+        return '%s-%d' % (self.category.slug, self.order)

@@ -25,9 +25,9 @@
 import json
 import datetime
 
+from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import reverse
 from django.views.generic import (View, TemplateView)
-
 from django.http import HttpResponse
 import django.db.models.manager
 import django.db.models.query
@@ -43,9 +43,8 @@ from ..models import (Question,
                       QuestionCategory,
                       PortfolioPredicate,
                       QuestionCategoryPredicate)
-from ..mixins import QuestionMixin, SurveyModelMixin
 from ..settings import ACCOUNT_MODEL
-from ..compat import csrf
+
 
 class MatrixView(TemplateView):
     template_name = "survey/matrix.html"
@@ -56,34 +55,33 @@ class MatrixView(TemplateView):
             'questioncategory_api': reverse('questioncategory_api'),
         }
 
-def select_keys(obj, ks):
-    d = {}
-    for k in ks:
-        d[k] = getattr(obj, k)
-    return d
+def select_keys(obj, key_selectors):
+    result = {}
+    for key in key_selectors:
+        result[key] = getattr(obj, key)
+    return result
 
 
 def encode_json(obj):
-
+    data = None
     if isinstance(obj, django.contrib.auth.models.User):
-        d = select_keys(obj, [
+        data = select_keys(obj, [
             'first_name',
             'last_name',
             'email',
             'username',
         ])
-        d.update({
+        data.update({
             'id': obj.email
         })
-        return d
     if isinstance(obj, Response):
-        return select_keys(obj, [
+        data = select_keys(obj, [
             'survey',
             'answers',
             'user',
         ])
     elif isinstance(obj, Answer):
-        return select_keys(obj, [
+        data = select_keys(obj, [
             'created_at',
             'updated_at',
             'question',
@@ -91,7 +89,7 @@ def encode_json(obj):
             'body',
         ])
     elif isinstance(obj, SurveyModel):
-        return select_keys(obj, [
+        data = select_keys(obj, [
             'start_date',
             'end_date',
             'title',
@@ -102,7 +100,7 @@ def encode_json(obj):
             'questions',
         ])
     elif isinstance(obj, Question):
-        d = select_keys(obj, [
+        data = select_keys(obj, [
             'text',
             'question_type',
             'has_other',
@@ -111,39 +109,35 @@ def encode_json(obj):
             'correct_answer',
             'required',
         ])
-        d.update({
+        data.update({
             'id': ':'.join([obj.survey.slug, str(obj.order)])
         })
-        return d
-
 
     elif isinstance(obj, Portfolio):
-        d = select_keys(obj, [
+        data = select_keys(obj, [
             'title',
             'slug',
         ])
-        d.update({
+        data.update({
             'predicates': obj.predicates.order_by('order')
         })
-        return d
     elif isinstance(obj, QuestionCategory):
-        d = select_keys(obj, [
+        data = select_keys(obj, [
             'title',
             'slug',
         ])
-        d.update({
+        data.update({
             'predicates': obj.predicates.order_by('order')
         })
-        return d
     elif isinstance(obj, PortfolioPredicate):
-        return select_keys(obj, [
+        data = select_keys(obj, [
             'operator',
             'operand',
             'property',
             'filterType',
         ])
     elif isinstance(obj, QuestionCategoryPredicate):
-        return select_keys(obj, [
+        data = select_keys(obj, [
             'operator',
             'operand',
             'property',
@@ -151,19 +145,24 @@ def encode_json(obj):
         ])
 
     elif isinstance(obj, datetime.datetime):
-        return obj.isoformat()
+        data = obj.isoformat()
     elif isinstance(obj, django.db.models.manager.Manager):
-        return obj.all()
+        data = obj.all()
     elif isinstance(obj, django.db.models.query.QuerySet):
-        return list(obj)
+        data = list(obj)
     else:
-        return obj
+        data = obj
+    return data
+
 
 def pretty_json(obj, *args, **kw):
-    return json.dumps(obj, sort_keys=True, indent=4, separators=(',', ': '), *args, **kw)
+    return json.dumps(obj, sort_keys=True, indent=4,
+        separators=(',', ': '), *args, **kw)
 
 class MatrixApi(View):
-    def get(self, request):
+
+    @staticmethod
+    def get(request, *args, **kwargs): #pylint:disable=unused-argument
         responses = Response.objects.all()
 
         return HttpResponse(pretty_json(responses, default=encode_json),
@@ -211,15 +210,15 @@ def get_account_model():
 
 class CategoryApi(View):
     # override in subclasses
-    categoryModel = None
-    predicateModel = None
-    objectModel = None
+    category_model = None
+    predicate_model = None
+    object_model = None
 
-    def get(self, request):
+    def get(self, request): #pylint: disable=unused-argument
 
-        categories = list(self.categoryModel.objects.all())
+        categories = list(self.category_model.objects.all())
         # accounts = get_account_model().objects.all()
-        objects = self.objectModel.objects.all()
+        objects = self.object_model.objects.all()
 
         data = {
             'categories': categories,
@@ -233,39 +232,49 @@ class CategoryApi(View):
     def post(self, request):
         category = json.loads(request.body)
 
+        if self.category_model is None:
+            raise ImproperlyConfigured(
+                "%s.category_model must be defined", self.__class__.name)
+        if self.predicate_model is None:
+            raise ImproperlyConfigured(
+                "%s.predicate_model must be defined", self.__class__.name)
+
         if category['slug'] is None:
             # create
-            c = self.categoryModel(title=category['title'])
-            c.save()
+            #pylint:disable=not-callable
+            catmodel = self.category_model(title=category['title'])
+            catmodel.save()
         else:
             # update
-            c = self.categoryModel.objects.get(slug=category['slug'])
-            c.title = category['title']
-            c.save()
+            catmodel = self.category_model.objects.get(slug=category['slug'])
+            catmodel.title = category['title']
+            catmodel.save()
 
 
         # always update predicates
-        c.predicates.all().delete()
-        for i, predicateData in enumerate(category['predicates']):
-            predicate = self.predicateModel(operator=predicateData['operator'],
-                                            operand=predicateData['operand'],
-                                            property=predicateData['property'],
-                                            filterType=predicateData['filterType'],
-                                            order=i,
-                                            category=c)
+        catmodel.predicates.all().delete()
+        for idx, predicate_data in enumerate(category['predicates']):
+            #pylint:disable=not-callable
+            predicate = self.predicate_model(
+                operator=predicate_data['operator'],
+                operand=predicate_data['operand'],
+                property=predicate_data['property'],
+                filterType=predicate_data['filterType'],
+                order=idx,
+                category=catmodel)
             predicate.save()
 
-
-        return HttpResponse(pretty_json(c, default=encode_json), content_type='application/json')
+        return HttpResponse(pretty_json(catmodel, default=encode_json),
+            content_type='application/json')
 
 class PortfolioApi(CategoryApi):
-    categoryModel = Portfolio
-    predicateModel = PortfolioPredicate
-    objectModel = get_account_model()
+    category_model = Portfolio
+    predicate_model = PortfolioPredicate
+    object_model = get_account_model()
 
 class QuestionCategoryApi(CategoryApi):
-    categoryModel = QuestionCategory
-    predicateModel = QuestionCategoryPredicate
-    objectModel = Question
+    category_model = QuestionCategory
+    predicate_model = QuestionCategoryPredicate
+    object_model = Question
 
 
