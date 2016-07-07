@@ -2,20 +2,44 @@
 {% load static from staticfiles %}
 
 {% block content %}
-
+<div>
+  <ul>
+    <li><a href="{% url 'matrix_base' %}">Charts</a></li>
+  </ul>
+</div>
 <div id="categorize">
-
-
-
-  
+  <div>
+    <input type="text" name="title" style="display:inline-block">
+    <button class="save">Update</button>
+  </div>
+  <div class="dj-predicates">
+    <div class="dj-predicate-template">
+        <select class="filterType">
+          <option value="removematching">Remove matching</option>
+          <option value="reinclude">Reinclude matching from full set</option>
+          <option value="keepmatching">Keep Matching</option>
+          <option value="includeall">Include all</option>
+          <option value="removeall">Remove all</option>
+        </select>
+        <select class="property">
+        </select>
+        <select class="operator">
+        </select>
+        <input class="operand" type="text">
+        <button class="delete">Remove predicate</button>
+    </div>
+  </div>
+  <div>
+    <button class="add-predicate">Add predicate</button>
+  </div>
+  <div>
+    <table class="dj-table table table-striped table-condensed">
+    </table>
+  </div>
 </div>
 {% endblock %}
 
 {% block bodyscripts %}
-
-
-
-
 <link rel="stylesheet" type="text/css" href="{% static 'vendor/css/bootstrap.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'vendor/css/nv.d3.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'css/matrix-chart.css' %}" />
@@ -26,13 +50,9 @@
 <script type="text/javascript" src="{% static 'vendor/js/nv.d3.js' %}"></script>
 <script type="text/javascript"
         src="{% static 'js/djaodjin-set.js' %}"></script>
-
 <script type="text/javascript"
         src="{% static 'js/djaodjin-categorize.js' %}"></script>
-
 <script type="text/javascript">
-
-
 jQuery(document).ready(function($) {
   var csrf_token = "{{csrf_token}}";
   function csrfSafeMethod(method) {
@@ -49,14 +69,10 @@ jQuery(document).ready(function($) {
 
 
   $('#categorize').djcategorize({
-     api: "{{category_api}}"
+     filter_api: "{{filter_api}}",
+     objects_api: "{{objects_api}}"
   });
 
 });
-
-
-
-
 </script>
-
 {% endblock %}

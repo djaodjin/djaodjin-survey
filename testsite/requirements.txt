@@ -1,1 +1,14 @@
-django-urldecorators>=0.5
+Django==1.9.6
+django-durationfield==0.5.2
+django-extra-views==0.6.5
+djangorestframework==3.3.3
+
+# testsite-only
+django-debug-toolbar==1.4
+django-extensions==1.6.1
+django-urldecorators==0.5
+
+# development
+Sphinx==1.4.1
+sphinxcontrib-httpdomain==1.4.0
+

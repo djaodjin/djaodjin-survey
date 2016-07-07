@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,14 +23,14 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-URLs for djaodjin-survey django app
+URLs for djaodjin-survey Django app
 """
 
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 
-urlpatterns = patterns(
-    'survey.views',
+urlpatterns = [
+    url(r'^api/', include('survey.urls.api')),
     url(r'^manage/', include('survey.urls.manager')),
     url(r'^matrix/', include('survey.urls.matrix')),
     url(r'^', include('survey.urls.interviewee')),
-)
+]

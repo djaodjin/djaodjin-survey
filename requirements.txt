@@ -1,2 +1,4 @@
-Django>=1.6
+Django>=1.8
 django-durationfield>=0.4
+django-extra-views>=0.6.5
+djangorestframework>=3.3.3

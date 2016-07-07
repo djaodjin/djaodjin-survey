@@ -34,9 +34,13 @@ from urldecorators import patterns, include, url
 from django.contrib import admin
 admin.autodiscover()
 
-urlpatterns = patterns('',
+import debug_toolbar
+
+urlpatterns = [
+    url(r'^__debug__/', include(debug_toolbar.urls)),
     url(r'^$', TemplateView.as_view(template_name='index.html'), name='home'),
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^api/', include('survey.urls.api')),
     url(r'^accounts/profile/',
         RedirectView.as_view(url=reverse_lazy('survey_list'))),
     url(r'^accounts/', include('django.contrib.auth.urls')),
@@ -44,4 +48,4 @@ urlpatterns = patterns('',
         decorators=['django.contrib.auth.decorators.login_required']),
     url(r'^matrix/', include('survey.urls.matrix')),
     url(r'^', include('survey.urls.interviewee')),
-)
+]

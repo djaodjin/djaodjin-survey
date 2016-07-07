@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,33 +22,20 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from rest_framework.serializers import ModelSerializer
+from django.core.exceptions import ImproperlyConfigured
+from django.apps import apps as django_apps
 
-from survey.models import Answer, Question, SurveyModel
+from .settings import ACCOUNT_MODEL
 
-
-class AnswerSerializer(ModelSerializer): #pylint: disable=no-init
-
-    class Meta(object):
-        model = Answer
-        fields = ('created_at', 'body')
-
-
-class QuestionSerializer(ModelSerializer): #pylint: disable=no-init
-
-    class Meta(object):
-        model = Question
-        fields = ('text', 'question_type', 'choices',
-                  'order', 'correct_answer', 'required')
-
-
-class SurveyModelSerializer(ModelSerializer): #pylint: disable=no-init
-
-    questions = QuestionSerializer(many=True)
-
-    class Meta(object):
-        model = SurveyModel
-        fields = ('slug', 'account', 'title', 'description', 'published',
-            'quizz_mode', 'questions')
-        read_only_fields = ('slug',)
-
+def get_account_model():
+    """
+    Returns the ``Account`` model that is active in this project.
+    """
+    try:
+        return django_apps.get_model(ACCOUNT_MODEL)
+    except ValueError:
+        raise ImproperlyConfigured(
+            "ACCOUNT_MODEL must be of the form 'app_label.model_name'")
+    except LookupError:
+        raise ImproperlyConfigured("ACCOUNT_MODEL refers to model '%s'"\
+" that has not been installed" % ACCOUNT_MODEL)

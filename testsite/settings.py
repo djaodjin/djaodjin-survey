@@ -41,6 +41,24 @@ def load_config(confpath):
     else:
         sys.stderr.write('warning: config file %s does not exist.\n' % confpath)
 
+load_config(os.path.join(BASE_DIR, 'credentials'))
+
+# Application definition
+INSTALLED_APPS = (
+    'debug_toolbar',
+    'django_extensions',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'django.contrib.admin',
+    'rest_framework',
+    'survey',
+    'testsite'
+)
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
 
@@ -50,21 +68,8 @@ SECRET_KEY = '9j24plovjvx%-_bvfgd*))umqd_olg!=4#a4i9_rf*)fl9b4b_'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-TEMPLATE_DEBUG = True
-
-ALLOWED_HOSTS = []
-
-# Database
-# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
-
 MIDDLEWARE_CLASSES = (
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -73,28 +78,9 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
+ALLOWED_HOSTS = []
 ROOT_URLCONF = 'testsite.urls'
-
 WSGI_APPLICATION = 'testsite.wsgi.application'
-
-# Internationalization
-# https://docs.djangoproject.com/en/1.6/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
-USE_I18N = True
-
-USE_L10N = True
-
-USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.6/howto/static-files/
-
-STATIC_URL = '/static/'
 
 # Default email address to use for various automated correspondence from
 # the site managers (also django-registration settings)
@@ -110,23 +96,66 @@ EMAIL_USE_TLS = False
 EMAIL_HOST_USER = ""
 EMAIL_HOST_PASSWORD = ""
 
-# Continuous build settings
-# -------------------------
+# Database
+# https://docs.djangoproject.com/en/1.6/ref/settings/#databases
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+    }
+}
 
-# Application definition
+# Internationalization
+# https://docs.djangoproject.com/en/1.6/topics/i18n/
 
-INSTALLED_APPS = (
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-#    'django.contrib.sites',  # XXX necessary?
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.admin',
-    'survey',
-    'testsite'
-)
+LANGUAGE_CODE = 'en-us'
 
-load_config(os.path.join(BASE_DIR, 'credentials'))
+TIME_ZONE = 'UTC'
 
+USE_I18N = True
 
+USE_L10N = True
+
+USE_TZ = True
+
+REST_FRAMEWORK = {
+    'PAGE_SIZE': 25,
+}
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/1.6/howto/static-files/
+
+STATIC_URL = '/static/'
+
+# Templates (Django 1.8+)
+# ----------------------
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': (os.path.join(BASE_DIR, 'testsite', 'templates'),
+                 os.path.join(BASE_DIR, 'survey', 'templates')),
+        'OPTIONS': {
+            'context_processors': [
+    'django.contrib.auth.context_processors.auth', # because of admin/
+    'django.template.context_processors.request',
+    'django.template.context_processors.media',
+            ],
+            'loaders': [
+                'django.template.loaders.filesystem.Loader',
+                'django.template.loaders.app_directories.Loader'],
+            'libraries': {},
+            'builtins': [
+                'survey.templatetags.survey_tags']
+        }
+    }
+]
+
+# debug-toolbar
+DEBUG_TOOLBAR_PATCH_SETTINGS = False
+DEBUG_TOOLBAR_CONFIG = {
+    'JQUERY_URL': '/static/vendor/js/jquery.js',
+    'SHOW_COLLAPSED': True,
+    'SHOW_TEMPLATE_CONTEXT': True,
+}
+
+INTERNAL_IPS = ('127.0.0.1', '::1')

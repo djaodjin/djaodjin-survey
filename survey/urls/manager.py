@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
 from survey.views.createsurvey import (SurveyCreateView, SurveyDeleteView,
     SurveyListView, SurveyPublishView, SurveyResultView, SurveySendView,
@@ -32,7 +32,7 @@ from survey.views.createquestion import (QuestionCreateView, QuestionDeleteView,
 from survey.views.response import RespondentListView
 
 
-urlpatterns = patterns('',
+urlpatterns = [
    url(r'^new/',
        SurveyCreateView.as_view(), name='survey_create'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/send/',
@@ -63,4 +63,4 @@ urlpatterns = patterns('',
        QuestionListView.as_view(), name='survey_question_list'),
    url(r'^',
        SurveyListView.as_view(), name='survey_list'),
-)
+]

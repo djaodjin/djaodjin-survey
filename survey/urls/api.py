@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,32 +22,28 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
--include $(buildTop)/share/dws/prefix.mk
+from django.conf.urls import url
 
-srcDir        ?= .
-installTop    ?= $(VIRTUAL_ENV)
-binDir        ?= $(installTop)/bin
+from ..api.matrix import (MatrixCreateAPIView, MatrixDetailAPIView,
+    PortfolioListAPIView, PortfolioDetailAPIView,
+    AccountListAPIView, QuestionListAPIView)
+from ..settings import SLUG_RE
 
-PYTHON        := $(binDir)/python
-
-RUNSYNCDB     = $(if $(findstring --run-syncdb,$(shell cd $(srcDir) && $(PYTHON) manage.py migrate --help 2>/dev/null)),--run-syncdb,)
-
-install::
-	cd $(srcDir) && $(PYTHON) ./setup.py --quiet \
-		build -b $(CURDIR)/build install
-
-install-conf:: $(srcDir)/credentials
-
-$(srcDir)/credentials: $(srcDir)/testsite/etc/credentials
-	[ -f $@ ] || \
-		SECRET_KEY=`python -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'` ; \
-		sed -e "s,\%(SECRET_KEY)s,$${SECRET_KEY}," $< > $@
-
-# XXX Enter a superuser when asked otherwise the fixtures won't load
-# correctly.
-initdb: install-conf
-	-rm -f db.sqlite3
-	cd $(srcDir) && $(PYTHON) ./manage.py migrate $(RUNSYNCDB) --noinput
-	cd $(srcDir) && $(PYTHON) ./manage.py loaddata \
-		testsite/fixtures/initial_data.json testsite/fixtures/testquestions.json
-
+urlpatterns = [
+   url(r'^matrix/(?P<matrix>%s)/?' % SLUG_RE,
+       MatrixDetailAPIView.as_view(), name='matrix_api'),
+   url(r'^matrix/?',
+       MatrixCreateAPIView.as_view(), name='matrix_api_base'),
+   url(r'^portfolios/(?P<portfolio>%s)/?' % SLUG_RE,
+       PortfolioDetailAPIView.as_view(), name='portfolio_api'),
+   url(r'^portfolios/?',
+       PortfolioListAPIView.as_view(), name='portfolio_api_base'),
+   url(r'^accounts/(?P<portfolio>%s)/?' % SLUG_RE,
+       AccountListAPIView.as_view(), name='accounts_api'),
+   url(r'^accounts/?',
+       AccountListAPIView.as_view(), name='accounts_api_base'),
+   url(r'^questions/(?P<portfolio>%s)/?' % SLUG_RE,
+       QuestionListAPIView.as_view(), name='questioncategory_api'),
+   url(r'^questions/?',
+       QuestionListAPIView.as_view(), name='questioncategory_api_base'),
+]

@@ -25,9 +25,9 @@
 from django.shortcuts import get_object_or_404
 from django.views.generic.detail import SingleObjectMixin
 
-from .compat import get_model, User
-from .models import Response, Question, SurveyModel
-from .settings import ACCOUNT_MODEL
+from .compat import User
+from .models import Matrix, Portfolio, Question, Response, SurveyModel
+from .utils import get_account_model
 
 
 class AccountMixin(object):
@@ -36,10 +36,7 @@ class AccountMixin(object):
 
     def get_account(self):
         if self.kwargs.has_key(self.account_kwarg_url):
-            if isinstance(ACCOUNT_MODEL, str):
-                account_model = get_model(*ACCOUNT_MODEL.rsplit('.', 1))
-            else:
-                account_model = ACCOUNT_MODEL
+            account_model = get_account_model()
             return get_object_or_404(account_model,
                 slug__exact=self.kwargs.get(self.account_kwarg_url))
         return None
@@ -145,3 +142,30 @@ class ResponseMixin(IntervieweeMixin, SurveyModelMixin):
         """
         return [self.interviewee_slug, 'survey', self.response_url_kwarg]
 
+
+class MatrixMixin(object):
+
+    matrix_url_kwarg = 'matrix'
+
+    @staticmethod
+    def get_queryset():
+        return Matrix.objects.all()
+
+    @property
+    def matrix(self):
+        if not hasattr(self, '_matrix'):
+            self._matrix = get_object_or_404(Matrix,
+                    slug=self.kwargs.get(self.matrix_url_kwarg))
+        return self._matrix
+
+
+class PortfolioMixin(object):
+
+    portfolio_url_kwarg = 'portfolio'
+
+    @property
+    def portfolio(self):
+        if not hasattr(self, '_portfolio'):
+            self._portfolio = get_object_or_404(Portfolio,
+                    slug=self.kwargs.get(self.portfolio_url_kwarg))
+        return self._portfolio

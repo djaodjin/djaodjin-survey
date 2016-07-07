@@ -42,110 +42,109 @@ if (!Array.prototype.filter) {
     var Predicate = DjaoDjinSet.Predicate;
     var fromPredicate = DjaoDjinSet.fromPredicate;
 
+    /**
+
+     <style>
+     .dj-predicate-template {
+       display: none; // Templates are stored in DOM without being UI elements.
+     }
+     </style>
+
+     <div>
+       <input type="text" name="title">
+       <button class="save">Update</button>
+       <div class="dj-predicates">
+           ... This is where the filter predicates are presented ...
+           <div class="dj-predicate-template" style="display:none;">
+             <select class="operator"></select>
+             <select class="operand"></select>
+             <select class="property"></select>
+             <select class="filterType"></select>
+             <button class="delete"></button>
+           </div>
+           <button class="add-predicate">Add predicate</button>
+       </div>
+       <table class="dj-table">
+           ... This is where the filtered data will be presented ...
+       </table>
+     </div>
+    */
     function Djcategorize(el, options){
         this.element = $(el);
         this.options = options;
+        this.data = [];
+        this.categories = [];
+        this.selectedCategoryIndex = 0;
+        this.dataProperties = [];
         this.init();
     }
 
     Djcategorize.prototype = {
         init: function(){
             var self = this;
-
-            self.data = [];
-
-
-            self.categories = [new Category('title', null, [])];
-            self.selectedCategoryIndex = 0;
-
-            self.$addCategoryButton = $('<button/>');
-            self.$addCategoryButton.text('New');
-            self.$addCategoryButton.on('click', function(){
-                self.categories.push(new Category('title', null, []));
-                self.selectedCategoryIndex = self.categories.length - 1;
-                self.update();
-            })
-            self.element.append(self.$addCategoryButton);
-
-
-            self.$categories = $('<select></select>');
-            self.$categories.on('input', function(e){
-                self.selectedCategoryIndex=parseInt($(e.target).val(),10);
-                self.update();
-            });
-            self.element.append(self.$categories);
-
-            self.element.append('<br/>');
-            self.$categoryTitle = $('<input type="text" />');
+            var $element = $(self.element);
+            self.$categoryTitle = $element.find("[name='title']");
             self.$categoryTitle.on('input', function(e){
                 self.selectedCategory().title = $(e.target).val();
                 self.update();
                 return false;
             });
-            self.element.append(self.$categoryTitle);
 
-            self.$saveButton = $('<button>Save</button>');
-            self.$saveButton.on('click', function(){
+            var $saveButton = $element.find(".save");
+            $saveButton.on('click', function(){
                 self.save();
             });
-            self.element.append(self.$saveButton);
-            self.$saveButton.wrap('<div/>')
 
-            self.addPredicateButton = $('<button/>');
-            self.addPredicateButton.text('Add Predicate');
-            self.element.append(self.addPredicateButton);
-            self.addPredicateButton.on('click', function(){
-                self.selectedCategory().predicates.push(new Predicate('equals', '', self.dataProperties[0] || '', 'removematching'));
+            var addPredicateButton =  $element.find(".add-predicate");
+            addPredicateButton.on('click', function(){
+                self.selectedCategory().predicates.push(new Predicate(
+                    'equals', '', self.dataProperties[0] || '',
+                    'removematching'));
                 self.update();
             });
 
-            self.predicateContainer = $('<div/>');
-            self.element.append(self.predicateContainer);
+            self._load();
+        },
 
-            self.dataProperties = [];
-            self.updateDataProperties();
+        _csrfToken: function() {
+            var self = this;
+            if( self.options.csrfToken ) { return self.options.csrfToken; }
+            return getMetaCSRFToken();
+        },
 
-            self.$tableContainer = $('<div/>');
-            self.element.append(self.$tableContainer);
-
-            self.resultData = new DjSet(self.data);
-            self.updateTable();
-
-
-
-
+        _load: function() {
+            var self = this;
             $.ajax({
                 method: "GET",
-                url: self.options.api,
+                url: self.options.objects_api,
                 datatype: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(response) {
-                    self.data = response['objects'];
-
-                    self.resultData = new DjSet(self.data);
-                    if (response.categories.length > 0){
-                        self.categories = response['categories'];
+                success: function(data) {
+                    self.data = data.results;
+                    if( data.portfolio ) {
+                        self.categories = [data.portfolio];
+                        self._updateCategories();
                     }
-
                     self.updateDataProperties();
                     self.update();
+                },
+                error: function(resp) {
+                    showErrorMessages(resp);
                 }
             });
-
-
-
         },
+
         selectedCategory: function (){
             var self = this;
             return self.categories[self.selectedCategoryIndex];
         },
+
         save: function(){
             var self = this;
-
             var category = self.selectedCategory();
             $.ajax({
-                method: "POST",
-                url: self.options.api,
+                method: "PUT",
+                url: self.options.filter_api,
                 data: JSON.stringify(category),
                 datatype: "json",
                 contentType: "application/json; charset=utf-8",
@@ -155,8 +154,8 @@ if (!Array.prototype.filter) {
                     }
                 }.bind(null, category)
             });
-
         },
+
         updateDataProperties: function(){
             var self = this;
             self.dataProperties = [];
@@ -171,21 +170,20 @@ if (!Array.prototype.filter) {
                 }
             }
         },
+
         updateTable: function(){
             var self = this;
+            var $element = $(self.element);
 
             var originalData = new DjSet(self.data);
             var resultData = originalData.clone();
-
             for ( var i = 0; i < self.selectedCategory().predicates.length; i ++){
                 resultData = fromPredicate(originalData, resultData, self.selectedCategory().predicates[i]);
 
             }
 
-            var $table = $('<table/>');
-            $table.addClass('table');
-            $table.addClass('table-striped');
-            $table.addClass('table-condensed');
+            var $table = $element.find(".dj-table");
+            $table.html("");
 
             var $header = $('<tr/>');
             for (var k = 0; k < self.dataProperties.length; k ++){
@@ -215,51 +213,55 @@ if (!Array.prototype.filter) {
                     $tr.addClass('danger');
                 }
             }
-
-            self.$tableContainer.html($table);
-
         },
-        update: function(){
+
+        /** Update the dropdown of available filters.
+         */
+        _updateCategories: function() {
             var self = this;
-
-            var $categoryElems = self.$categories.children('option');
-            for (var i = 0; i < self.categories.length; i ++){
-                var category = self.categories[i];
-                var $elem;
-                if ( i >= $categoryElems.length ){
-                    $elem = $('<option/>');
-                    $elem.attr('value', i);
-
-                    self.$categories.append($elem);
-                }else{
-                    $elem = $categoryElems.eq(i);
+            var $categories = $(self.element).find(".categories");
+            if( $categories.length > 0 ) {
+                var $categoryElems = $categories.children('option');
+                for (var i = 0; i < self.categories.length; i ++){
+                    var category = self.categories[i];
+                    var $elem;
+                    if ( i >= $categoryElems.length ){
+                        $elem = $('<option/>');
+                        $elem.attr('value', i);
+                        $categories.append($elem);
+                    }else{
+                        $elem = $categoryElems.eq(i);
+                    }
+                    $elem.text(category.title);
                 }
-
-                $elem.text(category.title);
+                for ( var i = self.categories.length; i < $categoryElems.length ; i ++){
+                    $categoryElems.get(i).remove();
+                }
+                $categories.val(self.selectedCategoryIndex);
             }
-            for ( var i = self.categories.length; i < $categoryElems.length ; i ++){
-                $categoryElems.get(i).remove();
-            }
-
-            self.$categories.val(self.selectedCategoryIndex);
             self.$categoryTitle.val(self.selectedCategory().title);
+        },
 
-            var $predicateElems = self.predicateContainer.children('.predicate');
-            var data = new DjSet(self.data);
-            for ( var i = 0; i < self.selectedCategory().predicates.length; i ++){
-                var predicate = self.selectedCategory().predicates[i];
+        /** Update the list of predicates.
+         */
+        _updatePredicates: function(predicates) {
+            var self = this;
+            var predicateContainer = $(self.element).find(".dj-predicates");
+            var $predicateElems = predicateContainer.children('.predicate');
+            var predicateElemTemplate =  predicateContainer.find(".dj-predicate-template");
+            for ( var i = 0; i < predicates.length; ++i ){
+                var predicate = predicates[i];
                 var $elem;
-                if ( i >= $predicateElems.length ){
-                    $elem = $('<div class="predicate"><select class="filterType"><option value="removematching">Remove matching</option><option value="reinclude">Reinclude matching from full set</option><option value="keepmatching">Keep Matching</option><option value="includeall">Include all</option><option value="removeall">Remove all</option></select><select class="property" ></select><select class="operator" ></select><input class="operand" type="text"/><button>Remove</button><br/>');
-                    self.predicateContainer.append($elem);
-
-                    $elem.find('button').on('click', function(i,$elem){
-
-                        self.selectedCategory().predicates.splice(i,1);
+                if( i >= $predicateElems.length ) {
+                    /* Let's add a ui element when the new list is longer. */
+                    $elem = predicateElemTemplate.clone();
+                    $elem.removeClass("dj-predicate-template").addClass("predicate");
+                    predicateContainer.append($elem);
+                    $elem.find('.delete').on('click', function(i, $elem){
+                        predicates.splice(i, 1);
                         $elem.remove();
                         self.update();
-
-                    }.bind(null,i, $elem));
+                    }.bind(null, i, $elem));
 
                     var onUpdate = function(predicate, prop){
                         return function(e){
@@ -268,11 +270,14 @@ if (!Array.prototype.filter) {
                         };
                     };
 
-                    $elem.find('.operator').on('input', onUpdate(predicate,'operator'));
-                    $elem.find('.operand').on('input', onUpdate(predicate,'operand'));
-                    $elem.find('.property').on('input', onUpdate(predicate,'property'));
-                    $elem.find('.filterType').on('input', onUpdate(predicate,'filterType'));
-
+                    $elem.find('.operator').on('input',
+                        onUpdate(predicate,'operator'));
+                    $elem.find('.operand').on('input',
+                        onUpdate(predicate,'operand'));
+                    $elem.find('.property').on('input',
+                        onUpdate(predicate,'property'));
+                    $elem.find('.filterType').on('input',
+                        onUpdate(predicate,'filterType'));
                     $elem.find('input').on('input', function(){
                         self.update();
                     });
@@ -294,38 +299,41 @@ if (!Array.prototype.filter) {
                         $option.text(operator.name);
                         $operators.append($option);
                     }
-
-
-
-                }else{
+                } else {
                     $elem = $predicateElems.eq(i);
                 }
-
+                /* update the ui element. */
                 $elem.find('.operator').val(predicate.operator);
                 $elem.find('.operand').val(predicate.operand);
                 $elem.find('.property').val(predicate.property);
                 $elem.find('.filterType').val(predicate.filterType);
-
-
-
-
             }
 
-            for ( var i = self.selectedCategory().predicates.length; i < $predicateElems.length ; i ++){
+            /* Let's remove extraneous ui elements when the new list
+               is shorter. */
+            for( var i = predicates.length; i < $predicateElems.length ; ++i ) {
                 $predicateElems.get(i).remove();
             }
+        },
+
+        update: function(){
+            var self = this;
+            self._updatePredicates(self.selectedCategory().predicates);
             self.updateTable();
-
         }
-
     }
 
     $.fn.djcategorize = function(options) {
         var opts = $.extend( {}, $.fn.djcategorize.defaults, options );
-        return new Djcategorize($(this), opts);
+        return this.each(function() {
+            if (!$.data($(this), "djcategorize")) {
+                $.data($(this), "djcategorize", new Djcategorize(this, opts));
+            }
+        });
     };
 
     $.fn.djcategorize.defaults = {
-
+        filter_api: null,
+        objects_api: null
     };
 })(jQuery);

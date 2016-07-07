@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,29 +22,24 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
-from survey.views.matrix import (MatrixView,
-                                 MatrixApi,
-                                 PortfolioView,
-                                 PortfolioApi,
-                                 QuestionCategoryApi,
-                                 QuestionCategoryView)
+from ..settings import SLUG_RE
+from ..views.matrix import (MatrixListView, MatrixDetailView,
+    AccountListView, QuestionListView)
 
 
-urlpatterns = patterns('',
-   url(r'^api/survey',
-       MatrixApi.as_view(), name='matrix_api'),
-   url(r'^portfolios',
-       PortfolioView.as_view(), name='portfolio_view'),
-   url(r'^questions',
-       QuestionCategoryView.as_view(), name='portfolio_view'),
-   url(r'^api/portfolio',
-       PortfolioApi.as_view(), name='portfolio_api'),
-   url(r'^api/question',
-       QuestionCategoryApi.as_view(), name='questioncategory_api'),
+urlpatterns = [
+   url(r'^accounts/(?P<portfolio>%s)/?' % SLUG_RE,
+       AccountListView.as_view(), name='accounts_list'),
+   url(r'^accounts/',
+       AccountListView.as_view(), name='accounts_base'),
+   url(r'^questions/(?P<portfolio>%s)/?' % SLUG_RE,
+       QuestionListView.as_view(), name='questions_list'),
+   url(r'^questions/',
+       QuestionListView.as_view(), name='questions_base'),
+   url(r'^(?P<matrix>%s)/' % SLUG_RE,
+       MatrixDetailView.as_view(), name='matrix_chart'),
    url(r'^',
-       MatrixView.as_view(), name='matrix_View'),
-
-
-)
+       MatrixListView.as_view(), name='matrix_base'),
+]

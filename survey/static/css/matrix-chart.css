@@ -8,3 +8,9 @@
     width : 600px;
     height: 600px;
 }
+
+/* This class is used to store HTML templates.
+   Templates are stored in the DOM with display:none; */
+.dj-predicate-template {
+    display: none;
+}

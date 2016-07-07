@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,15 +22,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
-from survey.views.displaysurvey import (AnswerUpdateView, ResponseCreateView,
+from ..settings import SLUG_RE
+from ..views.displaysurvey import (AnswerUpdateView, ResponseCreateView,
     ResponseResetView, ResponseResultView, ResponseUpdateView)
 
-SLUG_RE = '[a-zA-Z0-9-]+'
-
-
-urlpatterns = patterns('',
+urlpatterns = [
    url(r'^(?P<survey>%s)/(?P<response>%s)/reset/' % (SLUG_RE, SLUG_RE),
        ResponseResetView.as_view(), name='survey_response_reset'),
    url(r'^(?P<survey>%s)/(?P<response>%s)/results/' % (SLUG_RE, SLUG_RE),
@@ -42,4 +40,4 @@ urlpatterns = patterns('',
        ResponseUpdateView.as_view(), name='survey_response_update'),
    url(r'^(?P<survey>%s)/' % SLUG_RE,
        ResponseCreateView.as_view(), name='survey_response_new'),
-)
+]

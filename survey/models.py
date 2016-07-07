@@ -35,6 +35,10 @@ from .settings import AUTH_USER_MODEL, ACCOUNT_MODEL
 
 
 class SlugTitleMixin(object):
+    """
+    Generate a unique slug from title on ``save()`` when none is specified.
+    """
+
     def save(self, force_insert=False, force_update=False, using=None,
              update_fields=None):
         #pylint: disable=catching-non-exception
@@ -48,18 +52,20 @@ class SlugTitleMixin(object):
             self.slug = slug[:max_length]
         num = 1
         while True:
-            with transaction.atomic():
-                try:
+            try:
+                with transaction.atomic():
                     return models.Model.save(self,
                         force_insert=force_insert, force_update=force_update,
                         using=using, update_fields=update_fields)
-                except IntegrityError:
-                    prefix = '-%d' % num
-                    self.slug = '%s%s' % (slug, prefix)
-                    if len(self.slug) > max_length:
-                        self.slug = '%s-%d' % (
-                            slug[:(max_length-len(prefix))], num)
-                    num = num + 1
+            except IntegrityError, err:
+                if not 'uniq' in str(err).lower():
+                    raise
+                prefix = '-%d' % num
+                self.slug = '%s%s' % (slug, prefix)
+                if len(self.slug) > max_length:
+                    self.slug = '%s-%d' % (
+                        slug[:(max_length-len(prefix))], num)
+                num = num + 1
 
 
 class SurveyModel(SlugTitleMixin, models.Model):
@@ -256,37 +262,34 @@ class Portfolio(SlugTitleMixin, models.Model):
     of the rows of a model type
     """
 
+    slug = models.SlugField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     title = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True)
+    tags = models.CharField(max_length=255)
 
     def __unicode__(self):
         return self.slug
 
-
-class QuestionCategory(SlugTitleMixin, models.Model):
-    """
-    Model for a subset of the all the available questions.
-    """
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    title = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True)
-
-    def __unicode__(self):
-        return self.slug
+    def as_kwargs(self):
+        includes = {}
+        excludes = {}
+        for predicate in self.predicates.all().order_by('rank'):
+            if predicate.filterType == 'keepmatching':
+                includes.update(predicate.as_kwargs())
+            elif predicate.filterType == 'removematching':
+                excludes.update(predicate.as_kwargs())
+        return includes, excludes
 
 
 class PortfolioPredicate(models.Model):
     """
     A predicate describing a step to narrow or enlarge
-    a set of accounts in a portfolio.
+    a set of records in a portfolio.
     """
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    order = models.IntegerField()
+    rank = models.IntegerField()
     category = models.ForeignKey(Portfolio, related_name='predicates')
     operator = models.CharField(max_length=255)
     operand = models.CharField(max_length=255)
@@ -294,22 +297,32 @@ class PortfolioPredicate(models.Model):
     filterType = models.CharField(max_length=255)
 
     def __unicode__(self):
-        return '%s-%d' % (self.category.slug, self.order)
+        return '%s-%d' % (self.category.slug, self.rank)
+
+    def as_kwargs(self):
+        kwargs = {}
+        if self.operator == 'equals':
+            kwargs = {self.property: self.operand}
+        elif self.operator == 'startsWith':
+            kwargs = {"%s__starts_with" % self.property: self.operand}
+        elif self.operator == 'endsWith':
+            kwargs = {"%s__ends_with" % self.property: self.operand}
+        elif self.operator == 'contains':
+            kwargs = {"%s__contains" % self.property: self.operand}
+        return kwargs
 
 
-class QuestionCategoryPredicate(models.Model):
+class Matrix(SlugTitleMixin, models.Model):
     """
-    A predicate describing a step to narrow or elarge
-    a set of questions in a in question category.
+    Represent a set of cohorts against a metric.
     """
+
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    order = models.IntegerField()
-    category = models.ForeignKey(QuestionCategory, related_name='predicates')
-    operator = models.CharField(max_length=255)
-    operand = models.CharField(max_length=255)
-    property = models.CharField(max_length=255)
-    filterType = models.CharField(max_length=255)
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(unique=True)
+    metric = models.ForeignKey(Portfolio, related_name='measured', null=True)
+    cohorts = models.ManyToManyField(Portfolio, related_name='matrices')
 
     def __unicode__(self):
-        return '%s-%d' % (self.category.slug, self.order)
+        return self.slug
+

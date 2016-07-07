@@ -2,30 +2,53 @@
 {% load static from staticfiles %}
 
 {% block content %}
-
 <div>
+  <ul>
+    {% for entry in object_list %}
+    <li><a href="{% url 'matrix_chart' entry %}">{{entry.title}}</a></li>
+    {% endfor %}
+    <li><form id="new-matrix"><input name="title" type="text" /><button type="submit">New ...</button></form></li>
+  </ul>
+</div>
+<div id="matrixChart">
+  <div>
+    <input type="text" name="title" style="display:inline-block" value="{{object}}">
+    <button class="save">Update</button>
+  </div>
   <div id="status">Loading...</div>
-  <select id="portfolio" multiple="multiple">
-  </select>
-  <select id="questioncategory">
-
-  </select>
+  <div>
+    <h3>Portfolios</h3>
+    {% for entry in cohorts %}
+    <div>
+      <label for="{{forloop.counter}}">
+        <input id="cohort-{{forloop.counter}}" type="checkbox" name="cohorts" value="{{entry.slug}}" {% if entry.is_selected %}checked{% endif %}>
+        {{ entry }}
+      </label>
+      <a href="{% url 'accounts_list' entry %}">Edit</a>
+    </div>
+    {% endfor %}
+    <div><form id="new-portfolio"><input name="title" type="text" /><button type="submit">New ...</button></form></div>
+  </div>
+  <div>
+    <h3>Question Categories</h3>
+    {% for entry in metrics %}
+    <div>
+      <label for="{{forloop.counter}}">
+        <input id="metric-{{forloop.counter}}" type="radio" name="metric" value="{{entry.slug}}" {% if entry.is_selected %}checked{% endif %}>
+        {{ entry }}
+      </label>
+      <a href="{% url 'questions_list' entry %}">Edit</a>
+    </div>
+    {% endfor %}
+    <div><form id="new-questioncategory"><input name="title" type="text" /><button type="submit">New ...</button></form></div>
+  </div>
   <div id="chart">
     <svg></svg>
-
   </div>
-  
 </div>
 {% endblock %}
 
 {% block bodyscripts %}
-
-<script type="text/javascript">
-  var portfolio_api = '{{portfolio_api}}';
-  var questioncategory_api = '{{questioncategory_api}}';
-</script>
-
-
 <link rel="stylesheet" type="text/css" href="{% static 'vendor/css/nv.d3.css' %}" />
 <link rel="stylesheet" type="text/css" href="{% static 'css/matrix-chart.css' %}" />
 <script type="text/javascript" src="{% static 'vendor/js/jquery.js'%}"></script>
@@ -34,12 +57,61 @@
 <script type="text/javascript" src="{% static 'vendor/js/nv.d3.js' %}"></script>
 <script type="text/javascript"
         src="{% static 'js/matrix-chart.js' %}"></script>
-
 <script type="text/javascript"
         src="{% static 'js/djaodjin-set.js' %}"></script>
-
 <script type="text/javascript"
         src="{% static 'js/djaodjin-matrix.js' %}"></script>
-
-
+<script type="text/javascript">
+jQuery(document).ready(function($) {
+  $("#new-matrix").submit(function() {
+      var self = $(this);
+      var title = self.find("[name=\"title\"]").val();
+      $.ajax({
+          method: "POST",
+          url: "{% url 'matrix_api_base' %}",
+          data: JSON.stringify({title: title, cohorts: []}),
+          datatype: "json",
+          contentType: "application/json; charset=utf-8",
+          success: function(data){
+              window.location = "{% url 'matrix_base' %}" + data.slug;
+          }
+      });
+      return false;
+  });
+  $("#new-portfolio").submit(function() {
+      var self = $(this);
+      var title = self.find("[name=\"title\"]").val();
+      $.ajax({
+          method: "POST",
+          url: "{% url 'portfolio_api_base' %}",
+          data: JSON.stringify({title: title, tags: "cohort", predicates: []}),
+          datatype: "json",
+          contentType: "application/json; charset=utf-8",
+          success: function(data){
+              window.location = "{% url 'accounts_base' %}" + data.slug;
+          }
+      });
+      return false;
+  });
+  $("#new-questioncategory").submit(function() {
+      var self = $(this);
+      var title = self.find("[name=\"title\"]").val();
+      $.ajax({
+          method: "POST",
+          url: "{% url 'portfolio_api_base' %}",
+          data: JSON.stringify({title: title, tags: "metric", predicates: []}),
+          datatype: "json",
+          contentType: "application/json; charset=utf-8",
+          success: function(data){
+              window.location = "{% url 'questions_base' %}" + data.slug;
+          }
+      });
+      return false;
+  });
+  $("#matrixChart").djmatrixChart({
+      portfolio_api: "{{portfolio_api}}",
+      matrix_api: "{{matrix_api}}"
+  });
+});
+</script>
 {% endblock %}
