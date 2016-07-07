@@ -27,8 +27,8 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, DetailView, ListView
 
 from ..compat import csrf
-from ..mixins import MatrixMixin, PortfolioMixin
-from ..models import Portfolio
+from ..mixins import MatrixMixin, EditableFilterMixin
+from ..models import EditableFilter
 
 
 class MatrixListView(MatrixMixin, ListView):
@@ -38,8 +38,7 @@ class MatrixListView(MatrixMixin, ListView):
     def get_context_data(self, *args, **kwargs):
         context = super(MatrixListView, self).get_context_data(*args, **kwargs)
         context.update({
-            'portfolio_api' :reverse('portfolio_api_base'),
-            'questioncategory_api': reverse('questioncategory_api_base'),
+            'editable_filter_api' :reverse('editable_filter_api_base'),
         })
         return context
 
@@ -58,44 +57,44 @@ class MatrixDetailView(MatrixMixin, DetailView):
         context = super(MatrixDetailView, self).get_context_data(
             *args, **kwargs)
         selected = list(self.object.cohorts.all())
-        cohorts = Portfolio.objects.filter(tags='cohort')
+        cohorts = EditableFilter.objects.filter(tags='cohort')
         for cohort in cohorts:
             if cohort in selected:
                 cohort.is_selected = True
-        metrics = Portfolio.objects.filter(tags='metric')
+        metrics = EditableFilter.objects.filter(tags='metric')
         for metric in metrics:
             if metric == self.object.metric:
                 metric.is_selected = True
         context.update({
             'cohorts': cohorts,
             'metrics': metrics,
-            'portfolio_api' :reverse('portfolio_api_base'),
-            'questioncategory_api': reverse('questioncategory_api_base'),
+            'editable_filter_api' :reverse('editable_filter_api_base'),
             'matrix_api': reverse('matrix_api', args=(self.object,)),
         })
         return context
 
 
-class PortfolioView(PortfolioMixin, TemplateView):
+class EditableFilterView(EditableFilterMixin, TemplateView):
 
     api_url = None
     template_name = "survey/categorize.html"
 
     def get_context_data(self, *args, **kwargs):
-        context = super(PortfolioView, self).get_context_data(
+        context = super(EditableFilterView, self).get_context_data(
             *args, **kwargs)
         context.update(csrf(self.request))
         context.update({
-            'filter_api': reverse('portfolio_api', args=(self.portfolio,)),
-            'objects_api': reverse(self.api_url, args=(self.portfolio,))
+            'editable_filter_api': reverse(
+                'editable_filter_api', args=(self.editable_filter,)),
+            'objects_api': reverse(self.api_url, args=(self.editable_filter,))
         })
         return context
 
-class AccountListView(PortfolioView):
+class AccountListView(EditableFilterView):
 
     api_url = 'accounts_api'
 
 
-class QuestionListView(PortfolioView):
+class QuestionListView(EditableFilterView):
 
-    api_url = 'questioncategory_api'
+    api_url = 'questions_api'

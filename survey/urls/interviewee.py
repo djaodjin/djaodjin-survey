@@ -33,7 +33,7 @@ urlpatterns = [
        ResponseResetView.as_view(), name='survey_response_reset'),
    url(r'^(?P<survey>%s)/(?P<response>%s)/results/' % (SLUG_RE, SLUG_RE),
        ResponseResultView.as_view(), name='survey_response_results'),
-   url(r'^(?P<survey>%s)/(?P<response>%s)/(?:(?P<index>\d+)/)'
+   url(r'^(?P<survey>%s)/(?P<response>%s)/(?:(?P<rank>\d+)/)'
        % (SLUG_RE, SLUG_RE),
        AnswerUpdateView.as_view(), name='survey_answer_update'),
    url(r'^(?P<survey>%s)/(?P<response>%s)/' % (SLUG_RE, SLUG_RE),

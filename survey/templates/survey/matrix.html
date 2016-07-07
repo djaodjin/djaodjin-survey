@@ -17,7 +17,7 @@
   </div>
   <div id="status">Loading...</div>
   <div>
-    <h3>Portfolios</h3>
+    <h3>Cohorts</h3>
     {% for entry in cohorts %}
     <div>
       <label for="{{forloop.counter}}">
@@ -27,10 +27,10 @@
       <a href="{% url 'accounts_list' entry %}">Edit</a>
     </div>
     {% endfor %}
-    <div><form id="new-portfolio"><input name="title" type="text" /><button type="submit">New ...</button></form></div>
+    <div><form id="new-cohort"><input name="title" type="text" /><button type="submit">New ...</button></form></div>
   </div>
   <div>
-    <h3>Question Categories</h3>
+    <h3>Metrics</h3>
     {% for entry in metrics %}
     <div>
       <label for="{{forloop.counter}}">
@@ -40,7 +40,7 @@
       <a href="{% url 'questions_list' entry %}">Edit</a>
     </div>
     {% endfor %}
-    <div><form id="new-questioncategory"><input name="title" type="text" /><button type="submit">New ...</button></form></div>
+    <div><form id="new-metric"><input name="title" type="text" /><button type="submit">New ...</button></form></div>
   </div>
   <div id="chart">
     <svg></svg>
@@ -78,12 +78,12 @@ jQuery(document).ready(function($) {
       });
       return false;
   });
-  $("#new-portfolio").submit(function() {
+  $("#new-cohort").submit(function() {
       var self = $(this);
       var title = self.find("[name=\"title\"]").val();
       $.ajax({
           method: "POST",
-          url: "{% url 'portfolio_api_base' %}",
+          url: "{% url 'editable_filter_api_base' %}",
           data: JSON.stringify({title: title, tags: "cohort", predicates: []}),
           datatype: "json",
           contentType: "application/json; charset=utf-8",
@@ -93,12 +93,12 @@ jQuery(document).ready(function($) {
       });
       return false;
   });
-  $("#new-questioncategory").submit(function() {
+  $("#new-metric").submit(function() {
       var self = $(this);
       var title = self.find("[name=\"title\"]").val();
       $.ajax({
           method: "POST",
-          url: "{% url 'portfolio_api_base' %}",
+          url: "{% url 'editable_filter_api_base' %}",
           data: JSON.stringify({title: title, tags: "metric", predicates: []}),
           datatype: "json",
           contentType: "application/json; charset=utf-8",
@@ -109,7 +109,7 @@ jQuery(document).ready(function($) {
       return false;
   });
   $("#matrixChart").djmatrixChart({
-      portfolio_api: "{{portfolio_api}}",
+      editable_filter_api: "{{editable_filter_api}}",
       matrix_api: "{{matrix_api}}"
   });
 });

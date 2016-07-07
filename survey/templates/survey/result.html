@@ -27,8 +27,8 @@
 			<th>Interviewee(s) number</th>
 		</tr>
 		<tr>
-			<td>{{survey.start_date}}</td>
-			<td>{{survey.end_date}}</td>
+			<td>{{survey.created_at}}</td>
+			<td>{{survey.ends_at}}</td>
 			<td>{{survey.days}} days</td>
 			<td>{{questions|length}}</td>
 			<td>{{number_interviewees}}</td>
@@ -42,24 +42,24 @@
 		<h3>Questions list</h3>
 		<ul>
 			{% for question in questions %}
-			<li><a href="#{{question.order}}">{{question.text}}</a></li>
+			<li><a href="#{{question.rank}}">{{question.text}}</a></li>
 			{% endfor %}
 		</ul>
 	</section>
 	<section id="details">
 		{% for question in questions %}
-		<div id="{{question.order}}">
-			<h3>#{{question.order}} : {{ question.text }}</h3>
+		<div id="{{question.rank}}">
+			<h3>#{{question.rank}} : {{ question.text }}</h3>
 		{% if question.question_type == Question.TEXT %}
 			<table>
-				{% for answer_body in individuals|by_key:question.order %}
+				{% for answer_body in individuals|by_key:question.rank %}
 				<tr>
 					<td>{{answer_body}}</td>
 				</tr>
 				{% endfor %}
 			</table>
 		{% else %}
-			<div id="chart-{{question.order}}" >
+			<div id="chart-{{question.rank}}" >
 				<svg style="width:500px; height:250px;"></svg>
 			</div>
 		{% endif %}

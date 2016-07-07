@@ -49,9 +49,9 @@ class QuestionFormMixin(QuestionMixin):
         kwargs = super(QuestionFormMixin, self).get_initial()
         self.survey = get_object_or_404(
             SurveyModel, slug__exact=self.kwargs.get('survey'))
-        last_index = Question.objects.filter(survey=self.survey).count()
+        last_rank = Question.objects.filter(survey=self.survey).count()
         kwargs.update({'survey': self.survey,
-                       'order': last_index + 1})
+                       'rank': last_rank + 1})
         return kwargs
 
     def get_success_url(self):
@@ -87,7 +87,7 @@ class QuestionListView(SurveyModelMixin, ListView):
 
     def get_queryset(self):
         self.survey = self.get_survey()
-        queryset = Question.objects.filter(survey=self.survey).order_by('order')
+        queryset = Question.objects.filter(survey=self.survey).order_by('rank')
         return queryset
 
     def get_context_data(self, *args, **kwargs):
@@ -109,19 +109,19 @@ class QuestionRankView(QuestionMixin, RedirectView):
     def post(self, request, *args, **kwargs):
         question = self.get_object()
         swapped_question = None
-        question_index = question.order
+        question_rank = question.rank
         if self.direction < 0:
-            if question_index > 1:
+            if question_rank > 1:
                 swapped_question = Question.objects.get(
-                    survey=question.survey, order=question_index - 1)
+                    survey=question.survey, rank=question_rank - 1)
         else:
-            if question_index < Question.objects.filter(
+            if question_rank < Question.objects.filter(
                 survey=question.survey).count():
                 swapped_question = Question.objects.get(
-                    survey=question.survey, order=question_index + 1)
+                    survey=question.survey, rank=question_rank + 1)
         if swapped_question:
-            question.order = swapped_question.order
-            swapped_question.order = question_index
+            question.rank = swapped_question.rank
+            swapped_question.rank = question_rank
             question.save()
             swapped_question.save()
         kwargs = {'slug': kwargs['survey']}

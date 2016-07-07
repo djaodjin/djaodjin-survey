@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -104,13 +104,13 @@ class QuestionForm(forms.ModelForm):
 
     class Meta:
         model = Question
-        exclude = ['survey', 'order']
+        exclude = ['survey', 'rank']
 
     def save(self, commit=True):
         if self.initial.has_key('survey'):
             self.instance.survey = self.initial['survey']
-        if self.initial.has_key('order') and not self.instance.order:
-            self.instance.order = self.initial['order']
+        if self.initial.has_key('rank') and not self.instance.rank:
+            self.instance.rank = self.initial['rank']
         return super(QuestionForm, self).save(commit)
 
     def clean_choices(self):
@@ -152,8 +152,8 @@ class ResponseCreateForm(forms.ModelForm):
         return self.cleaned_data
 
     def save(self, commit=True):
-        if self.initial.has_key('user'):
-            self.instance.user = self.initial['user']
+        if self.initial.has_key('account'):
+            self.instance.account = self.initial['account']
         if self.initial.has_key('survey'):
             self.instance.survey = self.initial['survey']
         self.instance.slug = slugify(uuid.uuid4().hex)
@@ -171,15 +171,15 @@ class ResponseUpdateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(ResponseUpdateForm, self).__init__(*args, **kwargs)
-        for answer in self.instance.answers.order_by('index'):
+        for answer in self.instance.answers.order_by('rank'):
             question = answer.question
             fields = _create_field(question.question_type, question.text,
                 has_other=question.has_other, required=question.required,
                 choices=question.get_choices())
             # XXX set value.
-            self.fields['question-%d' % answer.index] = fields[0]
+            self.fields['question-%d' % answer.rank] = fields[0]
             if fields[1]:
-                self.fields['other-%d' % answer.index] = fields[1]
+                self.fields['other-%d' % answer.rank] = fields[1]
 
 
 class SurveyForm(forms.ModelForm):

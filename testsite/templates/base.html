@@ -14,7 +14,7 @@
 		<header>
 			<ul>
 			<li><a href="{% url 'survey_list' %}">survey list</a>
-			{% if user.is_authenticated %}
+			{% if request.user.is_authenticated %}
 			<li><a href="{% url 'logout' %}">sign out</a>
 			{% else %}
 			<li><a href="{% url 'login' %}">sign in</a>

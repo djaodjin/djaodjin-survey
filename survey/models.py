@@ -31,7 +31,7 @@ from django.utils.timezone import utc
 
 from durationfield.db.models.fields.duration import DurationField
 
-from .settings import AUTH_USER_MODEL, ACCOUNT_MODEL
+from .settings import ACCOUNT_MODEL
 
 
 class SlugTitleMixin(object):
@@ -72,8 +72,8 @@ class SurveyModel(SlugTitleMixin, models.Model):
     #pylint: disable=super-on-old-class
 
     slug = models.SlugField(unique=True)
-    start_date = models.DateTimeField(null=True)
-    end_date = models.DateTimeField(null=True)
+    created_at = models.DateTimeField(null=True)
+    ends_at = models.DateTimeField(null=True)
     title = models.CharField(max_length=150,
         help_text="Enter a survey title.")
     description = models.TextField(null=True, blank=True,
@@ -98,12 +98,12 @@ class SurveyModel(SlugTitleMixin, models.Model):
         """
         Returns the number of days the survey was available.
         """
-        end_date = start_date = datetime.datetime.now().replace(tzinfo=utc)
-        if self.start_date:
-            start_date = self.start_date
-        if self.end_date:
-            end_date = self.end_date
-        return (end_date - start_date).days
+        ends_at = created_at = datetime.datetime.now().replace(tzinfo=utc)
+        if self.created_at:
+            created_at = self.created_at
+        if self.ends_at:
+            ends_at = self.ends_at
+        return (ends_at - created_at).days
 
 
 class Question(models.Model):
@@ -133,7 +133,7 @@ class Question(models.Model):
     choices = models.TextField(blank=True, null=True,
         help_text="Enter choices here separated by a new line."\
 " (Only for radio and select multiple)")
-    order = models.IntegerField()
+    rank = models.IntegerField()
     correct_answer = models.TextField(blank=True, null=True,
         help_text="Enter correct answser(s) here separated by a new line.")
     required = models.BooleanField(default=True,
@@ -200,7 +200,7 @@ class Response(models.Model):
     slug = models.SlugField()
     created_at = models.DateTimeField(auto_now_add=True)
     survey = models.ForeignKey(SurveyModel, null=True)
-    user = models.ForeignKey(AUTH_USER_MODEL, null=True)
+    account = models.ForeignKey(ACCOUNT_MODEL, null=True)
     time_spent = DurationField(default=0,
         help_text="Total recorded time to complete the survey")
     is_frozen = models.BooleanField(default=False,
@@ -210,7 +210,7 @@ class Response(models.Model):
         return self.slug
 
     def get_answers_by_rank(self):
-        return self.answers.all().order_by('index') #pylint:disable=no-member
+        return self.answers.all().order_by('rank') #pylint:disable=no-member
 
 
 class AnswerManager(models.Manager):
@@ -241,14 +241,14 @@ class Answer(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     question = models.ForeignKey(Question)
     response = models.ForeignKey(Response, related_name='answers')
-    index = models.IntegerField(help_text="Position in the response list.")
+    rank = models.IntegerField(help_text="Position in the response list.")
     body = models.TextField(blank=True, null=True)
 
     class Meta:
         unique_together = ("question", "response")
 
     def __unicode__(self):
-        return '%s-%d' % (self.response.slug, self.index)
+        return '%s-%d' % (self.response.slug, self.rank)
 
     def get_multiple_choices(self):
         text = str(self.body)
@@ -256,7 +256,7 @@ class Answer(models.Model):
             'u\'', '').replace('\'', '').split(', ')
 
 
-class Portfolio(SlugTitleMixin, models.Model):
+class EditableFilter(SlugTitleMixin, models.Model):
     """
     A model type and list of predicates to create a subset of the
     of the rows of a model type
@@ -275,14 +275,14 @@ class Portfolio(SlugTitleMixin, models.Model):
         includes = {}
         excludes = {}
         for predicate in self.predicates.all().order_by('rank'):
-            if predicate.filterType == 'keepmatching':
+            if predicate.filter_type == 'keepmatching':
                 includes.update(predicate.as_kwargs())
-            elif predicate.filterType == 'removematching':
+            elif predicate.filter_type == 'removematching':
                 excludes.update(predicate.as_kwargs())
         return includes, excludes
 
 
-class PortfolioPredicate(models.Model):
+class EditablePredicate(models.Model):
     """
     A predicate describing a step to narrow or enlarge
     a set of records in a portfolio.
@@ -290,25 +290,25 @@ class PortfolioPredicate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     rank = models.IntegerField()
-    category = models.ForeignKey(Portfolio, related_name='predicates')
+    portfolio = models.ForeignKey(EditableFilter, related_name='predicates')
     operator = models.CharField(max_length=255)
     operand = models.CharField(max_length=255)
-    property = models.CharField(max_length=255)
-    filterType = models.CharField(max_length=255)
+    field = models.CharField(max_length=255)
+    filter_type = models.CharField(max_length=255)
 
     def __unicode__(self):
-        return '%s-%d' % (self.category.slug, self.rank)
+        return '%s-%d' % (self.portfolio.slug, self.rank)
 
     def as_kwargs(self):
         kwargs = {}
         if self.operator == 'equals':
-            kwargs = {self.property: self.operand}
+            kwargs = {self.field: self.operand}
         elif self.operator == 'startsWith':
-            kwargs = {"%s__starts_with" % self.property: self.operand}
+            kwargs = {"%s__starts_with" % self.field: self.operand}
         elif self.operator == 'endsWith':
-            kwargs = {"%s__ends_with" % self.property: self.operand}
+            kwargs = {"%s__ends_with" % self.field: self.operand}
         elif self.operator == 'contains':
-            kwargs = {"%s__contains" % self.property: self.operand}
+            kwargs = {"%s__contains" % self.field: self.operand}
         return kwargs
 
 
@@ -317,11 +317,12 @@ class Matrix(SlugTitleMixin, models.Model):
     Represent a set of cohorts against a metric.
     """
 
+    slug = models.SlugField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True)
-    metric = models.ForeignKey(Portfolio, related_name='measured', null=True)
-    cohorts = models.ManyToManyField(Portfolio, related_name='matrices')
+    metric = models.ForeignKey(EditableFilter,
+        related_name='measured', null=True)
+    cohorts = models.ManyToManyField(EditableFilter, related_name='matrices')
 
     def __unicode__(self):
         return self.slug

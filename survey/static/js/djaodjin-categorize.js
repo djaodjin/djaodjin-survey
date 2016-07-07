@@ -58,8 +58,8 @@ if (!Array.prototype.filter) {
            <div class="dj-predicate-template" style="display:none;">
              <select class="operator"></select>
              <select class="operand"></select>
-             <select class="property"></select>
-             <select class="filterType"></select>
+             <select class="field"></select>
+             <select class="filter_type"></select>
              <button class="delete"></button>
            </div>
            <button class="add-predicate">Add predicate</button>
@@ -121,8 +121,8 @@ if (!Array.prototype.filter) {
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
                     self.data = data.results;
-                    if( data.portfolio ) {
-                        self.categories = [data.portfolio];
+                    if( data.editable_filter ) {
+                        self.categories = [data.editable_filter];
                         self._updateCategories();
                     }
                     self.updateDataProperties();
@@ -144,7 +144,7 @@ if (!Array.prototype.filter) {
             var category = self.selectedCategory();
             $.ajax({
                 method: "PUT",
-                url: self.options.filter_api,
+                url: self.options.editable_filter_api,
                 data: JSON.stringify(category),
                 datatype: "json",
                 contentType: "application/json; charset=utf-8",
@@ -251,6 +251,9 @@ if (!Array.prototype.filter) {
             var predicateElemTemplate =  predicateContainer.find(".dj-predicate-template");
             for ( var i = 0; i < predicates.length; ++i ){
                 var predicate = predicates[i];
+                if( typeof predicate.filter_type !== "undefined" ) {
+                    predicate.filterType = predicate.filter_type;
+                }
                 var $elem;
                 if( i >= $predicateElems.length ) {
                     /* Let's add a ui element when the new list is longer. */
@@ -274,9 +277,9 @@ if (!Array.prototype.filter) {
                         onUpdate(predicate,'operator'));
                     $elem.find('.operand').on('input',
                         onUpdate(predicate,'operand'));
-                    $elem.find('.property').on('input',
-                        onUpdate(predicate,'property'));
-                    $elem.find('.filterType').on('input',
+                    $elem.find('.field').on('input',
+                        onUpdate(predicate,'field'));
+                    $elem.find('.filter_type').on('input',
                         onUpdate(predicate,'filterType'));
                     $elem.find('input').on('input', function(){
                         self.update();
@@ -285,7 +288,7 @@ if (!Array.prototype.filter) {
                         self.update();
                     });
 
-                    var $properties = $elem.find('.property');
+                    var $properties = $elem.find('.field');
                     for (var j = 0; j < self.dataProperties.length; j ++){
                         var $option = $('<option/>');
                         $option.text(self.dataProperties[j]);
@@ -305,8 +308,8 @@ if (!Array.prototype.filter) {
                 /* update the ui element. */
                 $elem.find('.operator').val(predicate.operator);
                 $elem.find('.operand').val(predicate.operand);
-                $elem.find('.property').val(predicate.property);
-                $elem.find('.filterType').val(predicate.filterType);
+                $elem.find('.field').val(predicate.field);
+                $elem.find('.filter_type').val(predicate.filterType);
             }
 
             /* Let's remove extraneous ui elements when the new list
@@ -333,7 +336,7 @@ if (!Array.prototype.filter) {
     };
 
     $.fn.djcategorize.defaults = {
-        filter_api: null,
+        editable_filter_api: null,
         objects_api: null
     };
 })(jQuery);

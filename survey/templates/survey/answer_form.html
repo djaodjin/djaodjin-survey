@@ -9,7 +9,7 @@
 
 <div>
 {% if survey.published %}
-#{{form.instance.question.order}}
+#{{form.instance.question.rank}}
 <form method="post" action=".">
         {% csrf_token %}
         {{ form }}

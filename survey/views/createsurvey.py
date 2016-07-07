@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -102,11 +102,11 @@ class SurveyPublishView(RedirectView):
             slug__exact=kwargs.get('survey'))
         if survey.published:
             survey.published = False
-            survey.end_date = datetime.datetime.now()
+            survey.ends_at = datetime.datetime.now()
         else:
             survey.published = True
-            if not survey.start_date:
-                survey.start_date = datetime.datetime.now()
+            if not survey.created_at:
+                survey.created_at = datetime.datetime.now()
         survey.save()
         return super(SurveyPublishView, self).post(request, *args, **kwargs)
 
@@ -125,7 +125,7 @@ class SurveyResultView(DetailView):
         number_interviewees = Response.objects.filter(
             survey=self.object).count()
         questions = Question.objects.filter(
-            survey=self.object).order_by('order')
+            survey=self.object).order_by('rank')
         # Answers that cannot be aggregated.
         #
         # The structure of the aggregated dataset returned to the client will
@@ -137,10 +137,10 @@ class SurveyResultView(DetailView):
         for question in Question.objects.filter(
             survey=self.object, question_type=Question.TEXT):
             individuals += [{
-                 'key': slugify("%d" % question.order),
+                 'key': slugify("%d" % question.rank),
 # XXX Might be better
 #                'key': slugify("%s-%d"
-#                    % (question.survey.slug, question.order)),
+#                    % (question.survey.slug, question.rank)),
                 'values': Answer.objects.filter(
                     question=question).values('body')}]
 
@@ -196,8 +196,8 @@ class SurveyResultView(DetailView):
                     values += [{"label": label, "value": value}]
             aggregates += [{
                 # XXX Might be better to use 'key': slugify("%s-%d"
-                #     % (question.survey.slug, question.order))
-                'key': slugify("%d" % question.order),
+                #     % (question.survey.slug, question.rank))
+                'key': slugify("%d" % question.rank),
                 'values': values}]
 
         context.update({

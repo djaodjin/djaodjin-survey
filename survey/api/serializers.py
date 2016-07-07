@@ -26,8 +26,8 @@ from django.db import transaction
 from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
-from ..models import (Answer, Matrix, Portfolio, PortfolioPredicate, Question,
-    Response, Question, SurveyModel)
+from ..models import (Answer, Matrix, EditableFilter, EditablePredicate,
+    Question, Response, Question, SurveyModel)
 from ..utils import get_account_model
 
 #pylint:disable=old-style-class,no-init
@@ -44,7 +44,7 @@ class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = ('text', 'question_type', 'has_other', 'choices',
-            'order', 'correct_answer', 'required')
+            'rank', 'correct_answer', 'required')
 
 
 class ResponseSerializer(serializers.ModelSerializer):
@@ -68,66 +68,65 @@ class SurveyModelSerializer(serializers.ModelSerializer):
         read_only_fields = ('slug',)
 
 
-class PortfolioPredicateSerializer(serializers.ModelSerializer):
+class EditablePredicateSerializer(serializers.ModelSerializer):
 
     rank = serializers.IntegerField(required=False)
 
     class Meta:
-        model = PortfolioPredicate
-        fields = ('rank', 'operator', 'operand', 'property', 'filterType')
+        model = EditablePredicate
+        fields = ('rank', 'operator', 'operand', 'field', 'filter_type')
 
 
-class PortfolioSerializer(serializers.ModelSerializer):
+class EditableFilterSerializer(serializers.ModelSerializer):
 
     slug = serializers.CharField(required=False)
-    predicates = PortfolioPredicateSerializer(many=True)
+    predicates = EditablePredicateSerializer(many=True)
 
     class Meta:
-        model = Portfolio
+        model = EditableFilter
         fields = ('slug', 'title', 'tags', 'predicates')
 
     def create(self, validated_data):
-        portfolio = Portfolio(
+        editable_filter = EditableFilter(
             title=validated_data['title'], tags=validated_data['tags'])
         with transaction.atomic():
-            portfolio.save()
+            editable_filter.save()
             for predicate in validated_data['predicates']:
-                predicate, _ = PortfolioPredicate.objects.get_or_create(
+                predicate, _ = EditablePredicate.objects.get_or_create(
                     rank=predicate['rank'],
                     operator=predicate['operator'],
                     operand=predicate['operand'],
-                    property=predicate['property'],
-                    filterType=predicate['filterType'])
-                portfolio.predicates.add(predicate)
-        return portfolio
+                    field=predicate['field'],
+                    filter_type=predicate['filter_type'])
+                editable_filter.predicates.add(predicate)
+        return editable_filter
 
     def update(self, instance, validated_data):
-        portfolio = instance
         with transaction.atomic():
-            portfolio.title = validated_data['title']
-            portfolio.tags = validated_data['tags']
-            portfolio.save()
+            instance.title = validated_data['title']
+            instance.tags = validated_data['tags']
+            instance.save()
             absents = set([item['pk']
                 for item in instance.predicates.all().values('pk')])
             for idx, predicate in enumerate(validated_data['predicates']):
-                predicate, _ = PortfolioPredicate.objects.get_or_create(
-                    category=portfolio,
+                predicate, _ = EditablePredicate.objects.get_or_create(
+                    editable_filter=instance,
                     operator=predicate['operator'],
                     operand=predicate['operand'],
-                    property=predicate['property'],
-                    filterType=predicate['filterType'],
+                    field=predicate['field'],
+                    filter_type=predicate['filter_type'],
                 defaults={'rank': idx})
-                portfolio.predicates.add(predicate)
+                instance.predicates.add(predicate)
                 absents = absents - set([predicate.pk])
-            PortfolioPredicate.objects.filter(pk__in=absents).delete()
-        return portfolio
+            EditablePredicate.objects.filter(pk__in=absents).delete()
+        return instance
 
 
 class MatrixSerializer(serializers.ModelSerializer):
 
     slug = serializers.CharField(required=False)
-    metric = PortfolioSerializer(required=False)
-    cohorts = PortfolioSerializer(many=True)
+    metric = EditableFilterSerializer(required=False)
+    cohorts = EditableFilterSerializer(many=True)
 
     class Meta:
         model = Matrix
@@ -137,9 +136,9 @@ class MatrixSerializer(serializers.ModelSerializer):
         matrix = Matrix(title=validated_data['title'])
         with transaction.atomic():
             matrix.save()
-            portfolio_serializer = PortfolioSerializer()
+            editable_filter_serializer = EditableFilterSerializer()
             for cohort in validated_data['cohorts']:
-                cohort = portfolio_serializer.create(cohort)
+                cohort = editable_filter_serializer.create(cohort)
                 matrix.predicates.add(cohort)
         return matrix
 
@@ -147,14 +146,15 @@ class MatrixSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             instance.title = validated_data['title']
             if 'metric' in validated_data:
-                instance.metric = get_object_or_404(Portfolio.objects.all(),
+                instance.metric = get_object_or_404(
+                    EditableFilter.objects.all(),
                     slug=validated_data['metric']['slug'])
             instance.save()
             absents = set([item['pk']
                 for item in instance.cohorts.all().values('pk')])
             for cohort in validated_data['cohorts']:
                 cohort = get_object_or_404(
-                    Portfolio.objects.all(), slug=cohort['slug'])
+                    EditableFilter.objects.all(), slug=cohort['slug'])
                 instance.cohorts.add(cohort)
                 absents = absents - set([cohort.pk])
             instance.cohorts.remove(*list(absents))

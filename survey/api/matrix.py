@@ -32,9 +32,9 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework import response as http
 
 from ..mixins import MatrixMixin
-from ..models import Answer, Matrix, Portfolio, Question
+from ..models import Answer, Matrix, EditableFilter, Question
 from ..utils import get_account_model
-from .serializers import (PortfolioSerializer,
+from .serializers import (EditableFilterSerializer,
     MatrixSerializer, AccountSerializer, QuestionSerializer)
 
 
@@ -131,7 +131,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
             accounts = get_account_model().objects.filter(
                 **includes).exclude(**excludes)
             nb_correct_answers = Answer.objects.filter(
-                response__user__in=accounts).filter(
+                response__account__in=accounts).filter(
                     body=F('question__correct_answer')).count()
             score = nb_correct_answers * 100 / (nb_questions * len(accounts))
             LOGGER.debug("score for '%s' = (%d * 100) / (%d * %d) = %f",
@@ -145,41 +145,41 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
         return http.Response(val)
 
 
-class PortfolioQuerysetMixin(object):
+class EditableFilterQuerysetMixin(object):
 
     @staticmethod
     def get_queryset():
-        return Portfolio.objects.all()
+        return EditableFilter.objects.all()
 
 
-class PortfolioListAPIView(SearchableListMixin, PortfolioQuerysetMixin,
-                           generics.ListCreateAPIView):
+class EditableFilterListAPIView(SearchableListMixin,
+                EditableFilterQuerysetMixin, generics.ListCreateAPIView):
 
     search_fields = ['tags']
-    serializer_class = PortfolioSerializer
+    serializer_class = EditableFilterSerializer
 
 
-class PortfolioDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
-    serializer_class = PortfolioSerializer
+    serializer_class = EditableFilterSerializer
     lookup_field = 'slug'
-    lookup_url_kwarg = 'portfolio'
+    lookup_url_kwarg = 'editable_filter'
 
     def get_queryset(self):
-        return Portfolio.objects.all()
+        return EditableFilter.objects.all()
 
 
-class PortfolioPagination(PageNumberPagination):
+class EditableFilterPagination(PageNumberPagination):
 
     def paginate_queryset(self, queryset, request, view=None):
-        self.portfolio = view.portfolio
-        return super(PortfolioPagination, self).paginate_queryset(
+        self.editable_filter = view.editable_filter
+        return super(EditableFilterPagination, self).paginate_queryset(
             queryset, request, view=view)
 
     def get_paginated_response(self, data):
         return http.Response(OrderedDict([
-            ('portfolio', PortfolioSerializer().to_representation(
-                self.portfolio)),
+            ('editable_filter', EditableFilterSerializer().to_representation(
+                self.editable_filter)),
             ('count', self.page.paginator.count),
             ('next', self.get_next_link()),
             ('previous', self.get_previous_link()),
@@ -187,23 +187,24 @@ class PortfolioPagination(PageNumberPagination):
         ]))
 
 
-class PortfolioObjectsAPIView(generics.ListAPIView):
+class EditableFilterObjectsAPIView(generics.ListAPIView):
 
-    pagination_class = PortfolioPagination
+    pagination_class = EditableFilterPagination
     serializer_class = None # override in subclasses
     lookup_field = 'slug'
-    lookup_url_kwarg = 'portfolio'
+    lookup_url_kwarg = 'editable_filter'
 
     def get(self, request, *args, **kwargs): #pylint: disable=unused-argument
-        self.portfolio = generics.get_object_or_404(Portfolio.objects.all(),
+        self.editable_filter = generics.get_object_or_404(
+            EditableFilter.objects.all(),
             slug=self.kwargs[self.lookup_url_kwarg])
-        return super(PortfolioObjectsAPIView, self).get(
+        return super(EditableFilterObjectsAPIView, self).get(
             request, *args, **kwargs)
 
 
-class AccountListAPIView(PortfolioObjectsAPIView):
+class AccountListAPIView(EditableFilterObjectsAPIView):
     """
-    Filtered list of ``Portfolio``.
+    Filtered list of ``EditableFilter``.
 
     **Examples**:
 
@@ -219,8 +220,8 @@ class AccountListAPIView(PortfolioObjectsAPIView):
            "predicates":[{
                "operator": "contains",
                "operand": "language",
-               "property": "text",
-               "filterType":"keepmatching"
+               "field": "text",
+               "filter_type":"keepmatching"
            }]
         }
     """
@@ -230,7 +231,7 @@ class AccountListAPIView(PortfolioObjectsAPIView):
         return self.get_serializer_class().Meta.model.objects.all()
 
 
-class QuestionListAPIView(PortfolioObjectsAPIView):
+class QuestionListAPIView(EditableFilterObjectsAPIView):
     """
     Filtered list of ``Question``.
 
@@ -248,8 +249,8 @@ class QuestionListAPIView(PortfolioObjectsAPIView):
            "predicates":[{
                "operator": "contains",
                "operand": "language",
-               "property": "text",
-               "filterType":"keepmatching"
+               "field": "text",
+               "filter_type":"keepmatching"
            }]
         }
     """

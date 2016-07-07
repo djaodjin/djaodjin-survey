@@ -28,7 +28,7 @@
 	"survey" : 1,
 	"question_type" : "radio",
 	"choices" : "Somewhat\nYes\nAwesome",
-	"order" : 1,
+	"rank" : 1,
 	"required" : true
 	},
 	"model" : "survey.question", "pk" : 1
@@ -38,7 +38,7 @@
 	"survey" : 1,
 	"question_type" : "checkbox",
 	"choices" : "Radio\nSelect Multiple\nFree form text\nInteger",
-	"order" : 2,
+	"rank" : 2,
 	"required" : true
 	},
 	"model" : "survey.question", "pk" : 2
@@ -47,7 +47,7 @@
 	"text" : "Rate this app from 1 to 10...",
 	"survey" : 1,
 	"question_type" : "integer",
-	"order" : 3,
+	"rank" : 3,
 	"required" : true
 	},
 	"model" : "survey.question", "pk" : 3
@@ -56,7 +56,7 @@
 	"text" : "Additional Comments...",
 	"survey" : 1,
 	"question_type" : "text",
-	"order" : 4,
+	"rank" : 4,
 	"required" : true
 	},
 	"model" : "survey.question", "pk" : 4

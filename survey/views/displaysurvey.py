@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -72,13 +72,13 @@ class AnswerUpdateView(ResponseMixin, UpdateView):
 
     def get_next_answer(self):
         return Answer.objects.filter(
-            response=self.get_response(), body=None).order_by('index').first()
+            response=self.get_response(), body=None).order_by('rank').first()
 
     def get_object(self, queryset=None):
-        index = self.kwargs.get('index', None)
-        if index:
+        rank = self.kwargs.get('rank', None)
+        if rank:
             return get_object_or_404(Answer,
-                response=self.get_response(), index=index)
+                response=self.get_response(), rank=rank)
         return self.get_next_answer()
 
     def get_success_url(self):
@@ -87,7 +87,7 @@ class AnswerUpdateView(ResponseMixin, UpdateView):
         if not next_answer:
             return reverse(self.complete_url,
                 kwargs=self.get_url_context())
-        kwargs.update({'index': next_answer.index})
+        kwargs.update({'rank': next_answer.rank})
         return reverse(self.next_step_url, kwargs=kwargs)
 
     def form_valid(self, form):
@@ -107,7 +107,7 @@ class AnswerNextView(AnswerUpdateView):
     next_step_url = 'survey_answer_update'
 
     def get_object(self, queryset=None):
-        # We always override the *index* by the latest unanswered question
+        # We always override the *rank* by the latest unanswered question
         # to avoid skipping over questions and unintended redirect to results.
         return self.get_next_answer()
 
@@ -160,7 +160,7 @@ class ResponseResultView(ResponseMixin, TemplateView):
 
 class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
     """
-    Creates a ``Response`` of a ``User`` to a ``SurveyModel``
+    Creates a ``Response`` of a ``Account`` to a ``SurveyModel``
     """
 
     model = Response
@@ -180,9 +180,9 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
         self.object = form.save()
         for question in Question.objects.filter(survey=self.object.survey):
             kwargs = {'response': self.object,
-                'question': question, 'index': question.order}
+                'question': question, 'rank': question.rank}
             answer_body = form.cleaned_data.get(
-                'question-%d' % question.order, None)
+                'question-%d' % question.rank, None)
             if answer_body:
                 kwargs.update({'body': answer_body})
             Answer.objects.create(**kwargs)
@@ -200,7 +200,7 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
         kwargs = super(ResponseCreateView, self).get_initial()
         self.survey = self.get_survey()
         kwargs.update({'survey': self.survey,
-                       'user': self.get_interviewee()})
+                       'account': self.get_interviewee()})
         return kwargs
 
     def get_success_url(self):
@@ -209,15 +209,15 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
         if self.survey and self.survey.defaults_single_page:
             next_step_url = self.single_page_next_step_url
         else:
-            kwargs.update({'index': Answer.objects.filter(
-                response=self.object).order_by('index').first().index})
+            kwargs.update({'rank': Answer.objects.filter(
+                response=self.object).order_by('rank').first().rank})
             next_step_url = self.next_step_url
         return reverse(next_step_url, kwargs=kwargs)
 
 
 class ResponseResetView(ResponseMixin, RedirectView):
     """
-    Resets all ``Answer`` of a ``Response`` from a ``User``.
+    Resets all ``Answer`` of a ``Response`` from a ``Account``.
     """
 
     pattern_name = 'survey_response_update'
@@ -236,9 +236,9 @@ class ResponseResetView(ResponseMixin, RedirectView):
 
 class ResponseUpdateView(SurveyModelMixin, IntervieweeMixin, UpdateView):
     """
-    Updates all ``Answer`` of a ``Response`` from a ``User`` in a single shot.
+    Updates all ``Answer`` of a ``Response`` from a ``Account``
+    in a single shot.
     """
-
     model = Response
     form_class = ResponseUpdateForm
     slug_url_kwarg = 'response'
@@ -251,8 +251,8 @@ class ResponseUpdateView(SurveyModelMixin, IntervieweeMixin, UpdateView):
 
     def form_valid(self, form):
         # We are updating all ``Answer`` for the ``Response`` here.
-        for answer in self.object.answers.order_by('index'):
-            answer.body = form.cleaned_data['question-%d' % answer.index]
+        for answer in self.object.answers.order_by('rank'):
+            answer.body = form.cleaned_data['question-%d' % answer.rank]
             answer.save()
         return super(ResponseUpdateView, self).form_valid(form)
 
@@ -268,7 +268,7 @@ class ResponseUpdateView(SurveyModelMixin, IntervieweeMixin, UpdateView):
         kwargs = super(ResponseUpdateView, self).get_initial()
         self.survey = self.get_survey()
         kwargs.update({'survey': self.survey,
-                       'user': self.get_interviewee()})
+                       'account': self.get_interviewee()})
         return kwargs
 
     def get_success_url(self):

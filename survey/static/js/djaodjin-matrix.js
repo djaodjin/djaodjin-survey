@@ -19,13 +19,13 @@
         this.options = options;
 
         this.responses = [];
-        this.portfolios = [];
+        this.cohorts = [];
         this.accounts = [];
         this.questions = [];
-        this.questioncategories = [];
+        this.metrics = [];
 
-        this.selectedQuestionCategory = null;
-        this.selectedPortfolios = [];
+        this.selectedMetric = null;
+        this.selectedCohorts = [];
 
         this.init();
     }
@@ -58,9 +58,9 @@
             if( metricElements.length > 0 ) {
                 var $element = $(metricElements[0]);
                 var elementVal = $element.val();
-                for ( var i = 0; i < self.questioncategories.length; i ++){
-                    if ( self.questioncategories[i].slug == elementVal ) {
-                        self.selectedQuestionCategory = self.questioncategories[i];
+                for ( var i = 0; i < self.metrics.length; i ++){
+                    if ( self.metrics[i].slug == elementVal ) {
+                        self.selectedMetric = self.metrics[i];
                     }
                 }
             }
@@ -71,27 +71,27 @@
                 var elementVal = $element.val();
                 if( $element.is(":checked") ) {
                     var found = -1;
-                    for ( var idx = 0 ; idx < self.selectedPortfolios.length; ++idx ){
-                        if( self.selectedPortfolios[idx].slug === elementVal ) {
+                    for ( var idx = 0 ; idx < self.selectedCohorts.length; ++idx ){
+                        if( self.selectedCohorts[idx].slug === elementVal ) {
                             found = idx;
                         }
                     }
                     if( found < 0 ) {
-                        for ( var idx = 0 ; idx < self.portfolios.length; ++idx ){
-                            if( self.portfolios[idx].slug === elementVal ) {
-                                self.selectedPortfolios.push(self.portfolios[idx]);
+                        for ( var idx = 0 ; idx < self.cohorts.length; ++idx ){
+                            if( self.cohorts[idx].slug === elementVal ) {
+                                self.selectedCohorts.push(self.cohorts[idx]);
                             }
                         }
                     }
                 } else {
                     var found = -1;
-                    for ( var idx = 0 ; idx < self.selectedPortfolios.length; ++idx ){
-                        if( self.selectedPortfolios[idx].slug === elementVal ) {
+                    for ( var idx = 0 ; idx < self.selectedCohorts.length; ++idx ){
+                        if( self.selectedCohorts[idx].slug === elementVal ) {
                             found = idx;
                         }
                     }
                     if( found >= 0 ) {
-                        self.selectedPortfolios.splice(found, 1);
+                        self.selectedCohorts.splice(found, 1);
                     }
                 }
             }
@@ -101,12 +101,12 @@
             var self = this;
             $.ajax({
                 method: "GET",
-                url: self.options.portfolio_api + "?q=cohort",
+                url: self.options.editable_filter_api + "?q=cohort",
                 datatype: "json",
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
 //                    self.accounts = data.results;
-                    self.portfolios = data.results;
+                    self.cohorts = data.results;
                     self._updateSelection();
                     self.updateOptions();
                 }
@@ -114,12 +114,12 @@
 
             $.ajax({
                 method: "GET",
-                url: self.options.portfolio_api + "?q=metric",
+                url: self.options.editable_filter_api + "?q=metric",
                 datatype: "json",
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
 //                    self.questions = response['objects'];
-                    self.questioncategories = data.results;
+                    self.metrics = data.results;
                     self._updateSelection();
                     self.updateOptions();
                 }
@@ -142,10 +142,10 @@
             self._updateSelection();
             var data = {
                 title: self.$element.find("[name=\"title\"]").val(),
-                cohorts: self.selectedPortfolios
+                cohorts: self.selectedCohorts
             };
-            if( self.selectedQuestionCategory ) {
-                data['metric'] = self.selectedQuestionCategory;
+            if( self.selectedMetric ) {
+                data['metric'] = self.selectedMetric;
             }
             $.ajax({
                 method: "PUT",
@@ -164,24 +164,24 @@
             var self = this;
             return; // XXX
 
-            var $questioncategories = self.$element.find("[name=\"questioncategory\"]");
-            $questioncategories.empty();
-            for ( var i = 0; i < self.questioncategories.length; i ++){
+            var $metrics = self.$element.find("[name=\"metric\"]");
+            $metrics.empty();
+            for ( var i = 0; i < self.metrics.length; i ++){
                 var $option = $('<option/>');
-                var qc = self.questioncategories[i];
+                var qc = self.metrics[i];
                 $option.text(qc.title);
                 $option.attr('value', qc.slug);
-                $questioncategories.append($option);
+                $metrics.append($option);
             }
 
-            var $portfolios = self.$element.find("[name=\"portfolios\"]");
-            $portfolios.empty();
-            for ( var i = 0; i < self.portfolios.length; i ++){
+            var $cohorts = self.$element.find("[name=\"cohorts\"]");
+            $cohorts.empty();
+            for ( var i = 0; i < self.cohorts.length; i ++){
                 var $option = $('<option/>');
-                var portfolio = self.portfolios[i];
-                $option.attr('value', portfolio.slug);
-                $option.text(portfolio.title);
-                $portfolios.append($option);
+                var cohort = self.cohorts[i];
+                $option.attr('value', cohort.slug);
+                $option.text(cohort.title);
+                $cohorts.append($option);
             }
         },
 
@@ -191,22 +191,22 @@
             (Currently not used)
          */
         scoresFromSet: function() {
-            var byUser= {};
+            var byAccount= {};
             var originalQuestionSet = new DjSet(self.questions);
             var questionSet = originalQuestionSet.clone();
 
-            for ( var i = 0; i < self.selectedQuestionCategory.predicates.length; i ++){
-                questionSet = DjaoDjinSet.fromPredicate(originalQuestionSet, questionSet, self.selectedQuestionCategory.predicates[i]);
+            for ( var i = 0; i < self.selectedMetric.predicates.length; i ++){
+                questionSet = DjaoDjinSet.fromPredicate(originalQuestionSet, questionSet, self.selectedMetric.predicates[i]);
             }
 
-            for(var h = 0; h < self.selectedPortfolios.length ; h ++){
-                var portfolio = self.selectedPortfolios[h];
+            for(var h = 0; h < self.selectedCohorts.length ; h ++){
+                var cohort = self.selectedCohorts[h];
 
                 var originalAccounts = new DjSet(self.accounts);
                 var accountSet = originalAccounts.clone();
 
-                for ( var i = 0; i < portfolio.predicates.length; i ++){
-                    accountSet = DjaoDjinSet.fromPredicate(originalAccounts, accountSet, portfolio.predicates[i]);
+                for ( var i = 0; i < cohort.predicates.length; i ++){
+                    accountSet = DjaoDjinSet.fromPredicate(originalAccounts, accountSet, cohort.predicates[i]);
                 }
 
                 var correctAnswerCount = 0;
@@ -214,7 +214,7 @@
                 for(var i = 0; i < self.responses.length; i ++){
                     var response = self.responses[i];
 
-                    if ( !accountSet.contains(response.user)){
+                    if ( !accountSet.contains(response.account)){
                         continue;
                     }
 
@@ -237,9 +237,9 @@
                 }else{
                     ratioCorrect = 1.0 * correctAnswerCount / matchingQuestionCount;
                 }
-                byUser[portfolio.title] = ratioCorrect * 100;
+                byAccount[cohort.title] = ratioCorrect * 100;
             }
-            self.scores = byUser;
+            self.scores = byAccount;
         },
 
         updateChart: function() {
@@ -297,7 +297,7 @@
     };
 
     $.fn.djmatrixChart.defaults = {
-        portfolio_api: null,
+        editable_filter_api: null,
         matrix_api: null
     };
 

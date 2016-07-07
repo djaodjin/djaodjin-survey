@@ -14,14 +14,14 @@
   </div>
   <div class="dj-predicates">
     <div class="dj-predicate-template">
-        <select class="filterType">
+        <select class="filter_type">
           <option value="removematching">Remove matching</option>
           <option value="reinclude">Reinclude matching from full set</option>
           <option value="keepmatching">Keep Matching</option>
           <option value="includeall">Include all</option>
           <option value="removeall">Remove all</option>
         </select>
-        <select class="property">
+        <select class="field">
         </select>
         <select class="operator">
         </select>
@@ -69,7 +69,7 @@ jQuery(document).ready(function($) {
 
 
   $('#categorize').djcategorize({
-     filter_api: "{{filter_api}}",
+     editable_filter_api: "{{editable_filter_api}}",
      objects_api: "{{objects_api}}"
   });
 

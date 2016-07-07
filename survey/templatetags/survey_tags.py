@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -38,14 +38,14 @@ def by_key(items, key):
 @register.filter()
 def field_for(form, answer):
     """
-    Returns the form field matching an answer index.
+    Returns the form field matching an answer rank.
     """
-    key = 'question-%d' % answer.index
+    key = 'question-%d' % answer.rank
     return {key: form.fields[key]}
 
 @register.filter()
 def answers_by_rank(response):
     """
-    Returns the answers on a ``Response`` in a stable increasing order.
+    Returns the answers on a ``Response`` in a stable increasing rank.
     """
     return response.get_answers_by_rank()

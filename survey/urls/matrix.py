@@ -30,11 +30,11 @@ from ..views.matrix import (MatrixListView, MatrixDetailView,
 
 
 urlpatterns = [
-   url(r'^accounts/(?P<portfolio>%s)/?' % SLUG_RE,
+   url(r'^accounts/(?P<editable_filter>%s)/?' % SLUG_RE,
        AccountListView.as_view(), name='accounts_list'),
    url(r'^accounts/',
        AccountListView.as_view(), name='accounts_base'),
-   url(r'^questions/(?P<portfolio>%s)/?' % SLUG_RE,
+   url(r'^questions/(?P<editable_filter>%s)/?' % SLUG_RE,
        QuestionListView.as_view(), name='questions_list'),
    url(r'^questions/',
        QuestionListView.as_view(), name='questions_base'),

@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@ from django.shortcuts import get_object_or_404
 from django.views.generic.detail import SingleObjectMixin
 
 from .compat import User
-from .models import Matrix, Portfolio, Question, Response, SurveyModel
+from .models import Matrix, EditableFilter, Question, Response, SurveyModel
 from .utils import get_account_model
 
 
@@ -53,7 +53,7 @@ class IntervieweeMixin(object):
     def get_interviewee(self):
         if self.request.user.is_authenticated():
             try:
-                interviewee = User.objects.get(
+                interviewee = get_account_model().objects.get(
                     username=self.kwargs.get(self.interviewee_slug))
             except User.DoesNotExist:
                 interviewee = self.request.user
@@ -89,12 +89,12 @@ class QuestionMixin(SingleObjectMixin):
         """
         Returns a question object based on the URL.
         """
-        index = self.kwargs.get(self.num_url_kwarg, 1)
+        rank = self.kwargs.get(self.num_url_kwarg, 1)
         slug = self.kwargs.get(self.survey_url_kwarg, None)
         survey = get_object_or_404(
             SurveyModel, slug__exact=slug)
         return get_object_or_404(
-            Question, survey=survey, order=index)
+            Question, survey=survey, rank=rank)
 
 
 class SurveyModelMixin(object):
@@ -129,10 +129,10 @@ class ResponseMixin(IntervieweeMixin, SurveyModelMixin):
             response = get_object_or_404(Response, slug=response_slug)
         else:
             # Well no id, let's see if we can find a response from
-            # a survey slug and a user
+            # a survey slug and a account
             interviewee = self.get_interviewee()
             response = get_object_or_404(Response,
-                survey=self.get_survey(), user=interviewee)
+                survey=self.get_survey(), account=interviewee)
         return response
 
     def get_reverse_kwargs(self):
@@ -159,13 +159,13 @@ class MatrixMixin(object):
         return self._matrix
 
 
-class PortfolioMixin(object):
+class EditableFilterMixin(object):
 
-    portfolio_url_kwarg = 'portfolio'
+    editable_filter_url_kwarg = 'editable_filter'
 
     @property
-    def portfolio(self):
-        if not hasattr(self, '_portfolio'):
-            self._portfolio = get_object_or_404(Portfolio,
-                    slug=self.kwargs.get(self.portfolio_url_kwarg))
-        return self._portfolio
+    def editable_filter(self):
+        if not hasattr(self, '_editable_filter'):
+            self._editable_filter = get_object_or_404(EditableFilter,
+                    slug=self.kwargs.get(self.editable_filter_url_kwarg))
+        return self._editable_filter
