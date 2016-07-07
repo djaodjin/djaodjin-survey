@@ -28,7 +28,7 @@ URLs for the djaodjin-survey django app testsite.
 
 from django.views.generic import RedirectView, TemplateView
 from django.core.urlresolvers import reverse_lazy
-from urldecorators import patterns, include, url
+from urldecorators import include, url
 
 # Uncomment the next two lines to enable the admin:
 from django.contrib import admin
