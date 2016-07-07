@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+
+{% block content %}
+<div>
+  <ul>
+    {% for entry in object_list %}
+    <li><a href="{% url 'matrix_chart' entry %}">{{entry.title}}</a></li>
+    {% endfor %}
+    <li><form id="new-matrix"><input name="title" type="text" /><button type="submit">New ...</button></form></li>
+  </ul>
+</div>
+<div id="matrix-charts">
+    {% for entry in object_list %}
+    <div class="matrix-chart">
+        <input type="text" name="title" style="display:inline-block" value="{{entry}}">
+        <button class="save">Update</button>
+    </div>
+    <div class="chart">
+        <svg><text x="50" y="100" font-family="Verdana">Loading ...</text></svg>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block bodyscripts %}
+<link rel="stylesheet" type="text/css" href="{% static 'vendor/css/nv.d3.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'css/matrix-chart.css' %}" />
+<script type="text/javascript" src="{% static 'vendor/js/jquery.js'%}"></script>
+<script type="text/javascript" charset="utf-8"
+        src="{% static 'vendor/js/d3.js' %}"></script>
+<script type="text/javascript" src="{% static 'vendor/js/nv.d3.js' %}"></script>
+<script type="text/javascript"
+        src="{% static 'js/matrix-chart.js' %}"></script>
+<script type="text/javascript"
+        src="{% static 'js/djaodjin-set.js' %}"></script>
+<script type="text/javascript"
+        src="{% static 'js/djaodjin-matrix.js' %}"></script>
+<script type="text/javascript">
+jQuery(document).ready(function($) {
+  $("#new-matrix").submit(function() {
+      var self = $(this);
+      var title = self.find("[name=\"title\"]").val();
+      $.ajax({
+          method: "POST",
+          url: "{% url 'matrix_api_base' %}",
+          data: JSON.stringify({title: title, cohorts: []}),
+          datatype: "json",
+          contentType: "application/json; charset=utf-8",
+          success: function(data){
+              window.location = "{% url 'matrix_base' %}" + data.slug;
+          }
+      });
+      return false;
+  });
+  $(".matrix-chart").djmatrixChart({
+      editable_filter_api: "{{editable_filter_api}}",
+      matrix_api: "{{matrix_api}}"
+  });
+});
+</script>
+{% endblock %}

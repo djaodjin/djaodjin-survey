@@ -33,9 +33,9 @@ from rest_framework import response as http
 
 from ..mixins import MatrixMixin
 from ..models import Answer, Matrix, EditableFilter, Question
-from ..utils import get_account_model
+from ..utils import get_account_model, get_account_serializer
 from .serializers import (EditableFilterSerializer,
-    MatrixSerializer, AccountSerializer, QuestionSerializer)
+    MatrixSerializer, QuestionSerializer)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -123,22 +123,28 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
         #pylint:disable=unused-argument,too-many-locals
         instance = self.get_object()
         scores = {}
-        includes, excludes = instance.metric.as_kwargs()
-        questions = Question.objects.filter(**includes).exclude(**excludes)
-        nb_questions = len(questions)
-        for cohort in instance.cohorts.all():
-            includes, excludes = cohort.as_kwargs()
-            accounts = get_account_model().objects.filter(
-                **includes).exclude(**excludes)
-            nb_correct_answers = Answer.objects.filter(
-                response__account__in=accounts).filter(
-                    body=F('question__correct_answer')).count()
-            score = nb_correct_answers * 100 / (nb_questions * len(accounts))
-            LOGGER.debug("score for '%s' = (%d * 100) / (%d * %d) = %f",
-                str(cohort), nb_correct_answers, nb_questions, len(accounts),
-                score)
-            assert score <= 100
-            scores.update({str(cohort): score})
+        if instance.metric:
+            includes, excludes = instance.metric.as_kwargs()
+            questions = Question.objects.filter(**includes).exclude(**excludes)
+            nb_questions = len(questions)
+            if nb_questions > 0:
+                for cohort in instance.cohorts.all():
+                    includes, excludes = cohort.as_kwargs()
+                    accounts = get_account_model().objects.filter(
+                        **includes).exclude(**excludes)
+                    nb_accounts = len(accounts)
+                    if nb_accounts > 0:
+                        nb_correct_answers = Answer.objects.filter(
+                            response__account__in=accounts).filter(
+                                body=F('question__correct_answer')).count()
+                        score = nb_correct_answers * 100 / (
+                            nb_questions * nb_accounts)
+                        LOGGER.debug(
+                            "score for '%s' = (%d * 100) / (%d * %d) = %f",
+                            str(cohort), nb_correct_answers, nb_questions,
+                            nb_accounts, score)
+                        assert score <= 100
+                        scores.update({str(cohort): score})
         serializer = self.get_serializer(instance)
         val = serializer.data
         val.update({"scores": scores})
@@ -225,7 +231,7 @@ class AccountListAPIView(EditableFilterObjectsAPIView):
            }]
         }
     """
-    serializer_class = AccountSerializer
+    serializer_class = get_account_serializer()
 
     def get_queryset(self):
         return self.get_serializer_class().Meta.model.objects.all()

@@ -56,7 +56,7 @@ class SurveyCreateView(AccountMixin, CreateView):
         Returns the initial data to use for forms on this view.
         """
         kwargs = super(SurveyCreateView, self).get_initial()
-        kwargs.update({'account': self.get_account()})
+        kwargs.update({'account': self.account})
         return kwargs
 
 
@@ -77,9 +77,8 @@ class SurveyListView(AccountMixin, ListView):
     slug_url_kwarg = 'survey'
 
     def get_queryset(self):
-        account = self.get_account()
-        if account:
-            queryset = SurveyModel.objects.filter(account=account)
+        if self.account:
+            queryset = SurveyModel.objects.filter(account=self.account)
         else:
             queryset = SurveyModel.objects.all()
         return queryset

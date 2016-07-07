@@ -27,13 +27,13 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, DetailView, ListView
 
 from ..compat import csrf
-from ..mixins import MatrixMixin, EditableFilterMixin
+from ..mixins import EditableFilterMixin, MatrixMixin, MatrixQuerysetMixin
 from ..models import EditableFilter
 
 
-class MatrixListView(MatrixMixin, ListView):
+class MatrixListView(MatrixQuerysetMixin, ListView):
 
-    template_name = "survey/matrix.html"
+    template_name = "survey/matrix/index.html"
 
     def get_context_data(self, *args, **kwargs):
         context = super(MatrixListView, self).get_context_data(*args, **kwargs)
@@ -45,7 +45,7 @@ class MatrixListView(MatrixMixin, ListView):
 
 class MatrixDetailView(MatrixMixin, DetailView):
 
-    template_name = "survey/matrix.html"
+    template_name = "survey/matrix/matrix.html"
 
     def get_object(self, queryset=None):
         if queryset is None:

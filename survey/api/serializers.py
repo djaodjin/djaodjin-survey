@@ -161,7 +161,7 @@ class MatrixSerializer(serializers.ModelSerializer):
         return instance
 
 
-class AccountSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_account_model()

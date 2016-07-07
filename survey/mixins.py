@@ -25,7 +25,7 @@
 from django.shortcuts import get_object_or_404
 from django.views.generic.detail import SingleObjectMixin
 
-from .compat import User
+from . import settings
 from .models import Matrix, EditableFilter, Question, Response, SurveyModel
 from .utils import get_account_model
 
@@ -34,17 +34,29 @@ class AccountMixin(object):
 
     account_kwarg_url = 'organization'
 
+    @property
+    def account(self):
+        if not hasattr(self, '_account'):
+            self._account = self.get_account()
+        return self._account
+
     def get_account(self):
         if self.kwargs.has_key(self.account_kwarg_url):
             account_model = get_account_model()
-            return get_object_or_404(account_model,
-                slug__exact=self.kwargs.get(self.account_kwarg_url))
+            kwargs = {'%s__exact' % settings.ACCOUNT_LOOKUP_FIELD:
+                self.kwargs.get(self.account_kwarg_url)}
+            return get_object_or_404(account_model, **kwargs)
         return None
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(AccountMixin, self).get_context_data(*args, **kwargs)
+        context.update({'account': self.account})
+        return context
 
 
 class IntervieweeMixin(object):
     """
-    Returns a User, either based on the interviewee or else, if none exists,
+    Returns an Account, either based on the interviewee or else, if none exists,
     the request.user.
     """
 
@@ -52,10 +64,12 @@ class IntervieweeMixin(object):
 
     def get_interviewee(self):
         if self.request.user.is_authenticated():
+            account_model = get_account_model()
             try:
-                interviewee = get_account_model().objects.get(
-                    username=self.kwargs.get(self.interviewee_slug))
-            except User.DoesNotExist:
+                kwargs = {'%s__exact' % settings.ACCOUNT_LOOKUP_FIELD:
+                    self.kwargs.get(self.interviewee_slug)}
+                interviewee = get_object_or_404(account_model, **kwargs)
+            except account_model.DoesNotExist:
                 interviewee = self.request.user
         else:
             interviewee = None
@@ -143,13 +157,16 @@ class ResponseMixin(IntervieweeMixin, SurveyModelMixin):
         return [self.interviewee_slug, 'survey', self.response_url_kwarg]
 
 
-class MatrixMixin(object):
-
-    matrix_url_kwarg = 'matrix'
+class MatrixQuerysetMixin(AccountMixin):
 
     @staticmethod
     def get_queryset():
         return Matrix.objects.all()
+
+
+class MatrixMixin(MatrixQuerysetMixin):
+
+    matrix_url_kwarg = 'matrix'
 
     @property
     def matrix(self):
@@ -159,7 +176,7 @@ class MatrixMixin(object):
         return self._matrix
 
 
-class EditableFilterMixin(object):
+class EditableFilterMixin(AccountMixin):
 
     editable_filter_url_kwarg = 'editable_filter'
 

@@ -132,7 +132,6 @@
                 success: function(data) {
                     self.scores = data.scores;
                     self.updateChart();
-                    $('#status').remove();
                 }
             });
         },
@@ -257,6 +256,12 @@
                 total += self.scores[k];
                 count ++;
             }
+            if( chartValues.length === 0 ) {
+                chartValues.push({
+                    "label": "no portfolio",
+                    "value": 0
+                });
+            }
 
             var avg = 1.0 * total / count;
             aggregates.push({"label": "Average " + d3.format(',.1f')(avg) + '%',
@@ -276,7 +281,9 @@
                     .yDomain([0, 100])
                     .valueFormat(d3.format(',.1f'));
 
-                d3.select('#chart svg')
+                var svgElement = self.$element.find(".chart svg")[0];
+                $(svgElement).empty();
+                d3.select(svgElement)
                     .datum(chartData)
                     .call(chart);
 

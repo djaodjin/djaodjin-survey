@@ -32,15 +32,16 @@ from django.conf import settings
 _SETTINGS = {
     'ACCOUNT_MODEL': getattr(
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
-    'AUTH_USER_MODEL': getattr(
-        settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
+    'ACCOUNT_LOOKUP_FIELD': 'username',
+    'ACCOUNT_SERIALIZER': 'survey.api.serializer.UserSerializer',
     'CORRECT_MARKER': '(correct)',
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None)
 }
 _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
-AUTH_USER_MODEL = _SETTINGS.get('AUTH_USER_MODEL')
+ACCOUNT_LOOKUP_FIELD = _SETTINGS.get('ACCOUNT_LOOKUP_FIELD')
+ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')
 CORRECT_MARKER = _SETTINGS.get('CORRECT_MARKER')
 DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
 

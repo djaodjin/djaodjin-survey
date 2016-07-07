@@ -15,7 +15,6 @@
     <input type="text" name="title" style="display:inline-block" value="{{object}}">
     <button class="save">Update</button>
   </div>
-  <div id="status">Loading...</div>
   <div>
     <h3>Cohorts</h3>
     {% for entry in cohorts %}
@@ -43,7 +42,7 @@
     <div><form id="new-metric"><input name="title" type="text" /><button type="submit">New ...</button></form></div>
   </div>
   <div id="chart">
-    <svg></svg>
+    <svg><text x="50" y="100" font-family="Verdana">Loading ...</text></svg>
   </div>
 </div>
 {% endblock %}
