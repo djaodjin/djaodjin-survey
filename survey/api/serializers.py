@@ -53,8 +53,7 @@ class ResponseSerializer(serializers.ModelSerializer):
 
     class Meta(object):
         model = Response
-        fields = ('slug', 'account', 'title', 'description', 'published',
-            'quizz_mode', 'questions')
+        fields = ('slug', 'created_at', 'time_spent', 'is_frozen', 'answers')
         read_only_fields = ('slug',)
 
 
@@ -64,7 +63,8 @@ class SurveyModelSerializer(serializers.ModelSerializer):
 
     class Meta(object):
         model = SurveyModel
-        fields = ('slug', 'created_at', 'time_spent', 'is_frozen', 'answers')
+        fields = ('slug', 'account', 'title', 'description', 'published',
+            'quizz_mode', 'questions')
         read_only_fields = ('slug',)
 
 

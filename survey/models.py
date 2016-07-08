@@ -31,7 +31,8 @@ from django.utils.timezone import utc
 
 from durationfield.db.models.fields.duration import DurationField
 
-from .settings import ACCOUNT_MODEL
+from . import settings
+from .utils import get_account_model
 
 
 class SlugTitleMixin(object):
@@ -81,7 +82,7 @@ class SurveyModel(SlugTitleMixin, models.Model):
     published = models.BooleanField(default=False)
     quizz_mode = models.BooleanField(default=False,
         help_text="If checked, correct answser are required")
-    account = models.ForeignKey(ACCOUNT_MODEL, null=True)
+    account = models.ForeignKey(settings.ACCOUNT_MODEL, null=True)
     defaults_single_page = models.BooleanField(default=False,
         help_text="If checked, will display all questions on a single page,"\
 " else there will be one question per page.")
@@ -162,6 +163,11 @@ class Question(models.Model):
 
 class ResponseManager(models.Manager):
 
+    def create_for_account(self, account_name, **kwargs):
+        account_lookup_kwargs = {settings.ACCOUNT_LOOKUP_FIELD: account_name}
+        return self.create(account=get_account_model().objects.get(
+                **account_lookup_kwargs), **kwargs)
+
     def create(self, **kwargs): #pylint: disable=super-on-old-class
         return super(ResponseManager, self).create(
             slug=slugify(uuid.uuid4().hex), **kwargs)
@@ -200,7 +206,7 @@ class Response(models.Model):
     slug = models.SlugField()
     created_at = models.DateTimeField(auto_now_add=True)
     survey = models.ForeignKey(SurveyModel, null=True)
-    account = models.ForeignKey(ACCOUNT_MODEL, null=True)
+    account = models.ForeignKey(settings.ACCOUNT_MODEL, null=True)
     time_spent = DurationField(default=0,
         help_text="Total recorded time to complete the survey")
     is_frozen = models.BooleanField(default=False,
