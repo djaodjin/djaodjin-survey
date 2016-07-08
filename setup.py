@@ -31,6 +31,7 @@ setup(
     author='The DjaoDjin Team',
     author_email='support@djaodjin.com',
     packages=['survey',
+              'survey.api',
               'survey.templatetags',
               'survey.urls',
               'survey.views'],
