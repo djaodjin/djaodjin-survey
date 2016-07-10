@@ -127,7 +127,7 @@ class ResponseMixin(IntervieweeMixin, SurveyModelMixin):
     Returns a ``Response`` to a ``SurveyModel``.
     """
 
-    response_url_kwarg = 'response_slug'
+    response_url_kwarg = 'response'
 
     @property
     def sample(self):
