@@ -43,12 +43,12 @@ jQuery(document).ready(function($) {
       var title = self.find("[name=\"title\"]").val();
       $.ajax({
           method: "POST",
-          url: "{% url 'matrix_api_base' %}",
+          url: "{{matrix_api_base}}",
           data: JSON.stringify({title: title, cohorts: []}),
           datatype: "json",
           contentType: "application/json; charset=utf-8",
           success: function(data){
-              window.location = "{% url 'matrix_base' %}" + data.slug;
+              window.location = data.slug + "/";
           }
       });
       return false;

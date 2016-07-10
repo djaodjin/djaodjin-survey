@@ -53,6 +53,14 @@ class AccountMixin(object):
         context.update({'account': self.account})
         return context
 
+    def get_url_kwargs(self):
+        kwargs = {}
+        for url_kwarg in [self.account_kwarg_url]:
+            url_kwarg_val = self.kwargs.get(url_kwarg, None)
+            if url_kwarg_val:
+                kwargs.update({url_kwarg: url_kwarg_val})
+        return kwargs
+
 
 class IntervieweeMixin(object):
     """

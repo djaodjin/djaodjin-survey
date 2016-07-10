@@ -39,8 +39,12 @@ class MatrixListView(MatrixQuerysetMixin, ListView):
 
     def get_context_data(self, *args, **kwargs):
         context = super(MatrixListView, self).get_context_data(*args, **kwargs)
+        url_kwargs = self.get_url_kwargs()
         context.update({
-            'editable_filter_api' :reverse('editable_filter_api_base'),
+            'editable_filter_api': reverse(
+                'editable_filter_api_base', kwargs=url_kwargs),
+            'matrix_api_base': reverse(
+                'matrix_api_base', kwargs=url_kwargs),
         })
         return context
 
@@ -67,11 +71,17 @@ class MatrixDetailView(MatrixMixin, DetailView):
         for metric in metrics:
             if metric == self.object.metric:
                 metric.is_selected = True
+        url_kwargs = self.get_url_kwargs()
         context.update({
             'cohorts': cohorts,
             'metrics': metrics,
-            'editable_filter_api' :reverse('editable_filter_api_base'),
-            'matrix_api': reverse('matrix_api', args=(self.object,)),
+            'editable_filter_api_base': reverse(
+                'editable_filter_api_base', kwargs=url_kwargs),
+        })
+        url_kwargs.update({'matrix': self.object})
+        context.update({
+            'matrix_api': reverse(
+                'matrix_api', kwargs=url_kwargs),
         })
         return context
 
@@ -100,12 +110,15 @@ class EditableFilterView(EditableFilterMixin, TemplateView):
         context = super(EditableFilterView, self).get_context_data(
             *args, **kwargs)
         context.update(csrf(self.request))
+        url_kwargs = self.get_url_kwargs()
+        url_kwargs.update({'editable_filter': self.editable_filter})
         context.update({
             'editable_filter_api': reverse(
-                'editable_filter_api', args=(self.editable_filter,)),
-            'objects_api': reverse(self.api_url, args=(self.editable_filter,))
+                'editable_filter_api', kwargs=url_kwargs),
+            'objects_api': reverse(self.api_url, kwargs=url_kwargs)
         })
         return context
+
 
 class AccountListView(EditableFilterView):
 
