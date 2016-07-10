@@ -225,7 +225,7 @@
                         }
 
                         matchingQuestionCount += 1;
-                        if ( answer.body == answer.question.correct_answer ){
+                        if ( answer.text == answer.question.correct_answer ){
                             correctAnswerCount ++;
                         }
                     }

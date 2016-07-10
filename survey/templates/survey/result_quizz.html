@@ -19,13 +19,13 @@
 		{% if answer.question.get_choices %}
 		{% for choice in answer.question.get_choices %}
 		<div>
-			<input type="{{ answer.question.question_type }}" disabled="true" {% if choice.0 in answer.body %}checked="true"{% endif %}>
+			<input type="{{ answer.question.question_type }}" disabled="true" {% if choice.0 in answer.text %}checked="true"{% endif %}>
 			<span>{{choice.0}}
 			{% if response.survey.quizz_mode %}
 				{% if choice.0 in answer.question.get_correct_answer %}
 					V
 				{% else %}
-					{% if choice.0 in answer.body %}
+					{% if choice.0 in answer.text %}
 					X
 					{% endif %}
 				{% endif %}
@@ -34,7 +34,7 @@
 		</div>
 		{% endfor %}
 		{% else %}
-		{{answer.body}}
+		{{answer.text}}
 		{% endif %}
 	{% endfor %}
 </div>

@@ -127,7 +127,13 @@ class ResponseMixin(IntervieweeMixin, SurveyModelMixin):
     Returns a ``Response`` to a ``SurveyModel``.
     """
 
-    response_url_kwarg = 'response'
+    response_url_kwarg = 'response_slug'
+
+    @property
+    def sample(self):
+        if not hasattr(self, '_sample'):
+            self._sample = self.get_response()
+        return self._sample
 
     def get_response(self, url_kwarg=None):
         """

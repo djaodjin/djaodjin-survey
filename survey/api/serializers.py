@@ -36,7 +36,7 @@ class AnswerSerializer(serializers.ModelSerializer): #pylint: disable=no-init
 
     class Meta(object):
         model = Answer
-        fields = ('created_at', 'body')
+        fields = ('created_at', 'text')
 
 
 class QuestionSerializer(serializers.ModelSerializer):

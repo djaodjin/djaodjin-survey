@@ -29,7 +29,7 @@ from survey.views.createsurvey import (SurveyCreateView, SurveyDeleteView,
     SurveyUpdateView)
 from survey.views.createquestion import (QuestionCreateView, QuestionDeleteView,
     QuestionListView, QuestionRankView, QuestionUpdateView)
-from survey.views.response import RespondentListView
+from survey.views.matrix import RespondentListView
 
 
 urlpatterns = [

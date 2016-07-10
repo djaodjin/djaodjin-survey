@@ -130,7 +130,7 @@ class SurveyResultView(DetailView):
         # The structure of the aggregated dataset returned to the client will
         # look like:
         # [ { "key": ``slug for Question``,
-        #     "values": [ ``Answer.body`` ... ] },
+        #     "values": [ ``Answer.text`` ... ] },
         #   ... ]
         individuals = []
         for question in Question.objects.filter(
@@ -141,7 +141,7 @@ class SurveyResultView(DetailView):
 #                'key': slugify("%s-%d"
 #                    % (question.survey.slug, question.rank)),
                 'values': Answer.objects.filter(
-                    question=question).values('body')}]
+                    question=question).values('text')}]
 
         # Aggregate results for questions which have a fixed given number of
         # possible choices.
@@ -163,14 +163,14 @@ class SurveyResultView(DetailView):
             # Populate the aggregate
             for answer in Answer.objects.filter(question=question):
                 if question.question_type == Question.INTEGER:
-                    choice = answer.body
+                    choice = answer.text
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
                     else:
                         LOGGER.error("'%s' not found in %s", choice, aggregate)
 
                 elif question.question_type == Question.RADIO:
-                    choice = answer.body
+                    choice = answer.text
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
                     else:

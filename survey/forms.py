@@ -78,7 +78,7 @@ class AnswerForm(forms.ModelForm):
 
     class Meta:
         model = Answer
-        fields = ('body',)
+        fields = ('text',)
 
     def __init__(self, *args, **kwargs):
         super(AnswerForm, self).__init__(*args, **kwargs)
@@ -90,13 +90,13 @@ class AnswerForm(forms.ModelForm):
         fields = _create_field(question.question_type, question.text,
             has_other=question.has_other, required=question.required,
             choices=question.get_choices())
-        self.fields['body'] = fields[0]
+        self.fields['text'] = fields[0]
         if fields[1]:
             self.fields['other'] = fields[1]
 
     def save(self, commit=True):
         if self.instance.question.has_other and self.cleaned_data['other']:
-            self.cleaned_data['body'] += self.cleaned_data['other']
+            self.cleaned_data['text'] += self.cleaned_data['other']
         return super(AnswerForm, self).save(commit)
 
 

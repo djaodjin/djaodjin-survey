@@ -32,5 +32,5 @@ urlpatterns = [
     url(r'^api/', include('survey.urls.api')),
     url(r'^manage/', include('survey.urls.manager')),
     url(r'^matrix/', include('survey.urls.matrix')),
-    url(r'^', include('survey.urls.interviewee')),
+    url(r'^', include('survey.urls.response')),
 ]

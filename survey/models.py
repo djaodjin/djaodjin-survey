@@ -178,7 +178,7 @@ class ResponseManager(models.Manager):
         nb_questions = len(answers)
         for answer in answers:
             if answer.question.question_type == Question.RADIO:
-                if answer.body in answer.question.get_correct_answer():
+                if answer.text in answer.question.get_correct_answer():
                     nb_correct_answers += 1
             elif answer.question.question_type == Question.SELECT_MULTIPLE:
                 multiple_choices = answer.get_multiple_choices()
@@ -248,7 +248,7 @@ class Answer(models.Model):
     question = models.ForeignKey(Question)
     response = models.ForeignKey(Response, related_name='answers')
     rank = models.IntegerField(help_text="Position in the response list.")
-    body = models.TextField(blank=True, null=True)
+    text = models.TextField(blank=True, null=True)
 
     class Meta:
         unique_together = ("question", "response")
@@ -257,7 +257,7 @@ class Answer(models.Model):
         return '%s-%d' % (self.response.slug, self.rank)
 
     def get_multiple_choices(self):
-        text = str(self.body)
+        text = str(self.text)
         return text.replace('[', '').replace(']', '').replace(
             'u\'', '').replace('\'', '').split(', ')
 

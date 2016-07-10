@@ -27,7 +27,9 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, DetailView, ListView
 
 from ..compat import csrf
-from ..mixins import EditableFilterMixin, MatrixMixin, MatrixQuerysetMixin
+from survey.models import Response
+from ..mixins import (EditableFilterMixin, MatrixMixin, MatrixQuerysetMixin,
+    SurveyModelMixin)
 from ..models import EditableFilter
 
 
@@ -71,6 +73,21 @@ class MatrixDetailView(MatrixMixin, DetailView):
             'editable_filter_api' :reverse('editable_filter_api_base'),
             'matrix_api': reverse('matrix_api', args=(self.object,)),
         })
+        return context
+
+
+class RespondentListView(SurveyModelMixin, ListView):
+
+    model = Response
+    template_name = 'survey/respondent_list.html'
+
+    def get_queryset(self):
+        return super(RespondentListView, self).get_queryset().filter(
+            survey=self.get_survey(), is_frozen=True)
+
+    def get_context_data(self, **kwargs):
+        context = super(RespondentListView, self).get_context_data(**kwargs)
+        context.update({'survey': self.get_survey()})
         return context
 
 

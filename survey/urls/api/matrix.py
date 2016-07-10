@@ -24,16 +24,12 @@
 
 from django.conf.urls import url
 
-from ..api.matrix import (MatrixCreateAPIView, MatrixDetailAPIView,
+from ...api.matrix import (MatrixCreateAPIView, MatrixDetailAPIView,
     EditableFilterListAPIView, EditableFilterDetailAPIView,
     AccountListAPIView, QuestionListAPIView)
-from ..settings import SLUG_RE
+from ...settings import SLUG_RE
 
 urlpatterns = [
-   url(r'^matrix/(?P<matrix>%s)/?' % SLUG_RE,
-       MatrixDetailAPIView.as_view(), name='matrix_api'),
-   url(r'^matrix/?',
-       MatrixCreateAPIView.as_view(), name='matrix_api_base'),
    url(r'^filters/(?P<editable_filter>%s)/?' % SLUG_RE,
        EditableFilterDetailAPIView.as_view(), name='editable_filter_api'),
    url(r'^filters/?',
@@ -46,4 +42,8 @@ urlpatterns = [
        QuestionListAPIView.as_view(), name='questions_api'),
    url(r'^questions/?',
        QuestionListAPIView.as_view(), name='questions_api_base'),
+   url(r'^(?P<matrix>%s)/?' % SLUG_RE,
+       MatrixDetailAPIView.as_view(), name='matrix_api'),
+   url(r'^',
+       MatrixCreateAPIView.as_view(), name='matrix_api_base'),
 ]

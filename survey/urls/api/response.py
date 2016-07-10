@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,27 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from distutils.core import setup
-import survey
+from django.conf.urls import url
 
-setup(
-    name='djaodjin-survey',
-    version=survey.__version__,
-    author='The DjaoDjin Team',
-    author_email='support@djaodjin.com',
-    packages=['survey',
-              'survey.api',
-              'survey.templatetags',
-              'survey.urls',
-              'survey.urls.api',
-              'survey.views'],
-    package_data={'survey': [
-        'static/js/*', 'static/vendor/css/*', 'static/vendor/js/*',
-        'templates/survey/*']},
-    url='https://github.com/djaodjin/djaodjin-survey/',
-    download_url='https://github.com/djaodjin/djaodjin-survey/tarball/%s' \
-        % survey.__version__,
-    license='BSD',
-    description='Survey Django app',
-    long_description=open('README.md').read(),
-)
+from ...api.response import AnswerAPIView, ResponseAPIView
+from ...settings import SLUG_RE
+
+urlpatterns = [
+   url(r'^response/(?P<response_slug>%s)/(?P<rank>\d+)/?' % SLUG_RE,
+       AnswerAPIView.as_view(), name='survey_api_answer'),
+   url(r'^response/(?P<response_slug>%s)/?' % SLUG_RE,
+       ResponseAPIView.as_view(), name='survey_api_response'),
+]

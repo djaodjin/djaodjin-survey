@@ -25,7 +25,7 @@
 from django.conf.urls import url
 
 from ..settings import SLUG_RE
-from ..views.displaysurvey import (AnswerUpdateView, ResponseCreateView,
+from ..views.response import (AnswerUpdateView, ResponseCreateView,
     ResponseResetView, ResponseResultView, ResponseUpdateView)
 
 urlpatterns = [
