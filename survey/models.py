@@ -82,7 +82,7 @@ class SurveyModel(SlugTitleMixin, models.Model):
     published = models.BooleanField(default=False)
     quizz_mode = models.BooleanField(default=False,
         help_text="If checked, correct answser are required")
-    account = models.ForeignKey(settings.ACCOUNT_MODEL, null=True)
+    account = models.ForeignKey(settings.BELONGS_MODEL, null=True)
     defaults_single_page = models.BooleanField(default=False,
         help_text="If checked, will display all questions on a single page,"\
 " else there will be one question per page.")
