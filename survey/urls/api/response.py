@@ -28,8 +28,8 @@ from ...api.response import AnswerAPIView, ResponseAPIView
 from ...settings import SLUG_RE
 
 urlpatterns = [
-   url(r'^response/(?P<response>%s)/(?P<rank>\d+)/?' % SLUG_RE,
+   url(r'^response/(?P<sample>%s)/(?P<rank>\d+)/?' % SLUG_RE,
        AnswerAPIView.as_view(), name='survey_api_answer'),
-   url(r'^response/(?P<response>%s)/?' % SLUG_RE,
+   url(r'^response/(?P<sample>%s)/?' % SLUG_RE,
        ResponseAPIView.as_view(), name='survey_api_response'),
 ]

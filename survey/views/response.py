@@ -205,7 +205,7 @@ class ResponseCreateView(SurveyModelMixin, IntervieweeMixin, CreateView):
 
     def get_success_url(self):
         kwargs = self.get_url_context()
-        kwargs.update({'response': self.object.slug})
+        kwargs.update({ResponseMixin.response_url_kwarg: self.object.slug})
         if self.survey and self.survey.defaults_single_page:
             next_step_url = self.single_page_next_step_url
         else:
@@ -234,14 +234,13 @@ class ResponseResetView(ResponseMixin, RedirectView):
         return super(ResponseResetView, self).get(request, *args, **kwargs)
 
 
-class ResponseUpdateView(SurveyModelMixin, IntervieweeMixin, UpdateView):
+class ResponseUpdateView(ResponseMixin, IntervieweeMixin, UpdateView):
     """
     Updates all ``Answer`` of a ``Response`` from a ``Account``
     in a single shot.
     """
     model = Response
     form_class = ResponseUpdateForm
-    slug_url_kwarg = 'response'
     next_step_url = 'survey_response_results'
     template_name = 'survey/response_update.html'
 
@@ -255,6 +254,9 @@ class ResponseUpdateView(SurveyModelMixin, IntervieweeMixin, UpdateView):
             answer.text = form.cleaned_data['question-%d' % answer.rank]
             answer.save()
         return super(ResponseUpdateView, self).form_valid(form)
+
+    def get_object(self, queryset=None):
+        return self.get_response()
 
     def get_context_data(self, **kwargs):
         context = super(ResponseUpdateView, self).get_context_data(**kwargs)
@@ -273,5 +275,5 @@ class ResponseUpdateView(SurveyModelMixin, IntervieweeMixin, UpdateView):
 
     def get_success_url(self):
         kwargs = self.get_url_context()
-        kwargs.update({'response': self.object.slug})
+        kwargs.update({self.response_url_kwarg: self.object.slug})
         return reverse(self.next_step_url, kwargs=kwargs)

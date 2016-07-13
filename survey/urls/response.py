@@ -29,14 +29,14 @@ from ..views.response import (AnswerUpdateView, ResponseCreateView,
     ResponseResetView, ResponseResultView, ResponseUpdateView)
 
 urlpatterns = [
-   url(r'^(?P<survey>%s)/(?P<response>%s)/reset/' % (SLUG_RE, SLUG_RE),
+   url(r'^(?P<survey>%s)/(?P<sample>%s)/reset/' % (SLUG_RE, SLUG_RE),
        ResponseResetView.as_view(), name='survey_response_reset'),
-   url(r'^(?P<survey>%s)/(?P<response>%s)/results/' % (SLUG_RE, SLUG_RE),
+   url(r'^(?P<survey>%s)/(?P<sample>%s)/results/' % (SLUG_RE, SLUG_RE),
        ResponseResultView.as_view(), name='survey_response_results'),
-   url(r'^(?P<survey>%s)/(?P<response>%s)/(?:(?P<rank>\d+)/)'
+   url(r'^(?P<survey>%s)/(?P<sample>%s)/(?:(?P<rank>\d+)/)'
        % (SLUG_RE, SLUG_RE),
        AnswerUpdateView.as_view(), name='survey_answer_update'),
-   url(r'^(?P<survey>%s)/(?P<response>%s)/' % (SLUG_RE, SLUG_RE),
+   url(r'^(?P<survey>%s)/(?P<sample>%s)/' % (SLUG_RE, SLUG_RE),
        ResponseUpdateView.as_view(), name='survey_response_update'),
    url(r'^(?P<survey>%s)/' % SLUG_RE,
        ResponseCreateView.as_view(), name='survey_response_new'),

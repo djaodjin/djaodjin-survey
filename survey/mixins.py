@@ -135,7 +135,9 @@ class ResponseMixin(IntervieweeMixin, SurveyModelMixin):
     Returns a ``Response`` to a ``SurveyModel``.
     """
 
-    response_url_kwarg = 'response'
+    # We have to use a special url_kwarg here because 'response'
+    # interfers with the way rest_framework handles **kwargs.
+    response_url_kwarg = 'sample'
 
     @property
     def sample(self):
