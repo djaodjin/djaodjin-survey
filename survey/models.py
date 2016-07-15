@@ -46,27 +46,29 @@ class SlugTitleMixin(object):
         """
         Keep slug in sync with survey title.
         """
-        max_length = self._meta.get_field('slug').max_length
-        slug = slugify(self.title)
-        self.slug = slug
-        if len(self.slug) > max_length:
-            self.slug = slug[:max_length]
-        num = 1
-        while True:
-            try:
-                with transaction.atomic():
-                    return models.Model.save(self,
-                        force_insert=force_insert, force_update=force_update,
-                        using=using, update_fields=update_fields)
-            except IntegrityError, err:
-                if not 'uniq' in str(err).lower():
-                    raise
-                prefix = '-%d' % num
-                self.slug = '%s%s' % (slug, prefix)
-                if len(self.slug) > max_length:
-                    self.slug = '%s-%d' % (
-                        slug[:(max_length-len(prefix))], num)
-                num = num + 1
+        if not self.slug: #pylint:disable=access-member-before-definition
+            max_length = self._meta.get_field('slug').max_length
+            slug = slugify(self.title)
+            self.slug = slug
+            if len(self.slug) > max_length:
+                self.slug = slug[:max_length]
+            num = 1
+            while True:
+                try:
+                    with transaction.atomic():
+                        return models.Model.save(self,
+                            force_insert=force_insert,
+                            force_update=force_update,
+                            using=using, update_fields=update_fields)
+                except IntegrityError, err:
+                    if not 'uniq' in str(err).lower():
+                        raise
+                    prefix = '-%d' % num
+                    self.slug = '%s%s' % (slug, prefix)
+                    if len(self.slug) > max_length:
+                        self.slug = '%s-%d' % (
+                            slug[:(max_length-len(prefix))], num)
+                    num = num + 1
 
 
 class SurveyModel(SlugTitleMixin, models.Model):
