@@ -33,7 +33,8 @@ _SETTINGS = {
     'ACCOUNT_MODEL': getattr(
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
     'ACCOUNT_LOOKUP_FIELD': 'username',
-    'ACCOUNT_SERIALIZER': 'survey.api.serializer.UserSerializer',
+    'ACCOUNT_SERIALIZER': 'survey.api.serializers.UserSerializer',
+    'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionSerializer',
     'BELONGS_MODEL': None,
     'CORRECT_MARKER': '(correct)',
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None)
@@ -43,6 +44,7 @@ _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
 ACCOUNT_LOOKUP_FIELD = _SETTINGS.get('ACCOUNT_LOOKUP_FIELD')
 ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')
+QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
 BELONGS_MODEL = (_SETTINGS.get('BELONGS_MODEL')
     if _SETTINGS.get('BELONGS_MODEL') else _SETTINGS.get('ACCOUNT_MODEL'))
 CORRECT_MARKER = _SETTINGS.get('CORRECT_MARKER')

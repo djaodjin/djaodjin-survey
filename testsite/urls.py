@@ -47,5 +47,5 @@ urlpatterns = [
     url(r'^manager/', include('survey.urls.manager'),
         decorators=['django.contrib.auth.decorators.login_required']),
     url(r'^matrix/', include('survey.urls.matrix')),
-    url(r'^', include('survey.urls.interviewee')),
+    url(r'^', include('survey.urls.response')),
 ]

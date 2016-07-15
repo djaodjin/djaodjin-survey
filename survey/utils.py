@@ -27,27 +27,28 @@ from importlib import import_module
 from django.core.exceptions import ImproperlyConfigured
 from django.apps import apps as django_apps
 
-from .settings import ACCOUNT_MODEL, ACCOUNT_SERIALIZER
+from . import settings
+
 
 def get_account_model():
     """
     Returns the ``Account`` model that is active in this project.
     """
     try:
-        return django_apps.get_model(ACCOUNT_MODEL)
+        return django_apps.get_model(settings.ACCOUNT_MODEL)
     except ValueError:
         raise ImproperlyConfigured(
             "ACCOUNT_MODEL must be of the form 'app_label.model_name'")
     except LookupError:
         raise ImproperlyConfigured("ACCOUNT_MODEL refers to model '%s'"\
-" that has not been installed" % ACCOUNT_MODEL)
+" that has not been installed" % settings.ACCOUNT_MODEL)
 
 
 def get_account_serializer():
     """
     Returns the ``AccountSerializer`` model that is active in this project.
     """
-    path = ACCOUNT_SERIALIZER
+    path = settings.ACCOUNT_SERIALIZER
     dot_pos = path.rfind('.')
     module, attr = path[:dot_pos], path[dot_pos + 1:]
     try:
@@ -61,4 +62,25 @@ def get_account_serializer():
     except AttributeError:
         raise ImproperlyConfigured('Module "%s" does not define a "%s"'\
 ' check the value of ACCOUNT_SERIALIZER' % (module, attr))
+    return cls
+
+
+def get_question_serializer():
+    """
+    Returns the ``QuestionSerializer`` model that is active in this project.
+    """
+    path = settings.QUESTION_SERIALIZER
+    dot_pos = path.rfind('.')
+    module, attr = path[:dot_pos], path[dot_pos + 1:]
+    try:
+        mod = import_module(module)
+    except (ImportError, ValueError)  as err:
+        raise ImproperlyConfigured(
+            "Error importing class '%s' defined by QUESTION_SERIALIZER (%s)"
+            % (path, err))
+    try:
+        cls = getattr(mod, attr)
+    except AttributeError:
+        raise ImproperlyConfigured('Module "%s" does not define a "%s"'\
+' check the value of QUESTION_SERIALIZER' % (module, attr))
     return cls

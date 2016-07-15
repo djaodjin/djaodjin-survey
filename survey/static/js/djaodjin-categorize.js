@@ -59,7 +59,7 @@ if (!Array.prototype.filter) {
              <select class="operator"></select>
              <select class="operand"></select>
              <select class="field"></select>
-             <select class="filter_type"></select>
+             <select class="selector"></select>
              <button class="delete"></button>
            </div>
            <button class="add-predicate">Add predicate</button>
@@ -86,20 +86,23 @@ if (!Array.prototype.filter) {
             self.$categoryTitle = $element.find("[name='title']");
             self.$categoryTitle.on('input', function(e){
                 self.selectedCategory().title = $(e.target).val();
+                self.save();
                 self.update();
                 return false;
             });
 
             var $saveButton = $element.find(".save");
-            $saveButton.on('click', function(){
+            $saveButton.on('click', function(event){
+                event.preventDefault();
                 self.save();
             });
 
             var addPredicateButton =  $element.find(".add-predicate");
             addPredicateButton.on('click', function(){
+                event.preventDefault();
                 self.selectedCategory().predicates.push(new Predicate(
                     'equals', '', self.dataProperties[0] || '',
-                    'removematching'));
+                    'keepmatching'));
                 self.update();
             });
 
@@ -251,9 +254,6 @@ if (!Array.prototype.filter) {
             var predicateElemTemplate =  predicateContainer.find(".dj-predicate-template");
             for ( var i = 0; i < predicates.length; ++i ){
                 var predicate = predicates[i];
-                if( typeof predicate.filter_type !== "undefined" ) {
-                    predicate.filterType = predicate.filter_type;
-                }
                 var $elem;
                 if( i >= $predicateElems.length ) {
                     /* Let's add a ui element when the new list is longer. */
@@ -263,6 +263,7 @@ if (!Array.prototype.filter) {
                     $elem.find('.delete').on('click', function(i, $elem){
                         predicates.splice(i, 1);
                         $elem.remove();
+                        self.save();
                         self.update();
                     }.bind(null, i, $elem));
 
@@ -279,12 +280,14 @@ if (!Array.prototype.filter) {
                         onUpdate(predicate,'operand'));
                     $elem.find('.field').on('input',
                         onUpdate(predicate,'field'));
-                    $elem.find('.filter_type').on('input',
-                        onUpdate(predicate,'filterType'));
+                    $elem.find('.selector').on('input',
+                        onUpdate(predicate,'selector'));
                     $elem.find('input').on('input', function(){
+                        self.save();
                         self.update();
                     });
                     $elem.find('select').on('input', function(){
+                        self.save();
                         self.update();
                     });
 
@@ -309,7 +312,7 @@ if (!Array.prototype.filter) {
                 $elem.find('.operator').val(predicate.operator);
                 $elem.find('.operand').val(predicate.operand);
                 $elem.find('.field').val(predicate.field);
-                $elem.find('.filter_type').val(predicate.filterType);
+                $elem.find('.selector').val(predicate.selector);
             }
 
             /* Let's remove extraneous ui elements when the new list

@@ -30,7 +30,7 @@ from ..compat import csrf
 from survey.models import Response
 from ..mixins import (EditableFilterMixin, MatrixMixin, MatrixQuerysetMixin,
     SurveyModelMixin)
-from ..models import EditableFilter
+from ..models import EditableFilter, Matrix
 
 
 class MatrixListView(MatrixQuerysetMixin, ListView):
@@ -59,6 +59,14 @@ class MatrixDetailView(MatrixMixin, DetailView):
         return get_object_or_404(
             queryset, slug=self.kwargs.get(self.matrix_url_kwarg))
 
+    def get_aggregates_url(self, slug):
+        aggregates = Matrix.objects.filter(slug='%s-aggregates' % slug).first()
+        if aggregates:
+            url_kwargs = self.get_url_kwargs()
+            url_kwargs.update({'matrix': aggregates})
+            return reverse('matrix_api', kwargs=url_kwargs)
+        return None
+
     def get_context_data(self, *args, **kwargs):
         context = super(MatrixDetailView, self).get_context_data(
             *args, **kwargs)
@@ -80,9 +88,11 @@ class MatrixDetailView(MatrixMixin, DetailView):
         })
         url_kwargs.update({'matrix': self.object})
         context.update({
-            'matrix_api': reverse(
-                'matrix_api', kwargs=url_kwargs),
+            'matrix_api': reverse('matrix_api', kwargs=url_kwargs),
         })
+        aggregates_url = self.get_aggregates_url(self.object.slug)
+        if aggregates_url:
+            context.update({'aggregates_api': aggregates_url})
         return context
 
 

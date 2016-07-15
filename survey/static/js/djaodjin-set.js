@@ -53,11 +53,11 @@ var DjaoDjinSet = (function () {
     DjaoDjinSet.Category = Category;
 
 
-    function Predicate(operator, operand, property, filterType){
+    function Predicate(operator, operand, field, selector){
         this.operator = operator;
         this.operand = operand;
-        this.property = property;
-        this.filterType = filterType;
+        this.field = field;
+        this.selector = selector;
     }
     DjaoDjinSet.Predicate = Predicate;
 
@@ -162,26 +162,26 @@ var DjaoDjinSet = (function () {
         }
 
         var predicate_fn = function(x){
-            return operator_fn(new String(x[predicate.property]), predicate.operand);
+            return operator_fn(new String(x[predicate.field]), predicate.operand);
         }
 
-        var filterType = predicate.filterType;
-        if ( predicate.filterType == 'removematching'){
+        var selector = predicate.selector;
+        if ( predicate.selector == 'removematching'){
 
             var toRemove = data.array().filter(predicate_fn);
             for ( var j = 0; j < toRemove.length; j ++){
                 data.remove(toRemove[j]);
             }
-        }else if (predicate.filterType == 'reinclude'){
+        }else if (predicate.selector == 'reinclude'){
             data.union(originalData.array().filter(predicate_fn));
-        }else if ( predicate.filterType == 'keepmatching'){
+        }else if ( predicate.selector == 'keepmatching'){
             data = new DjSet(data.array().filter(predicate_fn));
-        }else if ( predicate.filterType == 'includeall'){
+        }else if ( predicate.selector == 'includeall'){
             data = originalData.clone();
-        }else if ( predicate.filterType == 'removeall'){
+        }else if ( predicate.selector == 'removeall'){
             data = new DjSet();
         }else{
-            // console.log('unknown filter type ' + filterType );
+            // console.log('unknown filter type ' + selector );
         }
 
         return data;

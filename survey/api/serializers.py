@@ -74,7 +74,7 @@ class EditablePredicateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EditablePredicate
-        fields = ('rank', 'operator', 'operand', 'field', 'filter_type')
+        fields = ('rank', 'operator', 'operand', 'field', 'selector')
 
 
 class EditableFilterSerializer(serializers.ModelSerializer):
@@ -97,7 +97,7 @@ class EditableFilterSerializer(serializers.ModelSerializer):
                     operator=predicate['operator'],
                     operand=predicate['operand'],
                     field=predicate['field'],
-                    filter_type=predicate['filter_type'])
+                    selector=predicate['selector'])
                 editable_filter.predicates.add(predicate)
         return editable_filter
 
@@ -114,8 +114,8 @@ class EditableFilterSerializer(serializers.ModelSerializer):
                     operator=predicate['operator'],
                     operand=predicate['operand'],
                     field=predicate['field'],
-                    filter_type=predicate['filter_type'],
-                defaults={'rank': idx})
+                    selector=predicate['selector'],
+                    defaults={'rank': idx})
                 instance.predicates.add(predicate)
                 absents = absents - set([predicate.pk])
             EditablePredicate.objects.filter(pk__in=absents).delete()

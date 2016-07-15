@@ -26,16 +26,17 @@ import logging
 from collections import OrderedDict
 
 from django.db.models import F
+from django.shortcuts import get_object_or_404
 from extra_views.contrib.mixins import SearchableListMixin
 from rest_framework import generics
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import response as http
 
 from ..mixins import MatrixMixin
-from ..models import Answer, Matrix, EditableFilter, Question
-from ..utils import get_account_model, get_account_serializer
-from .serializers import (EditableFilterSerializer,
-    MatrixSerializer, QuestionSerializer)
+from ..models import Answer, Matrix, EditableFilter
+from ..utils import (get_account_model, get_account_serializer,
+    get_question_serializer)
+from .serializers import EditableFilterSerializer, MatrixSerializer
 
 
 LOGGER = logging.getLogger(__name__)
@@ -114,39 +115,79 @@ class MatrixCreateAPIView(generics.ListCreateAPIView):
 
 
 class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
+    """
+    A table of scores for cohorts aganist a metric.
+
+    **Examples**:
+
+    .. sourcecode:: http
+
+        GET /api/matrix/languages
+
+        Response:
+
+        {
+           "slug": "languages",
+           "title": "All cohorts for all questions"
+           "scores":[{
+               "portfolio-a": "0.1",
+               "portfolio-b": "0.5",
+           }]
+        }
+    """
 
     serializer_class = MatrixSerializer
     lookup_field = 'slug'
     lookup_url_kwarg = 'matrix'
+    question_model = get_question_serializer().Meta.model
 
     def get(self, request, *args, **kwargs):
         #pylint:disable=unused-argument,too-many-locals
-        instance = self.get_object()
+        instance = Matrix.objects.filter(
+            slug=self.kwargs.get(self.matrix_url_kwarg)).first()
+        if instance:
+            metric = instance.metric
+            cohorts = instance.cohorts.all()
+            serializer = self.get_serializer(instance)
+            val = serializer.data
+        else:
+            metric = get_object_or_404(EditableFilter,
+                slug=self.kwargs.get(self.matrix_url_kwarg))
+            cohorts = []
+            for cohort_slug in request.GET:
+                cohorts += [get_object_or_404(EditableFilter, slug=cohort_slug)]
+            val = {
+                'slug': metric.slug,
+                'title': metric.title,
+                'metric': EditableFilterSerializer().to_representation(metric),
+                'cohorts': EditableFilterSerializer(
+                    many=True).to_representation(cohorts)}
+
         scores = {}
-        if instance.metric:
-            includes, excludes = instance.metric.as_kwargs()
-            questions = Question.objects.filter(**includes).exclude(**excludes)
+        if metric:
+            includes, excludes = metric.as_kwargs()
+            questions = self.question_model.objects.filter(
+                **includes).exclude(**excludes)
             nb_questions = len(questions)
             if nb_questions > 0:
-                for cohort in instance.cohorts.all():
+                for cohort in cohorts:
                     includes, excludes = cohort.as_kwargs()
                     accounts = get_account_model().objects.filter(
                         **includes).exclude(**excludes)
                     nb_accounts = len(accounts)
                     if nb_accounts > 0:
                         nb_correct_answers = Answer.objects.filter(
+                            question__in=questions,
                             response__account__in=accounts).filter(
                                 text=F('question__correct_answer')).count()
                         score = nb_correct_answers * 100 / (
                             nb_questions * nb_accounts)
-                        LOGGER.debug(
+                        LOGGER.info(
                             "score for '%s' = (%d * 100) / (%d * %d) = %f",
                             str(cohort), nb_correct_answers, nb_questions,
                             nb_accounts, score)
                         assert score <= 100
                         scores.update({str(cohort): score})
-        serializer = self.get_serializer(instance)
-        val = serializer.data
         val.update({"scores": scores})
         return http.Response(val)
 
@@ -200,6 +241,9 @@ class EditableFilterObjectsAPIView(generics.ListAPIView):
     lookup_field = 'slug'
     lookup_url_kwarg = 'editable_filter'
 
+    def get_queryset(self):
+        return self.get_serializer_class().Meta.model.objects.all()
+
     def get(self, request, *args, **kwargs): #pylint: disable=unused-argument
         self.editable_filter = generics.get_object_or_404(
             EditableFilter.objects.all(),
@@ -227,14 +271,11 @@ class AccountListAPIView(EditableFilterObjectsAPIView):
                "operator": "contains",
                "operand": "language",
                "field": "text",
-               "filter_type":"keepmatching"
+               "selector":"keepmatching"
            }]
         }
     """
     serializer_class = get_account_serializer()
-
-    def get_queryset(self):
-        return self.get_serializer_class().Meta.model.objects.all()
 
 
 class QuestionListAPIView(EditableFilterObjectsAPIView):
@@ -256,12 +297,8 @@ class QuestionListAPIView(EditableFilterObjectsAPIView):
                "operator": "contains",
                "operand": "language",
                "field": "text",
-               "filter_type":"keepmatching"
+               "selector":"keepmatching"
            }]
         }
     """
-    serializer_class = QuestionSerializer
-
-    def get_queryset(self):
-        return Question.objects.all()
-
+    serializer_class = get_question_serializer()

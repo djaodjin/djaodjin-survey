@@ -281,9 +281,9 @@ class EditableFilter(SlugTitleMixin, models.Model):
         includes = {}
         excludes = {}
         for predicate in self.predicates.all().order_by('rank'):
-            if predicate.filter_type == 'keepmatching':
+            if predicate.selector == 'keepmatching':
                 includes.update(predicate.as_kwargs())
-            elif predicate.filter_type == 'removematching':
+            elif predicate.selector == 'removematching':
                 excludes.update(predicate.as_kwargs())
         return includes, excludes
 
@@ -296,11 +296,12 @@ class EditablePredicate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     rank = models.IntegerField()
-    portfolio = models.ForeignKey(EditableFilter, related_name='predicates')
+    editable_filter = models.ForeignKey(
+        EditableFilter, related_name='predicates')
     operator = models.CharField(max_length=255)
     operand = models.CharField(max_length=255)
     field = models.CharField(max_length=255)
-    filter_type = models.CharField(max_length=255)
+    selector = models.CharField(max_length=255)
 
     def __unicode__(self):
         return '%s-%d' % (self.portfolio.slug, self.rank)
@@ -310,9 +311,9 @@ class EditablePredicate(models.Model):
         if self.operator == 'equals':
             kwargs = {self.field: self.operand}
         elif self.operator == 'startsWith':
-            kwargs = {"%s__starts_with" % self.field: self.operand}
+            kwargs = {"%s__startswith" % self.field: self.operand}
         elif self.operator == 'endsWith':
-            kwargs = {"%s__ends_with" % self.field: self.operand}
+            kwargs = {"%s__endswith" % self.field: self.operand}
         elif self.operator == 'contains':
             kwargs = {"%s__contains" % self.field: self.operand}
         return kwargs

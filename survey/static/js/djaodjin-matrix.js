@@ -5,12 +5,11 @@
 
     /** Matrix Chart
         <div id="#_chart_">
-          <div>
-            <input class="cohort" type="checkbox" name="cohorts">
+          <div class="chart">
           </div>
-          <div>
-            <input class="metric" type="radio" name="metric">
-          </div>
+          <input type="text" name="title">
+          <input class="cohort" type="checkbox" name="cohorts">
+          <input class="metric" type="radio" name="metric">
         </div>
      */
     function DJMatrixChart(el, options){
@@ -23,6 +22,7 @@
         this.accounts = [];
         this.questions = [];
         this.metrics = [];
+        this.aggregates = [];
 
         this.selectedMetric = null;
         this.selectedCohorts = [];
@@ -40,32 +40,40 @@
 
         init: function () {
             var self = this;
-            self.$element.find("[name=\"metric\"]").change(function() {
+
+            self.$selectionElement = self.$element;
+            if( self.options.selection_element ) {
+                self.$selectionElement = $(self.options.selection_element);
+            }
+
+            self.$selectionElement.find("[name='title']").on('input', function() {
+                self._save();
+            });
+            self.$selectionElement.find("[name=\"metric\"]").change(function() {
                 self._save();
                 self.updateChart();
             });
-            self.$element.find("[name=\"cohorts\"]").change(function() {
+            self.$selectionElement.find("[name=\"cohorts\"]").change(function() {
                 self._save();
                 self.updateChart();
             });
+            self._updateSelectionFromUI();
             self._load();
         },
 
-        _updateSelection: function() {
+        /** Update the selected metric and cohorts from the UI elements.
+         */
+        _updateSelectionFromUI: function() {
             var self = this;
 
-            var metricElements = self.$element.find("[name=\"metric\"]:checked");
+            var metricElements = self.$selectionElement.find("[name=\"metric\"]:checked");
             if( metricElements.length > 0 ) {
                 var $element = $(metricElements[0]);
                 var elementVal = $element.val();
-                for ( var i = 0; i < self.metrics.length; i ++){
-                    if ( self.metrics[i].slug == elementVal ) {
-                        self.selectedMetric = self.metrics[i];
-                    }
-                }
+                self.selectedMetric = {slug: elementVal};
             }
 
-            var cohortElements = self.$element.find("[name=\"cohorts\"]");
+            var cohortElements = self.$selectionElement.find("[name=\"cohorts\"]");
             for( var cohortIdx = 0; cohortIdx < cohortElements.length; ++cohortIdx ) {
                 var $element = $(cohortElements[cohortIdx]);
                 var elementVal = $element.val();
@@ -77,11 +85,8 @@
                         }
                     }
                     if( found < 0 ) {
-                        for ( var idx = 0 ; idx < self.cohorts.length; ++idx ){
-                            if( self.cohorts[idx].slug === elementVal ) {
-                                self.selectedCohorts.push(self.cohorts[idx]);
-                            }
-                        }
+                        self.selectedCohorts.push(
+                            {slug: elementVal, title: $element.text()});
                     }
                 } else {
                     var found = -1;
@@ -99,52 +104,79 @@
 
         _load: function() {
             var self = this;
-            $.ajax({
-                method: "GET",
-                url: self.options.editable_filter_api + "?q=cohort",
-                datatype: "json",
-                contentType: "application/json; charset=utf-8",
-                success: function(data) {
-//                    self.accounts = data.results;
-                    self.cohorts = data.results;
-                    self._updateSelection();
-                    self.updateOptions();
-                }
-            });
-
-            $.ajax({
-                method: "GET",
-                url: self.options.editable_filter_api + "?q=metric",
-                datatype: "json",
-                contentType: "application/json; charset=utf-8",
-                success: function(data) {
-//                    self.questions = response['objects'];
-                    self.metrics = data.results;
-                    self._updateSelection();
-                    self.updateOptions();
-                }
-            });
-
+            var data = {}
+            for( var idx = 0; idx < self.selectedCohorts.length; ++idx ) {
+                var cohort = self.selectedCohorts[idx];
+                data[cohort.slug] = 1;
+            }
             $.ajax({
                 method: "GET",
                 url: self.options.matrix_api,
-                datatype: "json",
+                data: data,
+                contentType: "application/json; charset=utf-8",
                 success: function(data) {
                     self.scores = data.scores;
+                    self.selectedCohorts = data.cohorts;
+                    self.selectedMetric = data.metric;
                     self.updateChart();
+                    self.$element.trigger("matrix.loaded");
+                },
+                error: function(resp) {
+                    if( resp.status === 404 ) {
+                        var svgElement = self.$element.find(".chart svg")[0];
+                        $(svgElement).empty();
+                        // XXX Why it does not show?
+                        $(svgElement).append('<text x="50" y="100" font-family="Verdana">Not found</text>');
+                    }
                 }
             });
+            if( self.options.aggregates_api ) {
+                $.ajax({
+                    method: "GET",
+                    url: self.options.aggregates_api,
+                    datatype: "json",
+                    contentType: "application/json; charset=utf-8",
+                    success: function(data) {
+                        self.aggregates = data.cohorts;
+                        self.aggregateScores = data.scores;
+                        self.updateChart();
+                    }
+                });
+            }
         },
 
         _save: function() {
             var self = this;
-            self._updateSelection();
+            self._updateSelectionFromUI();
             var data = {
-                title: self.$element.find("[name=\"title\"]").val(),
+                title: self.$selectionElement.find("[name=\"title\"]").val(),
                 cohorts: self.selectedCohorts
             };
             if( self.selectedMetric ) {
                 data['metric'] = self.selectedMetric;
+                if( !data['metric'].hasOwnProperty('title') ) {
+                    data['metric']['title'] = "blank";
+                }
+                if( !data['metric'].hasOwnProperty('tags') ) {
+                    data['metric']['tags'] = "blank";
+                }
+                if( !data['metric'].hasOwnProperty('predicates') ) {
+                    data['metric']['predicates'] = [];
+                }
+            }
+            for( var idx = 0; idx < data['cohorts'].length; ++idx ) {
+                var cohort = data['cohorts'][idx];
+                if( !data['cohorts'][idx].hasOwnProperty('title')
+                  || data['cohorts'][idx].title === "" ) {
+                    data['cohorts'][idx]['title'] = "blank";
+                }
+                if( !data['cohorts'][idx].hasOwnProperty('tags')
+                    || data['cohorts'][idx].tags === "" ) {
+                    data['cohorts'][idx]['tags'] = "blank";
+                }
+                if( !data['cohorts'][idx].hasOwnProperty('predicates') ) {
+                    data['cohorts'][idx]['predicates'] = [];
+                }
             }
             $.ajax({
                 method: "PUT",
@@ -159,37 +191,57 @@
             });
         },
 
-        updateOptions: function() {
-            var self = this;
-            return; // XXX
-
-            var $metrics = self.$element.find("[name=\"metric\"]");
-            $metrics.empty();
-            for ( var i = 0; i < self.metrics.length; i ++){
-                var $option = $('<option/>');
-                var qc = self.metrics[i];
-                $option.text(qc.title);
-                $option.attr('value', qc.slug);
-                $metrics.append($option);
-            }
-
-            var $cohorts = self.$element.find("[name=\"cohorts\"]");
-            $cohorts.empty();
-            for ( var i = 0; i < self.cohorts.length; i ++){
-                var $option = $('<option/>');
-                var cohort = self.cohorts[i];
-                $option.attr('value', cohort.slug);
-                $option.text(cohort.title);
-                $cohorts.append($option);
-            }
-        },
-
         /** This function will recompute the scores by applying the filters
             on a Response set on the client in Javascript.
 
             (Currently not used)
          */
         scoresFromSet: function() {
+            var self = this;
+
+            $.ajax({
+                method: "GET",
+                url: self.options.editable_filter_api + "?q=cohort",
+                datatype: "json",
+                contentType: "application/json; charset=utf-8",
+                success: function(data) {
+                    self.cohorts = data.results;
+                    var $cohorts = self.$selectionElement.find("[name=\"cohorts\"]");
+                    $cohorts.empty();
+                    for ( var i = 0; i < self.cohorts.length; i ++){
+                        var $option = $('<option/>');
+                        var cohort = self.cohorts[i];
+                        $option.attr('value', cohort.slug);
+                        $option.text(cohort.title);
+                        $cohorts.append($option);
+                    }
+                    self._scoresFromSet();
+                }
+            });
+
+            $.ajax({
+                method: "GET",
+                url: self.options.editable_filter_api + "?q=metric",
+                datatype: "json",
+                contentType: "application/json; charset=utf-8",
+                success: function(data) {
+                    self.metrics = data.results;
+                    var $metrics = self.$selectionElement.find("[name=\"metric\"]");
+                    $metrics.empty();
+                    for ( var i = 0; i < self.metrics.length; i ++){
+                        var $option = $('<option/>');
+                        var qc = self.metrics[i];
+                        $option.text(qc.title);
+                        $option.attr('value', qc.slug);
+                        $metrics.append($option);
+                    }
+                    self._scoresFromSet();
+                }
+            });
+        },
+
+        _scoresFromSet: function() {
+            var self = this;
             var byAccount= {};
             var originalQuestionSet = new DjSet(self.questions);
             var questionSet = originalQuestionSet.clone();
@@ -244,18 +296,19 @@
         updateChart: function() {
             var self = this;
             var chartValues = [];
-            var aggregates = [{"label": "Goal 75%" + Math.random(),
-                               "value": 75}];
             var total = 0;
             var count = 0;
-            for ( var k in self.scores ){
+            for( var i = 0; i < self.selectedCohorts.length; i++ ) {
+                var cohort = self.selectedCohorts[i];
+                var score = self.scores[cohort.slug] || 0.0;
                 chartValues.push({
-                    "label": k,
-                    "value": self.scores[k]
+                    "label": cohort.title,
+                    "value": score
                 });
-                total += self.scores[k];
-                count ++;
+                total += score;
+                ++count;
             }
+
             if( chartValues.length === 0 ) {
                 chartValues.push({
                     "label": "no portfolio",
@@ -263,9 +316,17 @@
                 });
             }
 
-            var avg = 1.0 * total / count;
-            aggregates.push({"label": "Average " + d3.format(',.1f')(avg) + '%',
-                             "value": avg });
+            var aggregates = [];
+            for( var i = 0; i < self.aggregates.length; i++ ) {
+                var aggregate = self.aggregates[i];
+                var score = self.aggregateScores[aggregate.slug] || 0.0;
+                aggregates.push({
+                    "label": aggregate.title
+                        + " " + d3.format(',.1f')(score) + '%',
+                    "value": score
+                });
+            }
+
             var chartData = [{
                 "values": chartValues,
                 "aggregates": aggregates
@@ -304,8 +365,10 @@
     };
 
     $.fn.djmatrixChart.defaults = {
+        selection_element: null,
         editable_filter_api: null,
-        matrix_api: null
+        matrix_api: null,
+        aggregates_api: null
     };
 
 })(jQuery);
