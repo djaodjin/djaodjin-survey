@@ -56,7 +56,7 @@ class SlugTitleMixin(object):
             while True:
                 try:
                     with transaction.atomic():
-                        return models.Model.save(self,
+                        return super(SlugTitleMixin, self).save(
                             force_insert=force_insert,
                             force_update=force_update,
                             using=using, update_fields=update_fields)
@@ -69,6 +69,10 @@ class SlugTitleMixin(object):
                         self.slug = '%s-%d' % (
                             slug[:(max_length-len(prefix))], num)
                     num = num + 1
+        return super(SlugTitleMixin, self).save(
+            force_insert=force_insert,
+            force_update=force_update,
+            using=using, update_fields=update_fields)
 
 
 class SurveyModel(SlugTitleMixin, models.Model):
