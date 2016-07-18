@@ -29,7 +29,7 @@ from django.db import models, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.timezone import utc
 
-from durationfield.db.models.fields.duration import DurationField
+from django.db.models.fields import DurationField
 
 from . import settings
 from .utils import get_account_model
