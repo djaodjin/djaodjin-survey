@@ -213,7 +213,7 @@ class Response(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     survey = models.ForeignKey(SurveyModel, null=True)
     account = models.ForeignKey(settings.ACCOUNT_MODEL, null=True)
-    time_spent = DurationField(default=datetime.timedelta(),
+    time_spent = DurationField(default=datetime.timedelta,
         help_text="Total recorded time to complete the survey")
     is_frozen = models.BooleanField(default=False,
         help_text="When True, answers to that response cannot be updated.")
