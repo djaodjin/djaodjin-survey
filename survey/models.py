@@ -22,14 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime, uuid
+import datetime, random, uuid
 
-from django.db import transaction
-from django.db import models, IntegrityError
+from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.timezone import utc
-
-from django.db.models.fields import DurationField
+from rest_framework.exceptions import ValidationError
 
 from . import settings
 from .utils import get_account_model
@@ -39,40 +37,35 @@ class SlugTitleMixin(object):
     """
     Generate a unique slug from title on ``save()`` when none is specified.
     """
-
-    def save(self, force_insert=False, force_update=False, using=None,
-             update_fields=None):
-        #pylint: disable=catching-non-exception
-        """
-        Keep slug in sync with survey title.
-        """
-        if not self.slug: #pylint:disable=access-member-before-definition
-            max_length = self._meta.get_field('slug').max_length
-            slug = slugify(self.title)
-            self.slug = slug
-            if len(self.slug) > max_length:
-                self.slug = slug[:max_length]
-            num = 1
-            while True:
-                try:
-                    with transaction.atomic():
-                        return super(SlugTitleMixin, self).save(
-                            force_insert=force_insert,
-                            force_update=force_update,
-                            using=using, update_fields=update_fields)
-                except IntegrityError, err:
-                    if not 'uniq' in str(err).lower():
-                        raise
-                    prefix = '-%d' % num
-                    self.slug = '%s%s' % (slug, prefix)
-                    if len(self.slug) > max_length:
-                        self.slug = '%s-%d' % (
-                            slug[:(max_length-len(prefix))], num)
-                    num = num + 1
-        return super(SlugTitleMixin, self).save(
-            force_insert=force_insert,
-            force_update=force_update,
-            using=using, update_fields=update_fields)
+    def save(self, force_insert=False, force_update=False,
+             using=None, update_fields=None):
+        if self.slug: #pylint:disable=access-member-before-definition
+            # serializer will set created slug to '' instead of None.
+            return super(SlugTitleMixin, self).save(
+                force_insert=force_insert, force_update=force_update,
+                using=using, update_fields=update_fields)
+        max_length = self._meta.get_field('slug').max_length
+        slug_base = slugify(self.title)
+        if len(slug_base) > max_length:
+            slug_base = slug_base[:max_length]
+        self.slug = slug_base
+        for _ in range(1, 10):
+            try:
+                with transaction.atomic():
+                    return super(SlugTitleMixin, self).save(
+                        force_insert=force_insert, force_update=force_update,
+                        using=using, update_fields=update_fields)
+            except IntegrityError, err:
+                if not 'uniq' in str(err).lower():
+                    raise
+                suffix = '-%s' % "".join([random.choice("abcdef0123456789")
+                    for _ in range(7)])
+                if len(slug_base) + len(suffix) > max_length:
+                    self.slug = slug_base[:(max_length - len(suffix))] + suffix
+                else:
+                    self.slug = slug_base + suffix
+        raise ValidationError({'detail':
+            "Unable to create a unique URL slug from title '%s'" % self.title})
 
 
 class SurveyModel(SlugTitleMixin, models.Model):
@@ -146,6 +139,9 @@ class Question(models.Model):
     required = models.BooleanField(default=True,
         help_text="If checked, an answer is required")
 
+    class Meta:
+        unique_together = ('survey', 'rank')
+
     def get_choices(self):
         choices_list = []
         if self.choices:
@@ -213,7 +209,7 @@ class Response(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     survey = models.ForeignKey(SurveyModel, null=True)
     account = models.ForeignKey(settings.ACCOUNT_MODEL, null=True)
-    time_spent = DurationField(default=datetime.timedelta,
+    time_spent = models.DurationField(default=datetime.timedelta,
         help_text="Total recorded time to complete the survey")
     is_frozen = models.BooleanField(default=False,
         help_text="When True, answers to that response cannot be updated.")
