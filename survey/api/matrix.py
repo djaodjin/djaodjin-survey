@@ -182,10 +182,9 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
                                 text=F('question__correct_answer')).count()
                         score = nb_correct_answers * 100 / (
                             nb_questions * nb_accounts)
-                        LOGGER.info(
-                            "score for '%s' = (%d * 100) / (%d * %d) = %f",
-                            str(cohort), nb_correct_answers, nb_questions,
-                            nb_accounts, score)
+                        LOGGER.debug("score for '%s' = (%d * 100) "\
+                            "/ (%d * %d) = %f", str(cohort), nb_correct_answers,
+                            nb_questions, nb_accounts, score)
                         assert score <= 100
                         scores.update({str(cohort): score})
         val.update({"scores": scores})
