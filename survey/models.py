@@ -329,8 +329,9 @@ class Matrix(SlugTitleMixin, models.Model):
     slug = models.SlugField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=255)
-    metric = models.ForeignKey(EditableFilter,
-        related_name='measured', null=True)
+    account = models.ForeignKey(settings.BELONGS_MODEL, null=True)
+    metric = models.ForeignKey(EditableFilter, related_name='measured',
+        null=True)
     cohorts = models.ManyToManyField(EditableFilter, related_name='matrices')
 
     def __unicode__(self):

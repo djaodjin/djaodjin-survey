@@ -68,7 +68,7 @@ class AccountMixin(object):
                         }
                     )
                 kwargs = {'%s__exact' % self.account_lookup_field:
-                    self.kwargs.get(self.account_kwarg_url)}
+                    self.kwargs.get(self.account_url_kwarg)}
                 try:
                     self._account = self.account_queryset.filter(**kwargs).get()
                 except self.account_queryset.model.DoesNotExist:
@@ -87,7 +87,7 @@ class AccountMixin(object):
 
     def get_url_kwargs(self):
         kwargs = {}
-        for url_kwarg in [self.account_kwarg_url]:
+        for url_kwarg in [self.account_url_kwarg]:
             url_kwarg_val = self.kwargs.get(url_kwarg, None)
             if url_kwarg_val:
                 kwargs.update({url_kwarg: url_kwarg_val})
