@@ -333,6 +333,7 @@ class Matrix(SlugTitleMixin, models.Model):
     metric = models.ForeignKey(EditableFilter, related_name='measured',
         null=True)
     cohorts = models.ManyToManyField(EditableFilter, related_name='matrices')
+    cut = models.ForeignKey(EditableFilter, related_name='cuts', null=True)
 
     def __unicode__(self):
         return self.slug

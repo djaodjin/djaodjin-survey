@@ -85,8 +85,10 @@
                         }
                     }
                     if( found < 0 ) {
+                        var title = $element.parent().text().replace(
+                                /^\s+|\s+$/g,''); // label
                         self.selectedCohorts.push(
-                            {slug: elementVal, title: $element.text()});
+                            {slug: elementVal, title: title});
                     }
                 } else {
                     var found = -1;
@@ -115,9 +117,22 @@
                 data: data,
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
-                    self.scores = data.scores;
-                    self.selectedCohorts = data.cohorts;
-                    self.selectedMetric = data.metric;
+                    self.scores = data[0].values;
+                    for( var idx = 0; idx < data[0].cohorts.length; ++idx ) {
+                        if( !data[0].cohorts[idx].hasOwnProperty('title') ) {
+                            if( data[0].cohorts[idx].hasOwnProperty('printable_name') ) {
+                                data[0].cohorts[idx].title = data[0].cohorts[idx].printable_name;
+                            } else {
+                                data[0].cohorts[idx].title = "cohort-" + idx;
+                            }
+                        }
+                    }
+                    self.selectedCohorts = data[0].cohorts;
+                    self.selectedMetric = data[0].metric;
+                    if( data.length > 1 ) {
+                        self.aggregates = data[1].cohorts;
+                        self.aggregateScores = data[1].values;
+                    }
                     self.updateChart();
                     self.$element.trigger("matrix.loaded");
                 },
@@ -130,19 +145,6 @@
                     }
                 }
             });
-            if( self.options.aggregates_api ) {
-                $.ajax({
-                    method: "GET",
-                    url: self.options.aggregates_api,
-                    datatype: "json",
-                    contentType: "application/json; charset=utf-8",
-                    success: function(data) {
-                        self.aggregates = data.cohorts;
-                        self.aggregateScores = data.scores;
-                        self.updateChart();
-                    }
-                });
-            }
         },
 
         _save: function() {
@@ -168,7 +170,14 @@
                 var cohort = data['cohorts'][idx];
                 if( !data['cohorts'][idx].hasOwnProperty('title')
                   || data['cohorts'][idx].title === "" ) {
-                    data['cohorts'][idx]['title'] = "blank";
+                    if( data['cohorts'][idx].hasOwnProperty('printable_name')
+                        && data['cohorts'][idx].printable_name !== "" ) {
+                        data['cohorts'][idx]['title']
+                            = data['cohorts'][idx].printable_name;
+                    } else {
+                        data['cohorts'][idx]['title'] = "cohort-" + idx;
+                    }
+                    console.log("XXX cohort title=", data['cohorts'][idx].title);
                 }
                 if( !data['cohorts'][idx].hasOwnProperty('tags')
                     || data['cohorts'][idx].tags === "" ) {
@@ -367,8 +376,7 @@
     $.fn.djmatrixChart.defaults = {
         selection_element: null,
         editable_filter_api: null,
-        matrix_api: null,
-        aggregates_api: null
+        matrix_api: null
     };
 
 })(jQuery);

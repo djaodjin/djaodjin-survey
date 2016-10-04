@@ -26,6 +26,7 @@ import logging
 from collections import OrderedDict
 
 from django.db.models import F
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from extra_views.contrib.mixins import SearchableListMixin
 from rest_framework import generics
@@ -126,14 +127,14 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
         Response:
 
-        {
+        [{
            "slug": "languages",
            "title": "All cohorts for all questions"
-           "scores":[{
+           "scores":{
                "portfolio-a": "0.1",
                "portfolio-b": "0.5",
-           }]
-        }
+           }
+        }]
     """
 
     serializer_class = MatrixSerializer
@@ -141,30 +142,12 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
     lookup_url_kwarg = 'matrix'
     question_model = get_question_serializer().Meta.model
 
-    def get(self, request, *args, **kwargs):
-        #pylint:disable=unused-argument,too-many-locals
-        instance = Matrix.objects.filter(
-            slug=self.kwargs.get(self.matrix_url_kwarg)).first()
-        if instance:
-            metric = instance.metric
-            cohorts = instance.cohorts.all()
-            serializer = self.get_serializer(instance)
-            val = serializer.data
-        else:
-            metric = get_object_or_404(EditableFilter,
-                slug=self.kwargs.get(self.matrix_url_kwarg))
-            cohorts = []
-            for cohort_slug in request.GET:
-                cohorts += [get_object_or_404(EditableFilter, slug=cohort_slug)]
-            val = {
-                'slug': metric.slug,
-                'title': metric.title,
-                'metric': EditableFilterSerializer().to_representation(metric),
-                'cohorts': EditableFilterSerializer(
-                    many=True).to_representation(cohorts)}
-
+    def aggregate_scores(self, metric, cohorts, cut=None):
+        #pylint:disable=unused-argument
         scores = {}
         if metric:
+            assert 'metric' in metric.tags, \
+                "filter '%s' is not tagged as a metric" % str(metric)
             includes, excludes = metric.as_kwargs()
             questions = self.question_model.objects.filter(
                 **includes).exclude(**excludes)
@@ -187,8 +170,65 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
                             nb_questions, nb_accounts, score)
                         assert score <= 100
                         scores.update({str(cohort): score})
-        val.update({"scores": scores})
-        return http.Response(val)
+        return {"scores": scores}
+
+    @property
+    def matrix(self):
+        if not hasattr(self, '_matrix'):
+            self._matrix = Matrix.objects.filter(
+                slug=self.kwargs.get(self.matrix_url_kwarg)).first()
+        return self._matrix
+
+    def get(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument,too-many-locals
+        matrix = self.matrix
+        if matrix:
+            metric = self.matrix.metric
+        else:
+            parts = self.kwargs.get(self.matrix_url_kwarg).split('/')
+            metric = get_object_or_404(EditableFilter, slug=parts[-1])
+            matrix = Matrix.objects.filter(slug=parts[0]).first()
+        if not matrix:
+            raise Http404()
+
+        cohorts = matrix.cohorts.exclude(tags__contains='aggregate')
+        public_cohorts = matrix.cohorts.filter(tags__contains='aggregate')
+        cut = matrix.cut
+
+        result = []
+        scores = {}
+        val = {
+            'slug': metric.slug,
+            'title': metric.title,
+            'metric': EditableFilterSerializer().to_representation(metric),
+            'cut': EditableFilterSerializer().to_representation(cut),
+            'cohorts': EditableFilterSerializer(many=True).to_representation(
+                cohorts)}
+
+        if not cohorts:
+            # We don't have any cohorts, let's show individual accounts instead.
+            if cut:
+                includes, excludes = cut.as_kwargs()
+                accounts = get_account_model().objects.filter(
+                    **includes).exclude(**excludes)
+            else:
+                accounts = get_account_model().objects.all()
+            val.update({'cohorts': get_account_serializer()(
+                many=True).to_representation(accounts)})
+            cohorts = accounts
+
+        scores.update(val)
+        scores.update({"values": self.aggregate_scores(metric, cohorts, cut)})
+        result += [scores]
+        if public_cohorts:
+            public_scores = {}
+            public_scores.update(val)
+            public_scores.update(
+                {"cohorts": EditableFilterSerializer(
+                    public_cohorts, many=True).data,
+                 "values": self.aggregate_scores(metric, public_cohorts)})
+            result += [public_scores]
+        return http.Response(result)
 
 
 class EditableFilterQuerysetMixin(object):

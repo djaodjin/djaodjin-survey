@@ -242,6 +242,10 @@ nv.models.matrixChart = function() {
         tooltip();
     });
 
+    discretebar.dispatch.on('elementClick', function(evt) {
+        console.log("XXX click bar(", evt.data, evt.index, evt.color, ")");
+    });
+
     //============================================================
     // Expose Public Variables
     //------------------------------------------------------------

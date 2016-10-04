@@ -130,7 +130,7 @@ class MatrixSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Matrix
-        fields = ('slug', 'title', 'metric', 'cohorts')
+        fields = ('slug', 'title', 'metric', 'cohorts', 'cuts')
 
     def create(self, validated_data):
         matrix = Matrix(title=validated_data['title'])

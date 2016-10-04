@@ -27,22 +27,22 @@ from django.conf.urls import url
 from ...api.matrix import (MatrixCreateAPIView, MatrixDetailAPIView,
     EditableFilterListAPIView, EditableFilterDetailAPIView,
     AccountListAPIView, QuestionListAPIView)
-from ...settings import SLUG_RE
+from ... import settings
 
 urlpatterns = [
-   url(r'^filters/(?P<editable_filter>%s)/?' % SLUG_RE,
+   url(r'^filters/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
        EditableFilterDetailAPIView.as_view(), name='editable_filter_api'),
    url(r'^filters/?',
        EditableFilterListAPIView.as_view(), name='editable_filter_api_base'),
-   url(r'^accounts/(?P<editable_filter>%s)/?' % SLUG_RE,
+   url(r'^accounts/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
        AccountListAPIView.as_view(), name='accounts_api'),
    url(r'^accounts/?',
        AccountListAPIView.as_view(), name='accounts_api_base'),
-   url(r'^questions/(?P<editable_filter>%s)/?' % SLUG_RE,
+   url(r'^questions/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
        QuestionListAPIView.as_view(), name='questions_api'),
    url(r'^questions/?',
        QuestionListAPIView.as_view(), name='questions_api_base'),
-   url(r'^(?P<matrix>%s)/?' % SLUG_RE,
+   url(r'^(?P<matrix>%s)/?' % settings.PATH_RE,
        MatrixDetailAPIView.as_view(), name='matrix_api'),
    url(r'^',
        MatrixCreateAPIView.as_view(), name='matrix_api_base'),

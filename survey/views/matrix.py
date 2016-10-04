@@ -30,7 +30,7 @@ from ..compat import csrf
 from survey.models import Response
 from ..mixins import (EditableFilterMixin, MatrixMixin, MatrixQuerysetMixin,
     SurveyModelMixin)
-from ..models import EditableFilter, Matrix
+from ..models import EditableFilter
 
 
 class MatrixListView(MatrixQuerysetMixin, ListView):
@@ -59,29 +59,28 @@ class MatrixDetailView(MatrixMixin, DetailView):
         return get_object_or_404(
             queryset, slug=self.kwargs.get(self.matrix_url_kwarg))
 
-    def get_aggregates_url(self, slug):
-        aggregates = Matrix.objects.filter(slug='%s-aggregates' % slug).first()
-        if aggregates:
-            url_kwargs = self.get_url_kwargs()
-            url_kwargs.update({'matrix': aggregates})
-            return reverse('matrix_api', kwargs=url_kwargs)
-        return None
-
-    def get_context_data(self, *args, **kwargs):
-        context = super(MatrixDetailView, self).get_context_data(
-            *args, **kwargs)
+    def get_cohorts(self):
+        """
+        Returns the list of cohorts shown in the Matrix decorated
+        with ``is_selected`` for cohorts the user shows.
+        """
         selected = list(self.object.cohorts.all())
         cohorts = EditableFilter.objects.filter(tags='cohort')
         for cohort in cohorts:
             if cohort in selected:
                 cohort.is_selected = True
+        return cohorts
+
+    def get_context_data(self, *args, **kwargs):
+        context = super(MatrixDetailView, self).get_context_data(
+            *args, **kwargs)
         metrics = EditableFilter.objects.filter(tags='metric')
         for metric in metrics:
             if metric == self.object.metric:
                 metric.is_selected = True
         url_kwargs = self.get_url_kwargs()
         context.update({
-            'cohorts': cohorts,
+            'cohorts': self.get_cohorts(),
             'metrics': metrics,
             'editable_filter_api_base': reverse(
                 'editable_filter_api_base', kwargs=url_kwargs),
@@ -90,9 +89,6 @@ class MatrixDetailView(MatrixMixin, DetailView):
         context.update({
             'matrix_api': reverse('matrix_api', kwargs=url_kwargs),
         })
-        aggregates_url = self.get_aggregates_url(self.object.slug)
-        if aggregates_url:
-            context.update({'aggregates_api': aggregates_url})
         return context
 
 
