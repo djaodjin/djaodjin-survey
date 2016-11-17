@@ -1,4 +1,4 @@
-# Copyright (c) 2015, DjaoDjin inc.
+# Copyright (c) 2016, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@ _SETTINGS = {
     'ACCOUNT_MODEL': getattr(
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
     'ACCOUNT_LOOKUP_FIELD': 'username',
-    'ACCOUNT_SERIALIZER': 'survey.api.serializers.UserSerializer',
+    'ACCOUNT_SERIALIZER': 'survey.api.serializers.AccountSerializer',
     'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionSerializer',
     'BELONGS_MODEL': None,
     'CORRECT_MARKER': '(correct)',

@@ -161,8 +161,8 @@ class MatrixSerializer(serializers.ModelSerializer):
         return instance
 
 
-class UserSerializer(serializers.ModelSerializer):
+class AccountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_account_model()
-        fields = ('username', 'first_name', 'last_name', 'email')
+        fields = ('slug', 'email')
