@@ -127,10 +127,11 @@ class MatrixSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False)
     metric = EditableFilterSerializer(required=False)
     cohorts = EditableFilterSerializer(many=True)
+    cut = EditableFilterSerializer(required=False)
 
     class Meta:
         model = Matrix
-        fields = ('slug', 'title', 'metric', 'cohorts', 'cuts')
+        fields = ('slug', 'title', 'metric', 'cohorts', 'cut')
 
     def create(self, validated_data):
         matrix = Matrix(title=validated_data['title'])
