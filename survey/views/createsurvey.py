@@ -167,14 +167,18 @@ class SurveyResultView(DetailView):
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
                     else:
-                        LOGGER.error("'%s' not found in %s", choice, aggregate)
+                        LOGGER.error("'%s' (pk=%d) not found in %s",
+                            choice, answer.pk, aggregate,
+                            extra={'request': self.request})
 
                 elif question.question_type == Question.RADIO:
                     choice = answer.text
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
                     else:
-                        LOGGER.error("'%s' not found in %s", choice, aggregate)
+                        LOGGER.error("'%s' (pk=%d) not found in %s",
+                            choice, answer.pk, aggregate,
+                            extra={'request': self.request})
 
                 elif question.question_type == Question.SELECT_MULTIPLE:
                     for choice in answer.get_multiple_choices():
@@ -182,7 +186,9 @@ class SurveyResultView(DetailView):
                             aggregate[choice] = aggregate[choice] + 1
                         else:
                             LOGGER.error(
-                                "'%s' not found in %s", choice, aggregate)
+                                "'%s' (pk=%d) not found in %s",
+                                choice, answer.pk, aggregate,
+                                extra={'request': self.request})
 
             # Convert to json-ifiable format
             values = []
