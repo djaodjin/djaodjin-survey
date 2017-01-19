@@ -120,6 +120,7 @@ class SurveyResultView(DetailView):
     template_name = 'survey/result.html'
 
     def get_context_data(self, **kwargs):
+        #pylint:disable=too-many-locals
         context = super(SurveyResultView, self).get_context_data(**kwargs)
         number_interviewees = Response.objects.filter(
             survey=self.object).count()
@@ -154,6 +155,7 @@ class SurveyResultView(DetailView):
         #                 }, ...] },
         #   ... ]
         aggregates = []
+        with_errors = {}
         for question in Question.objects.filter(
             survey=self.object).exclude(question_type=Question.TEXT):
             aggregate = {}
@@ -167,28 +169,24 @@ class SurveyResultView(DetailView):
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
                     else:
-                        LOGGER.error("'%s' (pk=%d) not found in %s",
-                            choice, answer.pk, aggregate,
-                            extra={'request': self.request})
+                        with_errors[question] = with_errors.get(
+                            question, []) + [answer]
 
                 elif question.question_type == Question.RADIO:
                     choice = answer.text
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
                     else:
-                        LOGGER.error("'%s' (pk=%d) not found in %s",
-                            choice, answer.pk, aggregate,
-                            extra={'request': self.request})
+                        with_errors[question] = with_errors.get(
+                            question, []) + [answer]
 
                 elif question.question_type == Question.SELECT_MULTIPLE:
                     for choice in answer.get_multiple_choices():
                         if choice in aggregate:
                             aggregate[choice] = aggregate[choice] + 1
                         else:
-                            LOGGER.error(
-                                "'%s' (pk=%d) not found in %s",
-                                choice, answer.pk, aggregate,
-                                extra={'request': self.request})
+                            with_errors[question] = with_errors.get(
+                                question, []) + [answer]
 
             # Convert to json-ifiable format
             values = []
@@ -204,6 +202,9 @@ class SurveyResultView(DetailView):
                 #     % (question.survey.slug, question.rank))
                 'key': slugify("%d" % question.rank),
                 'values': values}]
+        if with_errors:
+            LOGGER.error("Answers with an invalid choice\n%s",
+                with_errors, extra={'request': self.request})
 
         context.update({
                 'survey': self.object,
