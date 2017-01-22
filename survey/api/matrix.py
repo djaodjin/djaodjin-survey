@@ -1,4 +1,4 @@
-# Copyright (c) 2016, DjaoDjin inc.
+# Copyright (c) 2017, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
+import logging, re
 from collections import OrderedDict
 
 from django.db.models import F
@@ -192,6 +192,17 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
             raise Http404()
 
         cohorts = matrix.cohorts.exclude(tags__contains='aggregate')
+        # In some case, a metric and cohort have a connection
+        # and could have the same name.
+        for cohort in cohorts:
+            look = re.match(r"(\S+)(-\d+)", cohort.slug)
+            if look:
+                try:
+                    cohort.likely_metric = EditableFilter.objects.get(
+                        slug=look.group(1)).slug
+                except EditableFilter.DoesNotExist:
+                    pass
+
         public_cohorts = matrix.cohorts.filter(tags__contains='aggregate')
         cut = matrix.cut
 

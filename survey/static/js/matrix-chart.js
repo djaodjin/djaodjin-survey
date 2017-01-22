@@ -243,7 +243,11 @@ nv.models.matrixChart = function() {
     });
 
     discretebar.dispatch.on('elementClick', function(evt) {
-        console.log("XXX click bar(", evt.data, evt.index, evt.color, ")");
+        if( evt.data.likely_metric ) {
+            window.location = evt.data.likely_metric;
+        } else {
+            showErrorMessages("Cannot derive a metric from this cohort.");
+        }
     });
 
     //============================================================

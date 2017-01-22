@@ -1,4 +1,4 @@
-# Copyright (c) 2016, DjaoDjin inc.
+# Copyright (c) 2017, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -80,11 +80,16 @@ class EditablePredicateSerializer(serializers.ModelSerializer):
 class EditableFilterSerializer(serializers.ModelSerializer):
 
     slug = serializers.CharField(required=False)
+    likely_metric = serializers.SerializerMethodField()
     predicates = EditablePredicateSerializer(many=True)
 
     class Meta:
         model = EditableFilter
-        fields = ('slug', 'title', 'tags', 'predicates')
+        fields = ('slug', 'title', 'tags', 'predicates', 'likely_metric')
+
+    @staticmethod
+    def get_likely_metric(obj):
+        return getattr(obj, 'likely_metric', None)
 
     def create(self, validated_data):
         editable_filter = EditableFilter(
