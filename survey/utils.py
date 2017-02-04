@@ -1,4 +1,4 @@
-# Copyright (c) 2016, DjaoDjin inc.
+# Copyright (c) 2017, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -53,7 +53,7 @@ def get_account_serializer():
     module, attr = path[:dot_pos], path[dot_pos + 1:]
     try:
         mod = import_module(module)
-    except (ImportError, ValueError)  as err:
+    except (ImportError, ValueError) as err:
         raise ImproperlyConfigured(
             "Error importing class '%s' defined by ACCOUNT_SERIALIZER (%s)"
             % (path, err))
@@ -74,7 +74,7 @@ def get_question_serializer():
     module, attr = path[:dot_pos], path[dot_pos + 1:]
     try:
         mod = import_module(module)
-    except (ImportError, ValueError)  as err:
+    except (ImportError, ValueError) as err:
         raise ImproperlyConfigured(
             "Error importing class '%s' defined by QUESTION_SERIALIZER (%s)"
             % (path, err))

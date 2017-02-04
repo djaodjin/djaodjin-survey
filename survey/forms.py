@@ -1,4 +1,4 @@
-# Copyright (c) 2016, DjaoDjin inc.
+# Copyright (c) 2017, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@ import uuid
 
 from django import forms
 from django.template.defaultfilters import slugify
+from django.utils import six
 
 from survey.models import Answer, Question, Response, SurveyModel
 
@@ -82,9 +83,9 @@ class AnswerForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(AnswerForm, self).__init__(*args, **kwargs)
-        if self.initial.has_key('question'):
+        if 'question' in self.initial:
             setattr(self.instance, 'question', self.initial['question'])
-        if self.initial.has_key('response'):
+        if 'response' in self.initial:
             setattr(self.instance, 'response', self.initial['response'])
         question = self.instance.question
         fields = _create_field(question.question_type, question.text,
@@ -107,9 +108,9 @@ class QuestionForm(forms.ModelForm):
         exclude = ['survey', 'rank']
 
     def save(self, commit=True):
-        if self.initial.has_key('survey'):
+        if 'survey' in self.initial:
             self.instance.survey = self.initial['survey']
-        if self.initial.has_key('rank') and not self.instance.rank:
+        if 'rank' in self.initial and not self.instance.rank:
             self.instance.rank = self.initial['rank']
         return super(QuestionForm, self).save(commit)
 
@@ -142,7 +143,7 @@ class ResponseCreateForm(forms.ModelForm):
 
     def clean(self):
         super(ResponseCreateForm, self).clean()
-        items = self.cleaned_data.items()
+        items = six.iteritems(self.cleaned_data)
         for key, value in items:
             if key.startswith('other-'):
                 if value:
@@ -152,9 +153,9 @@ class ResponseCreateForm(forms.ModelForm):
         return self.cleaned_data
 
     def save(self, commit=True):
-        if self.initial.has_key('account'):
+        if 'account' in self.initial:
             self.instance.account = self.initial['account']
-        if self.initial.has_key('survey'):
+        if 'survey' in self.initial:
             self.instance.survey = self.initial['survey']
         self.instance.slug = slugify(uuid.uuid4().hex)
         return super(ResponseCreateForm, self).save(commit)
@@ -199,7 +200,7 @@ class SurveyForm(forms.ModelForm):
         return self.cleaned_data['title']
 
     def save(self, commit=True):
-        if self.initial.has_key('account'):
+        if 'account' in self.initial:
             self.instance.account = self.initial['account']
         self.instance.slug = slugify(self.cleaned_data.get('title'))
         return super(SurveyForm, self).save(commit)

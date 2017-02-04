@@ -1,4 +1,4 @@
-# Copyright (c) 2016, DjaoDjin inc.
+# Copyright (c) 2017, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,6 +25,7 @@
 import datetime, random, uuid
 
 from django.db import models, transaction, IntegrityError
+from django.utils.encoding import python_2_unicode_compatible
 from django.template.defaultfilters import slugify
 from django.utils.timezone import utc
 from rest_framework.exceptions import ValidationError
@@ -55,7 +56,7 @@ class SlugTitleMixin(object):
                     return super(SlugTitleMixin, self).save(
                         force_insert=force_insert, force_update=force_update,
                         using=using, update_fields=update_fields)
-            except IntegrityError, err:
+            except IntegrityError as err:
                 if not 'uniq' in str(err).lower():
                     raise
                 suffix = '-%s' % "".join([random.choice("abcdef0123456789")
@@ -68,6 +69,7 @@ class SlugTitleMixin(object):
             "Unable to create a unique URL slug from title '%s'" % self.title})
 
 
+@python_2_unicode_compatible
 class SurveyModel(SlugTitleMixin, models.Model):
     #pylint: disable=super-on-old-class
 
@@ -88,7 +90,7 @@ class SurveyModel(SlugTitleMixin, models.Model):
     one_response_only = models.BooleanField(default=False,
         help_text="Only allows to answer survey once.")
 
-    def __unicode__(self):
+    def __str__(self):
         return self.slug
 
     def has_questions(self):
@@ -106,6 +108,7 @@ class SurveyModel(SlugTitleMixin, models.Model):
         return (ends_at - created_at).days
 
 
+@python_2_unicode_compatible
 class Question(models.Model):
 
     INTEGER = 'integer'
@@ -159,7 +162,7 @@ class Question(models.Model):
                 asw.strip() for asw in self.correct_answer.split('\n')]
         return correct_answer_list
 
-    def __unicode__(self):
+    def __str__(self):
         return self.text
 
 
@@ -198,6 +201,7 @@ class ResponseManager(models.Manager):
         return score, answers
 
 
+@python_2_unicode_compatible
 class Response(models.Model):
     """
     Response to a Survey. A Response is composed of multiple Answers
@@ -214,7 +218,7 @@ class Response(models.Model):
     is_frozen = models.BooleanField(default=False,
         help_text="When True, answers to that response cannot be updated.")
 
-    def __unicode__(self):
+    def __str__(self):
         return self.slug
 
     def get_answers_by_rank(self):
@@ -239,6 +243,7 @@ class AnswerManager(models.Manager):
         return answers
 
 
+@python_2_unicode_compatible
 class Answer(models.Model):
     """
     An Answer to a Question as part of Response to a Survey.
@@ -255,7 +260,7 @@ class Answer(models.Model):
     class Meta:
         unique_together = ("question", "response")
 
-    def __unicode__(self):
+    def __str__(self):
         return '%s-%d' % (self.response.slug, self.rank)
 
     def get_multiple_choices(self):
@@ -264,6 +269,7 @@ class Answer(models.Model):
             'u\'', '').replace('\'', '').split(', ')
 
 
+@python_2_unicode_compatible
 class EditableFilter(SlugTitleMixin, models.Model):
     """
     A model type and list of predicates to create a subset of the
@@ -276,7 +282,7 @@ class EditableFilter(SlugTitleMixin, models.Model):
     title = models.CharField(max_length=255)
     tags = models.CharField(max_length=255)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.slug
 
     def as_kwargs(self):
@@ -290,6 +296,7 @@ class EditableFilter(SlugTitleMixin, models.Model):
         return includes, excludes
 
 
+@python_2_unicode_compatible
 class EditablePredicate(models.Model):
     """
     A predicate describing a step to narrow or enlarge
@@ -305,7 +312,7 @@ class EditablePredicate(models.Model):
     field = models.CharField(max_length=255)
     selector = models.CharField(max_length=255)
 
-    def __unicode__(self):
+    def __str__(self):
         return '%s-%d' % (self.portfolio.slug, self.rank)
 
     def as_kwargs(self):
@@ -321,6 +328,7 @@ class EditablePredicate(models.Model):
         return kwargs
 
 
+@python_2_unicode_compatible
 class Matrix(SlugTitleMixin, models.Model):
     """
     Represent a set of cohorts against a metric.
@@ -335,6 +343,6 @@ class Matrix(SlugTitleMixin, models.Model):
     cohorts = models.ManyToManyField(EditableFilter, related_name='matrices')
     cut = models.ForeignKey(EditableFilter, related_name='cuts', null=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.slug
 

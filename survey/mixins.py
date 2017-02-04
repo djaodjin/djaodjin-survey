@@ -1,4 +1,4 @@
-# Copyright (c) 2016, DjaoDjin inc.
+# Copyright (c) 2017, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -129,7 +129,7 @@ class IntervieweeMixin(object):
         """
         kwargs = {}
         for key in self.get_reverse_kwargs():
-            if self.kwargs.has_key(key) and self.kwargs.get(key) is not None:
+            if key in self.kwargs and self.kwargs.get(key) is not None:
                 kwargs[key] = self.kwargs.get(key)
         return kwargs
 

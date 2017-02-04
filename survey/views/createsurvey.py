@@ -1,4 +1,4 @@
-# Copyright (c) 2016, DjaoDjin inc.
+# Copyright (c) 2017, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,11 +31,12 @@ from django.views.generic import (CreateView, DeleteView, DetailView,
     FormView, ListView, RedirectView, UpdateView)
 from django.views.generic.detail import SingleObjectMixin
 from django.template.defaultfilters import slugify
-from survey import settings
+from django.utils import six
 
-from survey.mixins import AccountMixin
-from survey.models import Answer, SurveyModel, Response, Question
-from survey.forms import SurveyForm, SendSurveyForm
+from .. import settings
+from ..mixins import AccountMixin
+from ..models import Answer, SurveyModel, Response, Question
+from ..forms import SurveyForm, SendSurveyForm
 
 
 LOGGER = logging.getLogger(__name__)
@@ -190,7 +191,7 @@ class SurveyResultView(DetailView):
 
             # Convert to json-ifiable format
             values = []
-            for label, value in aggregate.items():
+            for label, value in six.iteritems(aggregate):
                 if self.object.quizz_mode and label == question.correct_answer:
                     values += [{
                         "label": "%s %s" % (label, settings.CORRECT_MARKER),
