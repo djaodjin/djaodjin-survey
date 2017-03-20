@@ -53,12 +53,6 @@ class MatrixDetailView(MatrixMixin, DetailView):
 
     template_name = "survey/matrix/matrix.html"
 
-    def get_object(self, queryset=None):
-        if queryset is None:
-            queryset = self.get_queryset()
-        return get_object_or_404(
-            queryset, slug=self.kwargs.get(self.matrix_url_kwarg))
-
     def get_cohorts(self):
         """
         Returns the list of cohorts shown in the Matrix decorated
@@ -90,6 +84,17 @@ class MatrixDetailView(MatrixMixin, DetailView):
             'matrix_api': reverse('matrix_api', kwargs=url_kwargs),
         })
         return context
+
+    def get_object(self, queryset=None):
+        if queryset is None:
+            queryset = self.get_queryset()
+        return get_object_or_404(
+            queryset, slug=self.kwargs.get(self.matrix_url_kwarg))
+
+    def get_template_names(self):
+        names = super(MatrixDetailView, self).get_template_names()
+        names.insert(0, "survey/matrix/%s.html" % self.object.slug)
+        return names
 
 
 class RespondentListView(SurveyModelMixin, ListView):
