@@ -25,6 +25,7 @@
 import logging, re
 from collections import OrderedDict
 
+from django.core.urlresolvers import reverse
 from django.db.models import F
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -179,6 +180,26 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
                 slug=self.kwargs.get(self.matrix_url_kwarg)).first()
         return self._matrix
 
+    def get_likely_metric(self, cohort_slug):
+        """
+        Returns a URL to a ``Matrix`` derived from *cohort*.
+
+        Many times people will use the same name to either mean a cohort
+        or a metric and expect the system will magically switch between
+        both meaning. This is an attempt at magic.
+        """
+        likely_metric = None
+        look = re.match(r"(\S+)(-\d+)", cohort_slug)
+        if look:
+            try:
+                likely_metric = self.request.build_absolute_uri(
+                    reverse('matrix_chart', args=(
+                        EditableFilter.objects.get(slug=look.group(1)).slug,)))
+            except EditableFilter.DoesNotExist:
+                pass
+        return likely_metric
+
+
     def get(self, request, *args, **kwargs):
         #pylint:disable=unused-argument,too-many-locals
         matrix = self.matrix
@@ -191,31 +212,10 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
         if not matrix:
             raise Http404()
 
+        cohort_serializer = EditableFilterSerializer
         cohorts = matrix.cohorts.exclude(tags__contains='aggregate')
-        # In some case, a metric and cohort have a connection
-        # and could have the same name.
-        for cohort in cohorts:
-            look = re.match(r"(\S+)(-\d+)", cohort.slug)
-            if look:
-                try:
-                    cohort.likely_metric = EditableFilter.objects.get(
-                        slug=look.group(1)).slug
-                except EditableFilter.DoesNotExist:
-                    pass
-
         public_cohorts = matrix.cohorts.filter(tags__contains='aggregate')
         cut = matrix.cut
-
-        result = []
-        scores = {}
-        val = {
-            'slug': metric.slug,
-            'title': metric.title,
-            'metric': EditableFilterSerializer().to_representation(metric),
-            'cut': EditableFilterSerializer().to_representation(cut),
-            'cohorts': EditableFilterSerializer(many=True).to_representation(
-                cohorts)}
-
         if not cohorts:
             # We don't have any cohorts, let's show individual accounts instead.
             if cut:
@@ -224,9 +224,24 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
                     **includes).exclude(**excludes)
             else:
                 accounts = get_account_model().objects.all()
-            val.update({'cohorts': get_account_serializer()(
-                many=True).to_representation(accounts)})
+            cohort_serializer = get_account_serializer()
             cohorts = accounts
+
+        result = []
+        scores = {}
+        val = {
+            'slug': metric.slug,
+            'title': metric.title,
+            'metric': EditableFilterSerializer().to_representation(metric),
+            'cut': EditableFilterSerializer().to_representation(cut),
+            'cohorts': cohort_serializer(many=True).to_representation(cohorts)}
+
+        # In some case, a metric and cohort have a connection
+        # and could have the same name.
+        for cohort in val['cohorts']:
+            likely_metric = self.get_likely_metric(cohort['slug'])
+            if likely_metric:
+                cohort['likely_metric'] = likely_metric
 
         scores.update(val)
         scores.update({"values": self.aggregate_scores(metric, cohorts, cut)})

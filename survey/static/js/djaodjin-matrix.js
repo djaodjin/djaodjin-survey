@@ -312,10 +312,7 @@
                 var score = self.scores[cohort.slug] || 0.0;
                 var likelyMetricUrl = null;
                 if( cohort.likely_metric ) {
-                    likelyMetricUrl = window.location.pathname.substring(
-                        0, window.location.pathname.lastIndexOf(
-                            '/', window.location.pathname.length - 2) + 1)
-                        + cohort.likely_metric + "/";
+                    likelyMetricUrl = cohort.likely_metric;
                 }
                 chartValues.push({
                     "likely_metric": likelyMetricUrl,
