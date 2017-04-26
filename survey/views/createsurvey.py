@@ -50,7 +50,7 @@ class SurveyCreateView(AccountMixin, CreateView):
     model = SurveyModel
     form_class = SurveyForm
     slug_url_kwarg = 'survey'
-    success_url = reverse_lazy('survey_list')
+    pattern_name = 'survey_edit'
 
     def get_initial(self):
         """
@@ -59,6 +59,9 @@ class SurveyCreateView(AccountMixin, CreateView):
         kwargs = super(SurveyCreateView, self).get_initial()
         kwargs.update({'account': self.account})
         return kwargs
+
+    def get_success_url(self):
+        return reverse_lazy(self.pattern_name, args=(self.object,))
 
 
 class SurveyDeleteView(DeleteView):
