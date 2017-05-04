@@ -1,3 +1,6 @@
+/* Based on nv.models.discreteBarChart in nvd3.js version 1.8.1
+   to add clickable columns */
+
 nv.models.matrixChart = function() {
     "use strict";
 
@@ -231,6 +234,8 @@ nv.models.matrixChart = function() {
             value: chart.y()(evt.data),
             color: evt.color
         };
+        evt['footer'] = "Click on a bar to view details";
+
         tooltip.data(evt).hidden(false);
     });
 
@@ -239,7 +244,7 @@ nv.models.matrixChart = function() {
     });
 
     discretebar.dispatch.on('elementMousemove.tooltip', function(evt) {
-        tooltip();
+        tooltip.position({top: d3.event.pageY, left: d3.event.pageX})();
     });
 
     discretebar.dispatch.on('elementClick', function(evt) {
