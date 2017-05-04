@@ -37,7 +37,8 @@ setup(
               'survey.urls.api',
               'survey.views'],
     package_data={'survey': [
-        'static/js/*', 'static/vendor/css/*', 'static/vendor/js/*',
+        'static/css/*', 'static/js/*',
+        'static/vendor/css/*', 'static/vendor/js/*',
         'templates/survey/*']},
     url='https://github.com/djaodjin/djaodjin-survey/',
     download_url='https://github.com/djaodjin/djaodjin-survey/tarball/%s' \
