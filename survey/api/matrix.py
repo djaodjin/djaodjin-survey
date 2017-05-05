@@ -182,8 +182,8 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
                 slug=self.kwargs.get(self.matrix_url_kwarg)).first()
         return self._matrix
 
-    @staticmethod
-    def get_accounts():
+    def get_accounts(self):
+        #pylint:disable=unused-argument,no-self-use
         return get_account_model().objects.all()
 
     def get_likely_metric(self, cohort_slug):
