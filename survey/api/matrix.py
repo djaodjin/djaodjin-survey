@@ -143,8 +143,10 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
     lookup_url_kwarg = 'matrix'
     question_model = get_question_serializer().Meta.model
 
-    def aggregate_scores(self, metric, cohorts, cut=None):
+    def aggregate_scores(self, metric, cohorts, cut=None, accounts=None):
         #pylint:disable=unused-argument
+        if accounts is None:
+            accounts = get_account_model().objects.all()
         scores = {}
         if metric:
             assert 'metric' in metric.tags, \
@@ -156,13 +158,13 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
             if nb_questions > 0:
                 for cohort in cohorts:
                     includes, excludes = cohort.as_kwargs()
-                    accounts = get_account_model().objects.filter(
-                        **includes).exclude(**excludes)
-                    nb_accounts = len(accounts)
+                    qs_accounts = accounts.filter(**includes).exclude(
+                        **excludes)
+                    nb_accounts = len(qs_accounts)
                     if nb_accounts > 0:
                         nb_correct_answers = Answer.objects.filter(
                             question__in=questions,
-                            response__account__in=accounts).filter(
+                            response__account__in=qs_accounts).filter(
                                 text=F('question__correct_answer')).count()
                         score = nb_correct_answers * 100 / (
                             nb_questions * nb_accounts)
@@ -179,6 +181,10 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
             self._matrix = Matrix.objects.filter(
                 slug=self.kwargs.get(self.matrix_url_kwarg)).first()
         return self._matrix
+
+    @staticmethod
+    def get_accounts():
+        return get_account_model().objects.all()
 
     def get_likely_metric(self, cohort_slug):
         """
@@ -220,10 +226,10 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
             # We don't have any cohorts, let's show individual accounts instead.
             if cut:
                 includes, excludes = cut.as_kwargs()
-                accounts = get_account_model().objects.filter(
+                accounts = self.get_accounts().filter(
                     **includes).exclude(**excludes)
             else:
-                accounts = get_account_model().objects.all()
+                accounts = self.get_accounts()
             cohort_serializer = get_account_serializer()
             cohorts = accounts
 
@@ -244,7 +250,8 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
                 cohort['likely_metric'] = likely_metric
 
         scores.update(val)
-        scores.update({"values": self.aggregate_scores(metric, cohorts, cut)})
+        scores.update({"values": self.aggregate_scores(
+            metric, cohorts, cut, accounts=self.get_accounts())})
         result += [scores]
         if public_cohorts:
             public_scores = {}
