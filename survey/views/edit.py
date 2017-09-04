@@ -41,4 +41,5 @@ class QuizzResponseDeleteView(ResponseMixin, DeleteView):
             kwargs={'survey':self.object.survey.slug})
 
     def get_object(self, queryset=None):
+        #pylint:disable=not-a-mapping
         return self.get_response(**self.kwargs)

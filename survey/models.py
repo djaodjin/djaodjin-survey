@@ -57,7 +57,7 @@ class SlugTitleMixin(object):
                         force_insert=force_insert, force_update=force_update,
                         using=using, update_fields=update_fields)
             except IntegrityError as err:
-                if not 'uniq' in str(err).lower():
+                if 'uniq' not in str(err).lower():
                     raise
                 suffix = '-%s' % "".join([random.choice("abcdef0123456789")
                     for _ in range(7)])
@@ -173,10 +173,6 @@ class ResponseManager(models.Manager):
         return self.create(account=get_account_model().objects.get(
                 **account_lookup_kwargs), **kwargs)
 
-    def create(self, **kwargs): #pylint: disable=super-on-old-class
-        return super(ResponseManager, self).create(
-            slug=slugify(uuid.uuid4().hex), **kwargs)
-
     def get_score(self, response): #pylint: disable=no-self-use
         answers = Answer.objects.populate(response)
         nb_correct_answers = 0
@@ -220,6 +216,14 @@ class Response(models.Model):
 
     def __str__(self):
         return self.slug
+
+    def save(self, force_insert=False, force_update=False,
+             using=None, update_fields=None):
+        if not self.slug:
+            self.slug = slugify(uuid.uuid4().hex)
+        return super(Response, self).save(
+            force_insert=force_insert, force_update=force_update,
+            using=using, update_fields=update_fields)
 
     def get_answers_by_rank(self):
         return self.answers.all().order_by('rank') #pylint:disable=no-member

@@ -27,7 +27,7 @@ from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
 from ..models import (Answer, Matrix, EditableFilter, EditablePredicate,
-    Question, Response, Question, SurveyModel)
+    Question, Response, SurveyModel)
 from ..utils import get_account_model
 
 #pylint:disable=old-style-class,no-init

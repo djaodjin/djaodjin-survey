@@ -50,6 +50,7 @@ class AnswerAPIView(ResponseMixin, mixins.CreateModelMixin,
         return self._question
 
     def update(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument
         partial = kwargs.pop('partial', False)
         serializer = self.get_serializer(data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
