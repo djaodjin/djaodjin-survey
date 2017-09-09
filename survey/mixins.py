@@ -214,7 +214,7 @@ class MatrixQuerysetMixin(AccountMixin):
 
 class MatrixMixin(MatrixQuerysetMixin):
 
-    matrix_url_kwarg = 'matrix'
+    matrix_url_kwarg = 'path'
 
     @property
     def matrix(self):

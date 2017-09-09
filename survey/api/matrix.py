@@ -140,7 +140,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
     serializer_class = MatrixSerializer
     lookup_field = 'slug'
-    lookup_url_kwarg = 'matrix'
+    lookup_url_kwarg = 'path'
     question_model = get_question_serializer().Meta.model
 
     def aggregate_scores(self, metric, cohorts, cut=None, accounts=None):

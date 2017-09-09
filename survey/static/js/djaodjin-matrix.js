@@ -58,7 +58,11 @@
                 self.updateChart();
             });
             self._updateSelectionFromUI();
-            self._load();
+            if( self.options.data ) {
+                self._update(self.options.data);
+            } else {
+                self._load();
+            }
         },
 
         /** Update the selected metric and cohorts from the UI elements.
@@ -104,6 +108,27 @@
             }
         },
 
+        _update: function(data) {
+            var self = this;
+            self.scores = data.values;
+            for( var idx = 0; idx < data.cohorts.length; ++idx ) {
+                if( !data.cohorts[idx].hasOwnProperty('title') ) {
+                    if( data.cohorts[idx].hasOwnProperty('printable_name') ) {
+                        data.cohorts[idx].title = data.cohorts[idx].printable_name;
+                    } else {
+                        data.cohorts[idx].title = "cohort-" + idx;
+                    }
+                }
+            }
+            self.selectedCohorts = data.cohorts;
+            self.selectedMetric = data.metric;
+            if( data.length > 1 ) {
+                self.aggregates = data[1].cohorts;
+                self.aggregateScores = data[1].values;
+            }
+            self.updateChart();
+        },
+
         _load: function() {
             var self = this;
             var data = {}
@@ -117,31 +142,14 @@
                 data: data,
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
-                    self.scores = data[0].values;
-                    for( var idx = 0; idx < data[0].cohorts.length; ++idx ) {
-                        if( !data[0].cohorts[idx].hasOwnProperty('title') ) {
-                            if( data[0].cohorts[idx].hasOwnProperty('printable_name') ) {
-                                data[0].cohorts[idx].title = data[0].cohorts[idx].printable_name;
-                            } else {
-                                data[0].cohorts[idx].title = "cohort-" + idx;
-                            }
-                        }
-                    }
-                    self.selectedCohorts = data[0].cohorts;
-                    self.selectedMetric = data[0].metric;
-                    if( data.length > 1 ) {
-                        self.aggregates = data[1].cohorts;
-                        self.aggregateScores = data[1].values;
-                    }
-                    self.updateChart();
+                    self._update(data[0]);
                     self.$element.trigger("matrix.loaded");
                 },
                 error: function(resp) {
                     if( resp.status === 404 ) {
-                        var svgElement = self.$element.find(".chart svg")[0];
-                        $(svgElement).empty();
-                        // XXX Why it does not show?
-                        $(svgElement).append('<text x="50" y="100" font-family="Verdana">Not found</text>');
+                        var svgContainer = self.$element.find(".chart")[0];
+                        $(svgContainer).empty();
+                        $(svgContainer).append('<div>Not found</div>');
                     }
                 }
             });
@@ -177,7 +185,6 @@
                     } else {
                         data['cohorts'][idx]['title'] = "cohort-" + idx;
                     }
-                    console.log("XXX cohort title=", data['cohorts'][idx].title);
                 }
                 if( !data['cohorts'][idx].hasOwnProperty('tags')
                     || data['cohorts'][idx].tags === "" ) {
@@ -356,9 +363,9 @@
                     .yDomain([0, 100])
                     .valueFormat(d3.format(',.1f'));
 
-                var svgElement = self.$element.find(".chart svg")[0];
-                $(svgElement).empty();
-                d3.select(svgElement)
+                var svgContainer = self.$element.find(".chart");
+                svgContainer.empty().append('<svg>');
+                d3.select(svgContainer.find("svg")[0])
                     .datum(chartData)
                     .call(chart);
 
@@ -379,6 +386,7 @@
     };
 
     $.fn.djmatrixChart.defaults = {
+        data: null,
         selection_element: null,
         editable_filter_api: null,
         matrix_api: null

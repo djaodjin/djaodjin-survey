@@ -11,7 +11,7 @@ nv.models.matrixChart = function() {
     var discretebar = nv.models.discreteBar()
         , xAxis = nv.models.axis()
         , yAxis = nv.models.axis()
-	, legend = nv.models.legend()
+        , legend = nv.models.legend()
         , tooltip = nv.models.tooltip()
         ;
 
@@ -19,7 +19,7 @@ nv.models.matrixChart = function() {
         , width = null
         , height = null
         , color = nv.utils.getColor()
-	, showLegend = false
+        , showLegend = false
         , showXAxis = true
         , showYAxis = true
         , rightAlignYAxis = false

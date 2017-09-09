@@ -42,7 +42,7 @@ urlpatterns = [
        QuestionListAPIView.as_view(), name='questions_api'),
    url(r'^questions/?',
        QuestionListAPIView.as_view(), name='questions_api_base'),
-   url(r'^(?P<matrix>%s)/?' % settings.PATH_RE,
+   url(r'^(?P<path>%s)/?' % settings.PATH_RE,
        MatrixDetailAPIView.as_view(), name='matrix_api'),
    url(r'^',
        MatrixCreateAPIView.as_view(), name='matrix_api_base'),

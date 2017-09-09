@@ -38,7 +38,7 @@ urlpatterns = [
        QuestionListView.as_view(), name='questions_list'),
    url(r'^questions/',
        QuestionListView.as_view(), name='questions_base'),
-   url(r'^(?P<matrix>%s)/' % SLUG_RE,
+   url(r'^(?P<path>%s)/' % SLUG_RE,
        MatrixDetailView.as_view(), name='matrix_chart'),
    url(r'^$',
        MatrixListView.as_view(), name='matrix_base'),
