@@ -355,13 +355,17 @@
 
             nv.addGraph(function() {
                 var chart = nv.models.matrixChart()
-                    .x(function(d) { return d.label })    //Specify the data accessors.
+                    .x(function(d) { return d.label })
                     .y(function(d) { return d.value })
-                    .staggerLabels(true)    //Too many bars and not enough room? Try staggering labels.
-                    .showValues(true)       //...instead, show the bar value right on top of each bar.
+                    .staggerLabels(true) // Too many bars and not enough room?
+                                         // Try staggering labels.
                     .duration(350)
                     .yDomain([0, 100])
-                    .valueFormat(d3.format(',.1f'));
+                    .valueFormat(d3.format(',.1f'))
+                    .showValues(self.options.showValues);
+                if( self.options.color ) {
+                    chart.color(function() { return self.options.color; });
+                }
 
                 var svgContainer = self.$element.find(".chart");
                 svgContainer.empty().append('<svg>');
@@ -389,7 +393,9 @@
         data: null,
         selection_element: null,
         editable_filter_api: null,
-        matrix_api: null
+        matrix_api: null,
+        showValues: true,
+        color: null
     };
 
 })(jQuery);
