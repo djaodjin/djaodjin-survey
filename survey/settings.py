@@ -37,7 +37,8 @@ _SETTINGS = {
     'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionSerializer',
     'BELONGS_MODEL': None,
     'CORRECT_MARKER': '(correct)',
-    'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+    'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+    'EXTRA_FIELD': None,
 }
 _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 
@@ -52,3 +53,14 @@ DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
 
 SLUG_RE = r'[a-zA-Z0-9-]+'
 PATH_RE = SLUG_RE + r'(/[a-zA-Z0-9\-]+)*'
+
+
+def get_extra_field_class():
+    extra_class = _SETTINGS.get('EXTRA_FIELD')
+    if extra_class is None:
+        from django.db.models import TextField
+        extra_class = TextField
+    elif isinstance(extra_class, str):
+        from saas.compat import import_string
+        extra_class = import_string(extra_class)
+    return extra_class

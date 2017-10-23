@@ -213,6 +213,7 @@ class Response(models.Model):
         help_text="Total recorded time to complete the survey")
     is_frozen = models.BooleanField(default=False,
         help_text="When True, answers to that response cannot be updated.")
+    extra = settings.get_extra_field_class()(default="", null=True)
 
     def __str__(self):
         return self.slug
