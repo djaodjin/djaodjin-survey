@@ -366,6 +366,12 @@
                 if( self.options.color ) {
                     chart.color(function() { return self.options.color; });
                 }
+                if( self.options.margin ) {
+                    chart.margin(self.options.margin);
+                }
+                if( self.options.rotateLabels ) {
+                    chart.rotateLabels(self.options.rotateLabels);
+                }
 
                 var svgContainer = self.$element.find(".chart");
                 svgContainer.empty().append('<svg>');
@@ -395,7 +401,9 @@
         editable_filter_api: null,
         matrix_api: null,
         showValues: true,
-        color: null
+        color: null,
+        margin: null,
+        rotateLabels: 0
     };
 
 })(jQuery);
