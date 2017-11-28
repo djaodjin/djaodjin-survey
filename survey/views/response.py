@@ -244,10 +244,6 @@ class ResponseUpdateView(ResponseMixin, IntervieweeMixin, UpdateView):
     next_step_url = 'survey_response_results'
     template_name = 'survey/response_update.html'
 
-    def __init__(self, *args, **kwargs):
-        super(ResponseUpdateView, self).__init__(*args, **kwargs)
-        self.survey = None
-
     def form_valid(self, form):
         # We are updating all ``Answer`` for the ``Response`` here.
         for answer in self.object.answers.order_by('rank'):
@@ -256,24 +252,15 @@ class ResponseUpdateView(ResponseMixin, IntervieweeMixin, UpdateView):
         return super(ResponseUpdateView, self).form_valid(form)
 
     def get_object(self, queryset=None):
-        return self.get_response()
+        return self.sample
 
     def get_context_data(self, **kwargs):
         context = super(ResponseUpdateView, self).get_context_data(**kwargs)
-        context.update({'survey': self.survey})
+        context.update({'survey': self.sample.survey})
         return context
-
-    def get_initial(self):
-        """
-        Returns the initial data to use for forms on this view.
-        """
-        kwargs = super(ResponseUpdateView, self).get_initial()
-        self.survey = self.get_survey()
-        kwargs.update({'survey': self.survey,
-                       'account': self.get_interviewee()})
-        return kwargs
 
     def get_success_url(self):
         kwargs = self.get_url_context()
+        # XXX not sure we need to set this.
         kwargs.update({self.response_url_kwarg: self.object.slug})
         return reverse(self.next_step_url, kwargs=kwargs)
