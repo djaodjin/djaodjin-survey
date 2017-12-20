@@ -49,7 +49,10 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 class ResponseSerializer(serializers.ModelSerializer):
 
-    answers = AnswerSerializer(many=True)
+    answers = AnswerSerializer(many=True, required=False)
+    created_at = serializers.DateTimeField(required=False)
+    time_spent = serializers.DurationField(required=False)
+    is_frozen = serializers.BooleanField(required=False)
 
     class Meta(object):
         model = Response
