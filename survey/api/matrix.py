@@ -164,7 +164,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
                     if nb_accounts > 0:
                         nb_correct_answers = Answer.objects.filter(
                             question__in=questions,
-                            response__account__in=qs_accounts).filter(
+                            sample__account__in=qs_accounts).filter(
                                 text=F('question__correct_answer')).count()
                         score = nb_correct_answers * 100 / (
                             nb_questions * nb_accounts)

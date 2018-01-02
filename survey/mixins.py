@@ -31,7 +31,7 @@ from django.utils.translation import ugettext as _
 from django.views.generic.detail import SingleObjectMixin
 
 from . import settings
-from .models import Matrix, EditableFilter, Question, Response, SurveyModel
+from .models import Matrix, EditableFilter, Question, Sample, Campaign
 from .utils import get_account_model
 
 
@@ -146,63 +146,63 @@ class QuestionMixin(SingleObjectMixin):
         rank = self.kwargs.get(self.num_url_kwarg, 1)
         slug = self.kwargs.get(self.survey_url_kwarg, None)
         survey = get_object_or_404(
-            SurveyModel, slug__exact=slug)
+            Campaign, slug__exact=slug)
         return get_object_or_404(
             Question, survey=survey, rank=rank)
 
 
-class SurveyModelMixin(object):
+class CampaignMixin(object):
     """
-    Returns a ``Survey`` object associated with the request URL.
+    Returns a ``Campaign`` object associated with the request URL.
     """
     survey_url_kwarg = 'survey'
 
     def get_survey(self):
-        return get_object_or_404(SurveyModel, slug=self.kwargs.get(
+        return get_object_or_404(Campaign, slug=self.kwargs.get(
                 self.survey_url_kwarg))
 
 
-class ResponseMixin(IntervieweeMixin, SurveyModelMixin):
+class SampleMixin(IntervieweeMixin, CampaignMixin):
     """
-    Returns a ``Response`` to a ``SurveyModel``.
+    Returns a ``Sample`` to a ``Campaign``.
     """
 
-    # We have to use a special url_kwarg here because 'response'
+    # We have to use a special url_kwarg here because 'sample'
     # interfers with the way rest_framework handles **kwargs.
-    response_url_kwarg = 'sample'
+    sample_url_kwarg = 'sample'
 
     @property
     def sample(self):
         if not hasattr(self, '_sample'):
-            self._sample = self.get_response()
+            self._sample = self.get_sample()
         return self._sample
 
-    def get_response(self, url_kwarg=None):
+    def get_sample(self, url_kwarg=None):
         """
-        Returns the ``Response`` object associated with this URL.
+        Returns the ``Sample`` object associated with this URL.
         """
         if not url_kwarg:
-            url_kwarg = self.response_url_kwarg
-        response = None
-        response_slug = self.kwargs.get(url_kwarg)
-        if response_slug:
-            # We have an id for the response, let's get it and check
+            url_kwarg = self.sample_url_kwarg
+        sample = None
+        sample_slug = self.kwargs.get(url_kwarg)
+        if sample_slug:
+            # We have an id for the sample, let's get it and check
             # the user has rights to it.
-            response = get_object_or_404(Response, slug=response_slug)
+            sample = get_object_or_404(Sample, slug=sample_slug)
         else:
-            # Well no id, let's see if we can find a response from
+            # Well no id, let's see if we can find a sample from
             # a survey slug and a account
             interviewee = self.get_interviewee()
-            response = get_object_or_404(Response,
+            sample = get_object_or_404(Sample,
                 survey=self.get_survey(), account=interviewee)
-        return response
+        return sample
 
     def get_reverse_kwargs(self):
         """
         List of kwargs taken from the url that needs to be passed through
         to ``get_success_url``.
         """
-        return [self.interviewee_slug, 'survey', self.response_url_kwarg]
+        return [self.interviewee_slug, 'survey', self.sample_url_kwarg]
 
 
 class MatrixQuerysetMixin(AccountMixin):

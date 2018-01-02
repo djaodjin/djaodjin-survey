@@ -24,12 +24,20 @@
 
 from django.conf.urls import url
 
-from ...api.response import AnswerAPIView, ResponseAPIView
-from ...settings import SLUG_RE
+from ..settings import SLUG_RE
+from ..views.sample import (AnswerUpdateView, SampleCreateView,
+    SampleResetView, SampleResultView, SampleUpdateView)
 
 urlpatterns = [
-   url(r'^response/(?P<sample>%s)/(?P<rank>\d+)/?' % SLUG_RE,
-       AnswerAPIView.as_view(), name='survey_api_answer'),
-   url(r'^response/(?P<sample>%s)/?' % SLUG_RE,
-       ResponseAPIView.as_view(), name='survey_api_response'),
+   url(r'^(?P<survey>%s)/(?P<sample>%s)/reset/' % (SLUG_RE, SLUG_RE),
+       SampleResetView.as_view(), name='survey_sample_reset'),
+   url(r'^(?P<survey>%s)/(?P<sample>%s)/results/' % (SLUG_RE, SLUG_RE),
+       SampleResultView.as_view(), name='survey_sample_results'),
+   url(r'^(?P<survey>%s)/(?P<sample>%s)/(?:(?P<rank>\d+)/)'
+       % (SLUG_RE, SLUG_RE),
+       AnswerUpdateView.as_view(), name='survey_answer_update'),
+   url(r'^(?P<survey>%s)/(?P<sample>%s)/' % (SLUG_RE, SLUG_RE),
+       SampleUpdateView.as_view(), name='survey_sample_update'),
+   url(r'^(?P<survey>%s)/' % SLUG_RE,
+       SampleCreateView.as_view(), name='survey_sample_new'),
 ]

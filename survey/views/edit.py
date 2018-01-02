@@ -25,21 +25,21 @@
 from django.core.urlresolvers import reverse
 from django.views.generic import DeleteView
 
-from survey.models import Response
-from survey.mixins import ResponseMixin
+from survey.models import Sample
+from survey.mixins import SampleMixin
 
 
-class QuizzResponseDeleteView(ResponseMixin, DeleteView):
+class QuizzSampleDeleteView(SampleMixin, DeleteView):
     """
-    Delete Response to a quizz and redirects to its first question.
+    Delete Sample to a quizz and redirects to its first question.
     """
 
-    model = Response
+    model = Sample
 
     def get_success_url(self):
-        return reverse('survey_response_new',
+        return reverse('survey_sample_new',
             kwargs={'survey':self.object.survey.slug})
 
     def get_object(self, queryset=None):
         #pylint:disable=not-a-mapping
-        return self.get_response(**self.kwargs)
+        return self.get_sample(**self.kwargs)

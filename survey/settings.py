@@ -30,6 +30,8 @@ the appropriate settings.
 from django.conf import settings
 
 _SETTINGS = {
+    'AUTH_USER_MODEL': getattr(
+        settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
     'ACCOUNT_MODEL': getattr(
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
     'ACCOUNT_LOOKUP_FIELD': 'username',
@@ -42,6 +44,7 @@ _SETTINGS = {
 }
 _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 
+AUTH_USER_MODEL = _SETTINGS.get('AUTH_USER_MODEL')
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
 ACCOUNT_LOOKUP_FIELD = _SETTINGS.get('ACCOUNT_LOOKUP_FIELD')
 ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')

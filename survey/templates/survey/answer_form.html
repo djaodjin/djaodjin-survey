@@ -8,7 +8,7 @@
 </div>
 
 <div>
-{% if survey.published %}
+{% if survey.active %}
 #{{form.instance.question.rank}}
 <form method="post" action=".">
         {% csrf_token %}

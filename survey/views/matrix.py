@@ -27,9 +27,9 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, DetailView, ListView
 
 from ..compat import csrf
-from survey.models import Response
+from survey.models import Sample
 from ..mixins import (EditableFilterMixin, MatrixMixin, MatrixQuerysetMixin,
-    SurveyModelMixin)
+    CampaignMixin)
 from ..models import EditableFilter
 
 
@@ -97,9 +97,9 @@ class MatrixDetailView(MatrixMixin, DetailView):
         return names
 
 
-class RespondentListView(SurveyModelMixin, ListView):
+class RespondentListView(CampaignMixin, ListView):
 
-    model = Response
+    model = Sample
     template_name = 'survey/respondent_list.html'
 
     def get_queryset(self):

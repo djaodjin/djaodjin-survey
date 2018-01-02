@@ -29,8 +29,8 @@ from django.views.generic import (CreateView, DeleteView, ListView,
 
 from ..compat import csrf
 from ..forms import QuestionForm
-from ..models import Question, SurveyModel
-from ..mixins import QuestionMixin, SurveyModelMixin
+from ..models import Question, Campaign
+from ..mixins import QuestionMixin, CampaignMixin
 
 class QuestionFormMixin(QuestionMixin):
 
@@ -48,7 +48,7 @@ class QuestionFormMixin(QuestionMixin):
         """
         kwargs = super(QuestionFormMixin, self).get_initial()
         self.survey = get_object_or_404(
-            SurveyModel, slug__exact=self.kwargs.get('survey'))
+            Campaign, slug__exact=self.kwargs.get('survey'))
         last_rank = Question.objects.filter(survey=self.survey).count()
         kwargs.update({'survey': self.survey,
                        'rank': last_rank + 1})
@@ -75,7 +75,7 @@ class QuestionDeleteView(QuestionMixin, DeleteView):
         return reverse(self.success_url, args=(self.object.survey,))
 
 
-class QuestionListView(SurveyModelMixin, ListView):
+class QuestionListView(CampaignMixin, ListView):
     """
     List of questions for a survey
     """
@@ -90,9 +90,8 @@ class QuestionListView(SurveyModelMixin, ListView):
         queryset = Question.objects.filter(survey=self.survey).order_by('rank')
         return queryset
 
-    def get_context_data(self, *args, **kwargs):
-        context = super(QuestionListView, self).get_context_data(
-            *args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(QuestionListView, self).get_context_data(**kwargs)
         context.update(csrf(self.request))
         context.update({'survey': self.survey})
         return context

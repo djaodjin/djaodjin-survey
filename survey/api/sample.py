@@ -26,28 +26,34 @@ import logging
 
 from rest_framework import generics, mixins, status
 from rest_framework import response as http
+from rest_framework.exceptions import ValidationError
 
-from ..mixins import ResponseMixin
-from ..models import Answer, Question
-from .serializers import AnswerSerializer, ResponseSerializer
+from ..mixins import SampleMixin
+from ..models import Answer, Question, EnumeratedQuestions
+from .serializers import AnswerSerializer, SampleSerializer
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class AnswerAPIView(ResponseMixin, mixins.CreateModelMixin,
+class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                     generics.RetrieveUpdateDestroyAPIView):
 
     serializer_class = AnswerSerializer
     lookup_rank_kwarg = 'rank'
+    lookup_field = 'rank'
 
     @property
     def question(self):
         if not hasattr(self, '_question'):
             self._question = Question.objects.get(
-                survey=self.sample.survey, rank=self.kwargs.get(
+                enumeratedquestions__campaign=self.sample.survey,
+                enumeratedquestions__rank=self.kwargs.get(
                     self.lookup_rank_kwarg))
         return self._question
+
+    def get_queryset(self):
+        return Answer.objects.filter(sample=self.sample)
 
     def update(self, request, *args, **kwargs):
         #pylint:disable=unused-argument
@@ -56,7 +62,7 @@ class AnswerAPIView(ResponseMixin, mixins.CreateModelMixin,
         serializer.is_valid(raise_exception=True)
         try:
             serializer.instance = Answer.objects.get(
-                response=self.sample, question=self.question)
+                sample=self.sample, question=self.question)
             self.perform_update(serializer)
         except Answer.DoesNotExist:
             self.perform_create(serializer)
@@ -66,14 +72,18 @@ class AnswerAPIView(ResponseMixin, mixins.CreateModelMixin,
 
         return http.Response(serializer.data)
 
+
     def perform_create(self, serializer):
-        serializer.save(response=self.sample, question=self.question,
-            rank=self.question.rank)
+        serializer.save(sample=self.sample, question=self.question,
+            rank=EnumeratedQuestions.objects.filter(
+                campaign=self.sample.survey,
+                question=self.question).first().rank)
 
 
-class ResponseAPIView(ResponseMixin, generics.RetrieveUpdateDestroyAPIView):
 
-    serializer_class = ResponseSerializer
+class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
+
+    serializer_class = SampleSerializer
 
     def get_object(self):
         return self.sample

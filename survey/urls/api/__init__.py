@@ -26,5 +26,5 @@ from django.conf.urls import url, include
 
 urlpatterns = [
     url(r'^matrix/', include('survey.urls.api.matrix')),
-    url(r'^', include('survey.urls.api.response')),
+    url(r'^', include('survey.urls.api.sample')),
 ]

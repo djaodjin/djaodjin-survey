@@ -16,12 +16,12 @@
 },
 { "fields" : {
 	"slug" : "survey-example",
-	"title" : "Test Survey",
+	"title" : "Test Campaign",
 	"description" : "This is an example survey to test the app",
 	"account" : 2,
-	"published": true
+	"active": true
 	},
-	"model" : "survey.surveymodel", "pk" : 1
+	"model" : "survey.campaign", "pk" : 1
 },
 { "fields" : {
 	"text" : "Do you like the djaodjin-survey app...",

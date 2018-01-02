@@ -27,7 +27,7 @@ from rest_framework import serializers
 from rest_framework.generics import get_object_or_404
 
 from ..models import (Answer, Matrix, EditableFilter, EditablePredicate,
-    Question, Response, SurveyModel)
+    Question, Sample, Campaign)
 from ..utils import get_account_model
 
 #pylint:disable=old-style-class,no-init
@@ -47,23 +47,23 @@ class QuestionSerializer(serializers.ModelSerializer):
             'rank', 'correct_answer', 'required')
 
 
-class ResponseSerializer(serializers.ModelSerializer):
+class SampleSerializer(serializers.ModelSerializer):
 
     answers = AnswerSerializer(many=True)
 
     class Meta(object):
-        model = Response
+        model = Sample
         fields = ('slug', 'created_at', 'time_spent', 'is_frozen', 'answers')
         read_only_fields = ('slug',)
 
 
-class SurveyModelSerializer(serializers.ModelSerializer):
+class CampaignSerializer(serializers.ModelSerializer):
 
     questions = QuestionSerializer(many=True)
 
     class Meta(object):
-        model = SurveyModel
-        fields = ('slug', 'account', 'title', 'description', 'published',
+        model = Campaign
+        fields = ('slug', 'account', 'title', 'description', 'active',
             'quizz_mode', 'questions')
         read_only_fields = ('slug',)
 
