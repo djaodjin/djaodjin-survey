@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,19 +24,35 @@
 
 from django.db import transaction
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 
-from ..models import (Answer, Matrix, EditableFilter, EditablePredicate,
-    Question, Sample, Campaign)
+from ..models import (Answer, Campaign, Choice, Matrix, EditableFilter,
+    EditablePredicate, Question, Sample, Unit)
 from ..utils import get_account_model
 
 #pylint:disable=old-style-class,no-init
 
 class AnswerSerializer(serializers.ModelSerializer): #pylint: disable=no-init
 
+    measured = serializers.CharField(required=True)
+
     class Meta(object):
         model = Answer
-        fields = ('created_at', 'text')
+        fields = ('created_at', 'measured')
+
+    def validate_measured(self, data):
+        if self.context['question'].unit.system == Unit.SYSTEM_ENUMERATED:
+            try:
+                data = Choice.objects.get(
+                    unit=self.context['question'].unit, text=data).pk
+            except Choice.DoesNotExist:
+                choices = Choice.objects.filter(
+                    unit=self.context['question'].unit)
+                raise ValidationError(
+                    "'%s' is not a valid choice. Expected one of %s." % (
+                    data, [choice for choice in six.itervalues(choices)]))
+        return data
 
 
 class QuestionSerializer(serializers.ModelSerializer):

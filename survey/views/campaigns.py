@@ -135,7 +135,7 @@ class CampaignResultView(DetailView):
         # The structure of the aggregated dataset returned to the client will
         # look like:
         # [ { "key": ``slug for Question``,
-        #     "values": [ ``Answer.text`` ... ] },
+        #     "values": [ ``Answer.measured`` ... ] },
         #   ... ]
         individuals = []
         for question in Question.objects.filter(
@@ -169,7 +169,7 @@ class CampaignResultView(DetailView):
             # Populate the aggregate
             for answer in Answer.objects.filter(question=question):
                 if question.question_type == Question.INTEGER:
-                    choice = answer.text
+                    choice = answer.measured
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
                     else:
@@ -177,7 +177,7 @@ class CampaignResultView(DetailView):
                             question, []) + [answer]
 
                 elif question.question_type == Question.RADIO:
-                    choice = answer.text
+                    choice = answer.measured
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
                     else:

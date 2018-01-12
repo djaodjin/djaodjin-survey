@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -221,7 +221,7 @@ class SampleResetView(SampleMixin, RedirectView):
         if self.sample.survey and not self.sample.survey.one_sample_only:
             with transaction.atomic():
                 for answer in self.sample.answers.all():
-                    answer.text = None
+                    answer.measured = None
                     answer.save()
                 self.sample.is_frozen = False
                 self.sample.save()
@@ -241,7 +241,9 @@ class SampleUpdateView(SampleMixin, IntervieweeMixin, UpdateView):
     def form_valid(self, form):
         # We are updating all ``Answer`` for the ``Sample`` here.
         for answer in self.sample.answers.order_by('rank'):
-            answer.text = form.cleaned_data['question-%d' % answer.rank]
+            answer.measured, _ = Choice.objects.get_or_create(
+                unit=answer.question.unit,
+                text=form.cleaned_data['question-%d' % answer.rank])
             answer.save()
         return super(SampleUpdateView, self).form_valid(form)
 

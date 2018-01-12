@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -55,6 +55,11 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
     def get_queryset(self):
         return Answer.objects.filter(sample=self.sample)
 
+    def get_serializer_context(self):
+        context = super(AnswerAPIView, self).get_serializer_context()
+        context.update({'question': self.question})
+        return context
+
     def update(self, request, *args, **kwargs):
         #pylint:disable=unused-argument
         partial = kwargs.pop('partial', False)
@@ -74,8 +79,8 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
 
 
     def perform_create(self, serializer):
-        serializer.save(sample=self.sample, question=self.question,
-            rank=EnumeratedQuestions.objects.filter(
+        serializer.save(question=self.question,
+            sample=self.sample, rank=EnumeratedQuestions.objects.filter(
                 campaign=self.sample.survey,
                 question=self.question).first().rank)
 

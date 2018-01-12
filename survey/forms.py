@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -72,14 +72,10 @@ def _create_field(question_type, text,
     return fields
 
 
-class AnswerForm(forms.ModelForm):
+class AnswerForm(forms.Form):
     """
     Form used to submit an Answer to a Question as part of Sample to a Campaign.
     """
-
-    class Meta:
-        model = Answer
-        fields = ('text',)
 
     def __init__(self, *args, **kwargs):
         super(AnswerForm, self).__init__(*args, **kwargs)
@@ -89,15 +85,13 @@ class AnswerForm(forms.ModelForm):
             setattr(self.instance, 'sample', self.initial['sample'])
         question = self.instance.question
         fields = _create_field(question.question_type, question.text,
-            has_other=question.has_other, required=question.required,
-            choices=question.get_choices())
+            required=question.required, choices=question.get_choices())
         self.fields['text'] = fields[0]
-        if fields[1]:
-            self.fields['other'] = fields[1]
 
     def save(self, commit=True):
-        if self.instance.question.has_other and self.cleaned_data['other']:
-            self.cleaned_data['text'] += self.cleaned_data['other']
+        self.instance.measured, _ = Choice.objects.get_or_create(
+            unit=self.instance.question.unit,
+            text=self.cleaned_data['text'])
         return super(AnswerForm, self).save(commit)
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -300,13 +300,15 @@ class Answer(models.Model):
     rank = models.IntegerField(default=0,
         help_text=_("used to order answers when presenting a sample."))
 
-    text = models.TextField(blank=True, null=True) # XXX remove
-
     class Meta:
         unique_together = ("question", "sample")
 
     def __str__(self):
         return '%s-%d' % (self.sample.slug, self.rank)
+
+    @property
+    def as_text_value(self):
+        return Choice.objects.get(pk=self.measured).text
 
     def get_multiple_choices(self):
         text = str(self.text)
