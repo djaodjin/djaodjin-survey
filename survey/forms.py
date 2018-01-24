@@ -31,7 +31,7 @@ from django import forms
 from django.template.defaultfilters import slugify
 from django.utils import six
 
-from survey.models import Answer, Question, Sample, Campaign
+from survey.models import Choice, Question, Sample, Campaign
 
 
 def _create_field(question_type, text,

@@ -26,7 +26,6 @@ import logging
 
 from rest_framework import generics, mixins, status
 from rest_framework import response as http
-from rest_framework.exceptions import ValidationError
 
 from ..mixins import SampleMixin, IntervieweeMixin
 from ..models import Answer, Question, EnumeratedQuestions
@@ -168,6 +167,34 @@ class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         return self.sample
+
+
+class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
+    """
+    ``POST`` resets all answers in the ``Sample``.
+
+    .. sourcecode:: http
+
+        POST /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/reset/
+
+    **Example response**:
+
+    .. sourcecode:: http
+
+        {
+            "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
+            "created_at": "2018-01-24T17:03:34.926193Z",
+            "campaign": "best-practices"
+        }
+    """
+    serializer_class = SampleSerializer
+
+    def create(self, request, *args, **kwargs):
+        self.sample.answers.all().delete()
+        serializer = self.get_serializer(instance=self.sample)
+        headers = self.get_success_headers(serializer.data)
+        return http.Response(serializer.data, status=status.HTTP_201_CREATED,
+            headers=headers)
 
 
 class SampleCreateAPIView(IntervieweeMixin, generics.CreateAPIView):

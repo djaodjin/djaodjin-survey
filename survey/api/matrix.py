@@ -144,7 +144,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
     question_model = get_question_serializer().Meta.model
 
     def aggregate_scores(self, metric, cohorts, cut=None, accounts=None):
-        #pylint:disable=unused-argument
+        #pylint:disable=unused-argument,too-many-locals
         if accounts is None:
             accounts = get_account_model().objects.all()
         scores = {}

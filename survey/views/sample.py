@@ -32,9 +32,9 @@ from django.views.generic import (CreateView, RedirectView, TemplateView,
     UpdateView)
 from django.utils.timezone import utc
 
-from survey.forms import AnswerForm, SampleCreateForm, SampleUpdateForm
-from survey.mixins import IntervieweeMixin, SampleMixin, CampaignMixin
-from survey.models import Question, Sample, Answer
+from ..forms import AnswerForm, SampleCreateForm, SampleUpdateForm
+from ..mixins import IntervieweeMixin, SampleMixin, CampaignMixin
+from ..models import Choice, Question, Sample, Answer
 
 
 def _datetime_now():

@@ -24,9 +24,7 @@
 
 import logging
 
-from rest_framework import generics, mixins, status
-from rest_framework import response as http
-from rest_framework.exceptions import ValidationError
+from rest_framework import generics
 
 from ..mixins import CampaignMixin
 from .serializers import CampaignSerializer

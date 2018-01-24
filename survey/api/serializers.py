@@ -23,6 +23,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from django.db import transaction
+from django.utils import six
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
@@ -98,7 +99,7 @@ class SampleAnswerSerializer(serializers.ModelSerializer):
 class SampleSerializer(serializers.ModelSerializer):
 
     campaign = serializers.SlugRelatedField(source='survey', slug_field='slug',
-        queryset=Campaign.objects.all())
+        queryset=Campaign.objects.all(), required=False)
     account = serializers.SlugRelatedField(slug_field='slug',
         queryset=get_account_model().objects.all(), required=False)
     answers = SampleAnswerSerializer(many=True, required=False)

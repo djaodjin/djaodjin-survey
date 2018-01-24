@@ -22,30 +22,9 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-URLs for the djaodjin-survey django app testsite.
-"""
-
-from django.views.generic import RedirectView, TemplateView
-from django.core.urlresolvers import reverse_lazy
-from urldecorators import include, url
-
-# Uncomment the next two lines to enable the admin:
-from django.contrib import admin
-admin.autodiscover()
-
-import debug_toolbar
+from django.conf.urls import url, include
 
 urlpatterns = [
-    url(r'^__debug__/', include(debug_toolbar.urls)),
-    url(r'^$', TemplateView.as_view(template_name='index.html'), name='home'),
-    url(r'^admin/', include(admin.site.urls)),
-    url(r'^api/', include('survey.urls.api')),
-    url(r'^accounts/profile/',
-        RedirectView.as_view(url=reverse_lazy('survey_list'))),
-    url(r'^accounts/', include('django.contrib.auth.urls')),
-    url(r'^manager/', include('survey.urls.manager'),
-        decorators=['django.contrib.auth.decorators.login_required']),
-    url(r'^matrix/', include('survey.urls.matrix')),
-    url(r'^', include('survey.urls.sample')),
+    url(r'^', include('survey.urls.api.sample.reset')),
+    url(r'^', include('survey.urls.api.sample.update')),
 ]

@@ -24,14 +24,10 @@
 
 from django.conf.urls import url
 
-from ...api.sample import AnswerAPIView, SampleAPIView, SampleCreateAPIView
-from ...settings import SLUG_RE
+from ....api.sample import SampleResetAPIView
+from ....settings import SLUG_RE
 
 urlpatterns = [
-   url(r'^(?P<sample>%s)/(?P<rank>\d+)/' % SLUG_RE,
-       AnswerAPIView.as_view(), name='survey_api_answer'),
-   url(r'^(?P<sample>%s)/' % SLUG_RE,
-       SampleAPIView.as_view(), name='survey_api_sample'),
-   url(r'^$',
-       SampleCreateAPIView.as_view(), name='survey_api_sample_new'),
+   url(r'^(?P<sample>%s)/reset/' % SLUG_RE,
+       SampleResetAPIView.as_view(), name='survey_api_sample_reset'),
 ]
