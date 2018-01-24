@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -102,6 +102,12 @@ class IntervieweeMixin(object):
 
     interviewee_slug = 'interviewee'
 
+    @property
+    def interviewee(self):
+        if not hasattr(self, '_interviewee'):
+            self._interviewee = self.get_interviewee()
+        return self._interviewee
+
     def get_interviewee(self):
         if self.request.user.is_authenticated():
             account_model = get_account_model()
@@ -156,6 +162,12 @@ class CampaignMixin(object):
     Returns a ``Campaign`` object associated with the request URL.
     """
     survey_url_kwarg = 'survey'
+
+    @property
+    def campaign(self):
+        if not hasattr(self, '_campaign'):
+            self._campaign = self.get_survey()
+        return self._campaign
 
     def get_survey(self):
         return get_object_or_404(Campaign, slug=self.kwargs.get(

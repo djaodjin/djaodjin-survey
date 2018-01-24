@@ -22,10 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+from django.conf.urls import url
+
+from ...api.campaigns import CampaignAPIView
+from ...settings import SLUG_RE
 
 urlpatterns = [
-    url(r'^campaign/', include('survey.urls.api.campaigns')),
-    url(r'^matrix/', include('survey.urls.api.matrix')),
-    url(r'^sample/', include('survey.urls.api.sample')),
+   url(r'^(?P<survey>%s)/' % SLUG_RE,
+       CampaignAPIView.as_view(), name='survey_api_campaign'),
 ]

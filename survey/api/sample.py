@@ -28,7 +28,7 @@ from rest_framework import generics, mixins, status
 from rest_framework import response as http
 from rest_framework.exceptions import ValidationError
 
-from ..mixins import SampleMixin
+from ..mixins import SampleMixin, IntervieweeMixin
 from ..models import Answer, Question, EnumeratedQuestions
 from .serializers import AnswerSerializer, SampleSerializer
 
@@ -87,8 +87,111 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
 
 
 class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
+    """
+    ``GET`` returns the state of a ``Sample`` and the list of associated
+    ``Answer``.
+
+    **Example request**:
+
+    .. sourcecode:: http
+
+        GET /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/
+
+    **Example response**:
+
+    .. sourcecode:: http
+
+    {
+        "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
+        "created_at": "2018-01-24T17:03:34.926193Z",
+        "time_spent": "00:00:00",
+        "is_frozen": false,
+        "answers": [
+            {
+                "question": "the-assessment-process-is-rigorous",
+                "measured": "1"
+            },
+            {
+                "question": "a-policy-is-in-place",
+                "measured": "2"
+            },
+            {
+                "question": "product-design",
+                "measured": "2"
+            },
+            {
+                "question": "packaging-design",
+                "measured": "3"
+            },
+            {
+                "question": "reduce-combustion-air-flow-to-optimum",
+                "measured": "2"
+            },
+            {
+                "question": "adjust-air-fuel-ratio",
+                "measured": "2"
+            },
+            {
+                "question": "recover-heat-from-hot-waste-water",
+                "measured": "4"
+            },
+            {
+                "question": "educe-hot-water-temperature-to-minimum-required",
+                "measured": "4"
+            }
+        ]
+    }
+
+    ``PUT`` updates a ``Sample``. For example, mark the Sample as read-only.
+
+    .. sourcecode:: http
+
+        PUT /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/
+
+    **Example response**:
+
+    .. sourcecode:: http
+
+        {
+            "is_frozen": false
+        }
+
+    ``DELETE`` removes a ``Sample`` and all associated ``Answer``
+    from the database.
+
+    .. sourcecode:: http
+
+        DELETE /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/
+    """
 
     serializer_class = SampleSerializer
 
     def get_object(self):
         return self.sample
+
+
+class SampleCreateAPIView(IntervieweeMixin, generics.CreateAPIView):
+    """
+    ``POST`` creates a ``Sample`` from the ``Campaign``.
+
+    .. sourcecode:: http
+
+        POST /api/sample/
+        {
+            "campaign": "best-practices"
+        }
+
+    **Example response**:
+
+    .. sourcecode:: http
+
+        {
+            "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
+            "created_at": "2018-01-24T17:03:34.926193Z",
+            "campaign": "best-practices"
+        }
+    """
+    serializer_class = SampleSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(account=self.interviewee)
