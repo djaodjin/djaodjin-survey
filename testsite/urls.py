@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -47,5 +47,5 @@ urlpatterns = [
     url(r'^manager/', include('survey.urls.manager'),
         decorators=['django.contrib.auth.decorators.login_required']),
     url(r'^matrix/', include('survey.urls.matrix')),
-    url(r'^', include('survey.urls.response')),
+    url(r'^', include('survey.urls.sample')),
 ]

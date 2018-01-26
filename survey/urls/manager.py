@@ -24,9 +24,9 @@
 
 from django.conf.urls import url
 
-from survey.views.createsurvey import (SurveyCreateView, SurveyDeleteView,
-    SurveyListView, SurveyPublishView, SurveyResultView, SurveySendView,
-    SurveyUpdateView)
+from survey.views.campaigns import (CampaignCreateView, CampaignDeleteView,
+    CampaignListView, CampaignPublishView, CampaignResultView, CampaignSendView,
+    CampaignUpdateView)
 from survey.views.createquestion import (QuestionCreateView, QuestionDeleteView,
     QuestionListView, QuestionRankView, QuestionUpdateView)
 from survey.views.matrix import RespondentListView
@@ -34,19 +34,19 @@ from survey.views.matrix import RespondentListView
 
 urlpatterns = [
    url(r'^new/',
-       SurveyCreateView.as_view(), name='survey_create'),
+       CampaignCreateView.as_view(), name='survey_create'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/send/',
-       SurveySendView.as_view(), name='survey_send'),
+       CampaignSendView.as_view(), name='survey_send'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/result/',
-       SurveyResultView.as_view(), name='survey_result'),
+       CampaignResultView.as_view(), name='survey_result'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/respondents/',
        RespondentListView.as_view(), name='survey_respondent_list'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/publish/',
-       SurveyPublishView.as_view(), name='survey_publish'),
+       CampaignPublishView.as_view(), name='survey_publish'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/edit/',
-       SurveyUpdateView.as_view(), name='survey_edit'),
+       CampaignUpdateView.as_view(), name='survey_edit'),
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/delete/',
-       SurveyDeleteView.as_view(), name='survey_delete'),
+       CampaignDeleteView.as_view(), name='survey_delete'),
 
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/new/',
        QuestionCreateView.as_view(), name='survey_question_new'),
@@ -62,5 +62,5 @@ urlpatterns = [
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/',
        QuestionListView.as_view(), name='survey_question_list'),
    url(r'^',
-       SurveyListView.as_view(), name='survey_list'),
+       CampaignListView.as_view(), name='survey_list'),
 ]

@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@ from django import forms
 from django.template.defaultfilters import slugify
 from django.utils import six
 
-from survey.models import Answer, Question, Response, SurveyModel
+from survey.models import Choice, Question, Sample, Campaign
 
 
 def _create_field(question_type, text,
@@ -72,32 +72,26 @@ def _create_field(question_type, text,
     return fields
 
 
-class AnswerForm(forms.ModelForm):
+class AnswerForm(forms.Form):
     """
-    Form used to submit an Answer to a Question as part of Response to a Survey.
+    Form used to submit an Answer to a Question as part of Sample to a Campaign.
     """
-
-    class Meta:
-        model = Answer
-        fields = ('text',)
 
     def __init__(self, *args, **kwargs):
         super(AnswerForm, self).__init__(*args, **kwargs)
         if 'question' in self.initial:
             setattr(self.instance, 'question', self.initial['question'])
-        if 'response' in self.initial:
-            setattr(self.instance, 'response', self.initial['response'])
+        if 'sample' in self.initial:
+            setattr(self.instance, 'sample', self.initial['sample'])
         question = self.instance.question
         fields = _create_field(question.question_type, question.text,
-            has_other=question.has_other, required=question.required,
-            choices=question.get_choices())
+            required=question.required, choices=question.get_choices())
         self.fields['text'] = fields[0]
-        if fields[1]:
-            self.fields['other'] = fields[1]
 
     def save(self, commit=True):
-        if self.instance.question.has_other and self.cleaned_data['other']:
-            self.cleaned_data['text'] += self.cleaned_data['other']
+        self.instance.measured, _ = Choice.objects.get_or_create(
+            unit=self.instance.question.unit,
+            text=self.cleaned_data['text'])
         return super(AnswerForm, self).save(commit)
 
 
@@ -124,14 +118,14 @@ class QuestionForm(forms.ModelForm):
         return self.cleaned_data['correct_answer']
 
 
-class ResponseCreateForm(forms.ModelForm):
+class SampleCreateForm(forms.ModelForm):
 
     class Meta:
-        model = Response
+        model = Sample
         fields = []
 
     def __init__(self, *args, **kwargs):
-        super(ResponseCreateForm, self).__init__(*args, **kwargs)
+        super(SampleCreateForm, self).__init__(*args, **kwargs)
         for idx, question in enumerate(self.initial.get('questions', [])):
             key = 'question-%d' % (idx + 1)
             fields = _create_field(question.question_type, question.text,
@@ -142,7 +136,7 @@ class ResponseCreateForm(forms.ModelForm):
                 self.fields[key.replace('question-', 'other-')] = fields[1]
 
     def clean(self):
-        super(ResponseCreateForm, self).clean()
+        super(SampleCreateForm, self).clean()
         items = six.iteritems(self.cleaned_data)
         for key, value in items:
             if key.startswith('other-'):
@@ -158,20 +152,20 @@ class ResponseCreateForm(forms.ModelForm):
         if 'survey' in self.initial:
             self.instance.survey = self.initial['survey']
         self.instance.slug = slugify(uuid.uuid4().hex)
-        return super(ResponseCreateForm, self).save(commit)
+        return super(SampleCreateForm, self).save(commit)
 
 
-class ResponseUpdateForm(forms.ModelForm):
+class SampleUpdateForm(forms.ModelForm):
     """
-    Auto-generated ``Form`` from a list of ``Question`` in a ``SurveyModel``.
+    Auto-generated ``Form`` from a list of ``Question`` in a ``Campaign``.
     """
 
     class Meta:
-        model = Response
+        model = Sample
         fields = []
 
     def __init__(self, *args, **kwargs):
-        super(ResponseUpdateForm, self).__init__(*args, **kwargs)
+        super(SampleUpdateForm, self).__init__(*args, **kwargs)
         for answer in self.instance.answers.order_by('rank'):
             question = answer.question
             fields = _create_field(question.question_type, question.text,
@@ -183,10 +177,10 @@ class ResponseUpdateForm(forms.ModelForm):
                 self.fields['other-%d' % answer.rank] = fields[1]
 
 
-class SurveyForm(forms.ModelForm):
+class CampaignForm(forms.ModelForm):
 
     class Meta:
-        model = SurveyModel
+        model = Campaign
         fields = ['title', 'description', 'quizz_mode']
 
     def clean_title(self):
@@ -194,7 +188,7 @@ class SurveyForm(forms.ModelForm):
         Creates a slug from the survey title and checks it does not yet exists.
         """
         slug = slugify(self.cleaned_data.get('title'))
-        if SurveyModel.objects.filter(slug__exact=slug).exists():
+        if Campaign.objects.filter(slug__exact=slug).exists():
             raise forms.ValidationError(
                 "Title conflicts with an existing survey.")
         return self.cleaned_data['title']
@@ -203,10 +197,10 @@ class SurveyForm(forms.ModelForm):
         if 'account' in self.initial:
             self.instance.account = self.initial['account']
         self.instance.slug = slugify(self.cleaned_data.get('title'))
-        return super(SurveyForm, self).save(commit)
+        return super(CampaignForm, self).save(commit)
 
 
-class SendSurveyForm(forms.Form):
+class SendCampaignForm(forms.Form):
 
     from_address = forms.EmailField(
         help_text="add your email addresse to be contacted")
@@ -215,4 +209,3 @@ class SendSurveyForm(forms.Form):
         help_text="add email addresses separated by new line")
     message = forms.CharField(widget=forms.Textarea,
        help_text="You can explain the aim of this survey")
-

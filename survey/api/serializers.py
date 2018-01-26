@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,47 +23,103 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from django.db import transaction
+from django.utils import six
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 
-from ..models import (Answer, Matrix, EditableFilter, EditablePredicate,
-    Question, Response, SurveyModel)
+from ..models import (Answer, Campaign, Choice, Matrix, EditableFilter,
+    EditablePredicate, Question, Sample, Unit)
 from ..utils import get_account_model
 
 #pylint:disable=old-style-class,no-init
 
-class AnswerSerializer(serializers.ModelSerializer): #pylint: disable=no-init
+class AnswerSerializer(serializers.ModelSerializer):
+    """
+    Serializer of ``Answer`` when used individually.
+    """
+
+    measured = serializers.CharField(required=True)
 
     class Meta(object):
         model = Answer
-        fields = ('created_at', 'text')
+        fields = ('created_at', 'measured')
+
+    def validate_measured(self, data):
+        if self.context['question'].unit.system == Unit.SYSTEM_ENUMERATED:
+            try:
+                data = Choice.objects.get(
+                    unit=self.context['question'].unit, text=data).pk
+            except Choice.DoesNotExist:
+                choices = Choice.objects.filter(
+                    unit=self.context['question'].unit)
+                raise ValidationError(
+                    "'%s' is not a valid choice. Expected one of %s." % (
+                    data, [choice for choice in six.itervalues(choices)]))
+        return data
 
 
 class QuestionSerializer(serializers.ModelSerializer):
 
+    unit = serializers.SlugRelatedField(slug_field='slug',
+        queryset=Unit.objects.all())
+
     class Meta:
         model = Question
-        fields = ('text', 'question_type', 'has_other', 'choices',
-            'rank', 'correct_answer', 'required')
+        fields = ('path', 'title', 'text', 'unit', 'correct_answer', 'extra')
 
 
-class ResponseSerializer(serializers.ModelSerializer):
+class SampleAnswerSerializer(serializers.ModelSerializer):
+    """
+    Serializer of ``Answer`` when used in list.
+    """
 
-    answers = AnswerSerializer(many=True)
+    question = serializers.SlugRelatedField(slug_field='path',
+        queryset=Question.objects.all())
+    measured = serializers.CharField(required=True)
 
     class Meta(object):
-        model = Response
-        fields = ('slug', 'created_at', 'time_spent', 'is_frozen', 'answers')
-        read_only_fields = ('slug',)
+        model = Answer
+        fields = ('question', 'measured')
+
+    def validate_measured(self, data):
+        if self.context['question'].unit.system == Unit.SYSTEM_ENUMERATED:
+            try:
+                data = Choice.objects.get(
+                    unit=self.context['question'].unit, text=data).pk
+            except Choice.DoesNotExist:
+                choices = Choice.objects.filter(
+                    unit=self.context['question'].unit)
+                raise ValidationError(
+                    "'%s' is not a valid choice. Expected one of %s." % (
+                    data, [choice for choice in six.itervalues(choices)]))
+        return data
 
 
-class SurveyModelSerializer(serializers.ModelSerializer):
+class SampleSerializer(serializers.ModelSerializer):
 
+    campaign = serializers.SlugRelatedField(source='survey', slug_field='slug',
+        queryset=Campaign.objects.all(), required=False)
+    account = serializers.SlugRelatedField(slug_field='slug',
+        queryset=get_account_model().objects.all(), required=False)
+    answers = SampleAnswerSerializer(many=True, required=False)
+
+    class Meta(object):
+        model = Sample
+        fields = ('slug', 'account', 'created_at', 'is_frozen', 'campaign',
+            'time_spent', 'answers')
+        read_only_fields = ('slug', 'account', 'created_at', 'time_spent')
+
+
+class CampaignSerializer(serializers.ModelSerializer):
+
+    account = serializers.SlugRelatedField(slug_field='slug',
+        queryset=get_account_model().objects.all())
     questions = QuestionSerializer(many=True)
 
     class Meta(object):
-        model = SurveyModel
-        fields = ('slug', 'account', 'title', 'description', 'published',
+        model = Campaign
+        fields = ('slug', 'account', 'title', 'description', 'active',
             'quizz_mode', 'questions')
         read_only_fields = ('slug',)
 

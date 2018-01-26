@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,9 +25,9 @@
 import datetime, random, uuid
 
 from django.db import models, transaction, IntegrityError
-from django.utils.encoding import python_2_unicode_compatible
 from django.template.defaultfilters import slugify
-from django.utils.timezone import utc
+from django.utils.encoding import python_2_unicode_compatible
+from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from . import settings
@@ -70,42 +70,44 @@ class SlugTitleMixin(object):
 
 
 @python_2_unicode_compatible
-class SurveyModel(SlugTitleMixin, models.Model):
-    #pylint: disable=super-on-old-class
+class Unit(models.Model):
+    """
+    Unit in which an ``Answer.measured`` value is collected.
+    """
 
-    slug = models.SlugField(unique=True)
-    created_at = models.DateTimeField(null=True)
-    ends_at = models.DateTimeField(null=True)
-    title = models.CharField(max_length=150,
-        help_text="Enter a survey title.")
-    description = models.TextField(null=True, blank=True,
-        help_text="This description will be displayed to interviewees.")
-    published = models.BooleanField(default=False)
-    quizz_mode = models.BooleanField(default=False,
-        help_text="If checked, correct answser are required")
-    account = models.ForeignKey(settings.BELONGS_MODEL, null=True)
-    defaults_single_page = models.BooleanField(default=False,
-        help_text="If checked, will display all questions on a single page,"\
-" else there will be one question per page.")
-    one_response_only = models.BooleanField(default=False,
-        help_text="Only allows to answer survey once.")
+    SYSTEM_STANDARD = 0
+    SYSTEM_IMPERIAL = 1
+    SYSTEM_RANK = 2
+    SYSTEM_ENUMERATED = 3
+
+    SYSTEMS = [
+            (SYSTEM_STANDARD, 'standard'),
+            (SYSTEM_IMPERIAL, 'imperial'),
+            (SYSTEM_RANK, 'rank'),
+            (SYSTEM_ENUMERATED, 'enum'),
+        ]
+
+    slug = models.SlugField(unique=True, db_index=True)
+    title = models.CharField(max_length=50)
+    system = models.PositiveSmallIntegerField(
+        choices=SYSTEMS, default=SYSTEM_STANDARD)
 
     def __str__(self):
         return self.slug
 
-    def has_questions(self):
-        return Question.objects.filter(survey=self).exists()
 
-    def days(self):
-        """
-        Returns the number of days the survey was available.
-        """
-        ends_at = created_at = datetime.datetime.now().replace(tzinfo=utc)
-        if self.created_at:
-            created_at = self.created_at
-        if self.ends_at:
-            ends_at = self.ends_at
-        return (ends_at - created_at).days
+@python_2_unicode_compatible
+class Choice(models.Model):
+    """
+    Choice for a multiple choice question.
+    """
+    unit = models.ForeignKey(Unit)
+    rank = models.IntegerField(
+        help_text=_("used to order choice when presenting a question"))
+    text = models.TextField()
+
+    class Meta:
+        unique_together = ('unit', 'rank')
 
 
 @python_2_unicode_compatible
@@ -125,25 +127,19 @@ class Question(models.Model):
             (INTEGER, 'integer'),
     )
 
-    text = models.TextField(help_text="Enter your question here.")
-    survey = models.ForeignKey(SurveyModel, related_name='questions')
+    path = models.CharField(max_length=1024, unique=True, db_index=True)
+    title = models.CharField(max_length=50)
+    text = models.TextField(
+        help_text=_("Detailed description about the question"))
     question_type = models.CharField(
         max_length=9, choices=QUESTION_TYPES, default=TEXT,
-        help_text="Choose the type of answser.")
-    has_other = models.BooleanField(default=False,
-        help_text="If checked, allow user to enter a personnal choice."\
-" (Don't forget to add an 'Other' choice at the end of your list of choices)")
-    choices = models.TextField(blank=True, null=True,
-        help_text="Enter choices here separated by a new line."\
-" (Only for radio and select multiple)")
-    rank = models.IntegerField()
-    correct_answer = models.TextField(blank=True, null=True,
-        help_text="Enter correct answser(s) here separated by a new line.")
-    required = models.BooleanField(default=True,
-        help_text="If checked, an answer is required")
+        help_text=_("Choose the type of answser."))
+    unit = models.ForeignKey(Unit)
+    correct_answer = models.ForeignKey(Choice, null=True)
+    extra = settings.get_extra_field_class()(null=True)
 
-    class Meta:
-        unique_together = ('survey', 'rank')
+    def __str__(self):
+        return self.path
 
     def get_choices(self):
         choices_list = []
@@ -162,19 +158,63 @@ class Question(models.Model):
                 asw.strip() for asw in self.correct_answer.split('\n')]
         return correct_answer_list
 
+
+@python_2_unicode_compatible
+class Campaign(SlugTitleMixin, models.Model):
+    #pylint: disable=super-on-old-class
+
+    slug = models.SlugField(unique=True)
+    created_at = models.DateTimeField(null=True)
+    title = models.CharField(max_length=150,
+        help_text=_("Enter a survey title."))
+    description = models.TextField(null=True, blank=True,
+        help_text=_("This description will be displayed to interviewees."))
+    account = models.ForeignKey(settings.BELONGS_MODEL, null=True)
+    active = models.BooleanField(default=False)
+    quizz_mode = models.BooleanField(default=False,
+        help_text=_("If checked, correct answser are required"))
+    defaults_single_page = models.BooleanField(default=False,
+        help_text=_("If checked, will display all questions on a single page,"\
+" else there will be one question per page."))
+    one_response_only = models.BooleanField(default=False,
+        help_text=_("Only allows to answer survey once."))
+    questions = models.ManyToManyField(Question,
+        through='survey.EnumeratedQuestions', related_name='campaigns')
+    extra = settings.get_extra_field_class()(null=True)
+
     def __str__(self):
-        return self.text
+        return self.slug
+
+    def has_questions(self):
+        return self.questions.exists()
 
 
-class ResponseManager(models.Manager):
+@python_2_unicode_compatible
+class EnumeratedQuestions(models.Model):
+
+    campaign = models.ForeignKey(Campaign)
+    question = models.ForeignKey(Question)
+    rank = models.IntegerField(
+        help_text=_("used to order questions when presenting a campaign."))
+    required = models.BooleanField(default=True,
+        help_text=_("If checked, an answer is required"))
+
+    class Meta:
+        unique_together = ('campaign', 'question', 'rank')
+
+    def __str__(self):
+        return self.question.path
+
+
+class SampleManager(models.Manager):
 
     def create_for_account(self, account_name, **kwargs):
         account_lookup_kwargs = {settings.ACCOUNT_LOOKUP_FIELD: account_name}
         return self.create(account=get_account_model().objects.get(
                 **account_lookup_kwargs), **kwargs)
 
-    def get_score(self, response): #pylint: disable=no-self-use
-        answers = Answer.objects.populate(response)
+    def get_score(self, sample): #pylint: disable=no-self-use
+        answers = Answer.objects.populate(sample)
         nb_correct_answers = 0
         nb_questions = len(answers)
         for answer in answers:
@@ -183,8 +223,8 @@ class ResponseManager(models.Manager):
                     nb_correct_answers += 1
             elif answer.question.question_type == Question.SELECT_MULTIPLE:
                 multiple_choices = answer.get_multiple_choices()
-                if len(set(multiple_choices)
-                       ^ set(answer.question.get_correct_answer())) == 0:
+                if not (set(multiple_choices)
+                       ^ set(answer.question.get_correct_answer())):
                     # Perfect match
                     nb_correct_answers += 1
 
@@ -198,21 +238,21 @@ class ResponseManager(models.Manager):
 
 
 @python_2_unicode_compatible
-class Response(models.Model):
+class Sample(models.Model):
     """
-    Response to a Survey. A Response is composed of multiple Answers
+    Sample to a Campaign. A Sample is composed of multiple Answers
     to Questions.
     """
-    objects = ResponseManager()
+    objects = SampleManager()
 
     slug = models.SlugField()
     created_at = models.DateTimeField(auto_now_add=True)
-    survey = models.ForeignKey(SurveyModel, null=True)
+    survey = models.ForeignKey(Campaign, null=True)
     account = models.ForeignKey(settings.ACCOUNT_MODEL, null=True)
     time_spent = models.DurationField(default=datetime.timedelta,
         help_text="Total recorded time to complete the survey")
     is_frozen = models.BooleanField(default=False,
-        help_text="When True, answers to that response cannot be updated.")
+        help_text="When True, answers to that sample cannot be updated.")
     extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):
@@ -222,7 +262,7 @@ class Response(models.Model):
              using=None, update_fields=None):
         if not self.slug:
             self.slug = slugify(uuid.uuid4().hex)
-        return super(Response, self).save(
+        return super(Sample, self).save(
             force_insert=force_insert, force_update=force_update,
             using=using, update_fields=update_fields)
 
@@ -232,15 +272,15 @@ class Response(models.Model):
 
 class AnswerManager(models.Manager):
 
-    def populate(self, response):
+    def populate(self, sample):
         """
         Return a list of ``Answer`` for all questions in the survey
-        associated to a *response* even when there are no such record
+        associated to a *sample* even when there are no such record
         in the db.
         """
-        answers = self.filter(response=response)
-        if response.survey:
-            questions = Question.objects.filter(survey=response.survey).exclude(
+        answers = self.filter(sample=sample)
+        if sample.survey:
+            questions = Question.objects.filter(survey=sample.survey).exclude(
                 pk__in=answers.values('question'))
             answers = list(answers)
             for question in questions:
@@ -251,22 +291,28 @@ class AnswerManager(models.Manager):
 @python_2_unicode_compatible
 class Answer(models.Model):
     """
-    An Answer to a Question as part of Response to a Survey.
+    An Answer to a Question as part of Sample to a Campaign.
     """
     objects = AnswerManager()
 
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     question = models.ForeignKey(Question)
-    response = models.ForeignKey(Response, related_name='answers')
-    rank = models.IntegerField(help_text="Position in the response list.")
-    text = models.TextField(blank=True, null=True)
+    measured = models.IntegerField(null=True)
+    collected_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
+    # Optional fields when the answer is part of a survey campaign.
+    sample = models.ForeignKey(Sample, related_name='answers')
+    rank = models.IntegerField(default=0,
+        help_text=_("used to order answers when presenting a sample."))
 
     class Meta:
-        unique_together = ("question", "response")
+        unique_together = ("question", "sample")
 
     def __str__(self):
-        return '%s-%d' % (self.response.slug, self.rank)
+        return '%s-%d' % (self.sample.slug, self.rank)
+
+    @property
+    def as_text_value(self):
+        return Choice.objects.get(pk=self.measured).text
 
     def get_multiple_choices(self):
         text = str(self.text)
@@ -282,8 +328,6 @@ class EditableFilter(SlugTitleMixin, models.Model):
     """
 
     slug = models.SlugField(unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     title = models.CharField(max_length=255)
     tags = models.CharField(max_length=255)
 
@@ -307,14 +351,12 @@ class EditablePredicate(models.Model):
     A predicate describing a step to narrow or enlarge
     a set of records in a portfolio.
     """
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
     rank = models.IntegerField()
     editable_filter = models.ForeignKey(
         EditableFilter, related_name='predicates')
     operator = models.CharField(max_length=255)
     operand = models.CharField(max_length=255)
-    field = models.CharField(max_length=255)
+    field = models.CharField(max_length=255) # field on a Question.
     selector = models.CharField(max_length=255)
 
     def __str__(self):
@@ -340,14 +382,15 @@ class Matrix(SlugTitleMixin, models.Model):
     """
 
     slug = models.SlugField(unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=255)
+    description = models.TextField(null=True, blank=True,
+        help_text=_("Long form description of the matrix"))
     account = models.ForeignKey(settings.BELONGS_MODEL, null=True)
     metric = models.ForeignKey(EditableFilter, related_name='measured',
         null=True)
     cohorts = models.ManyToManyField(EditableFilter, related_name='matrices')
     cut = models.ForeignKey(EditableFilter, related_name='cuts', null=True)
+    extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):
         return self.slug
-

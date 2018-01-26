@@ -25,19 +25,19 @@
 from django.conf.urls import url
 
 from ..settings import SLUG_RE
-from ..views.response import (AnswerUpdateView, ResponseCreateView,
-    ResponseResetView, ResponseResultView, ResponseUpdateView)
+from ..views.sample import (AnswerUpdateView, SampleCreateView,
+    SampleResetView, SampleResultView, SampleUpdateView)
 
 urlpatterns = [
    url(r'^(?P<survey>%s)/(?P<sample>%s)/reset/' % (SLUG_RE, SLUG_RE),
-       ResponseResetView.as_view(), name='survey_response_reset'),
+       SampleResetView.as_view(), name='survey_sample_reset'),
    url(r'^(?P<survey>%s)/(?P<sample>%s)/results/' % (SLUG_RE, SLUG_RE),
-       ResponseResultView.as_view(), name='survey_response_results'),
+       SampleResultView.as_view(), name='survey_sample_results'),
    url(r'^(?P<survey>%s)/(?P<sample>%s)/(?:(?P<rank>\d+)/)'
        % (SLUG_RE, SLUG_RE),
        AnswerUpdateView.as_view(), name='survey_answer_update'),
    url(r'^(?P<survey>%s)/(?P<sample>%s)/' % (SLUG_RE, SLUG_RE),
-       ResponseUpdateView.as_view(), name='survey_response_update'),
+       SampleUpdateView.as_view(), name='survey_sample_update'),
    url(r'^(?P<survey>%s)/' % SLUG_RE,
-       ResponseCreateView.as_view(), name='survey_response_new'),
+       SampleCreateView.as_view(), name='survey_sample_new'),
 ]

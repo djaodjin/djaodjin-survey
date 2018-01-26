@@ -24,9 +24,9 @@
 
 from django.contrib import admin
 
-from survey.models import Answer, Question, Response, SurveyModel
+from survey.models import Answer, Question, Sample, Campaign
 
-admin.site.register(SurveyModel)
+admin.site.register(Campaign)
 admin.site.register(Question)
-admin.site.register(Response)
+admin.site.register(Sample)
 admin.site.register(Answer)

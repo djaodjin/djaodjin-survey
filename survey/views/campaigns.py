@@ -35,20 +35,20 @@ from django.utils import six
 
 from .. import settings
 from ..mixins import AccountMixin
-from ..models import Answer, SurveyModel, Response, Question
-from ..forms import SurveyForm, SendSurveyForm
+from ..models import Answer, Campaign, Sample, Question
+from ..forms import CampaignForm, SendCampaignForm
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class SurveyCreateView(AccountMixin, CreateView):
+class CampaignCreateView(AccountMixin, CreateView):
     """
     Create a new survey
     """
 
-    model = SurveyModel
-    form_class = SurveyForm
+    model = Campaign
+    form_class = CampaignForm
     slug_url_kwarg = 'survey'
     pattern_name = 'survey_edit'
 
@@ -56,7 +56,7 @@ class SurveyCreateView(AccountMixin, CreateView):
         """
         Returns the initial data to use for forms on this view.
         """
-        kwargs = super(SurveyCreateView, self).get_initial()
+        kwargs = super(CampaignCreateView, self).get_initial()
         kwargs.update({'account': self.account})
         return kwargs
 
@@ -64,35 +64,36 @@ class SurveyCreateView(AccountMixin, CreateView):
         return reverse_lazy(self.pattern_name, args=(self.object,))
 
 
-class SurveyDeleteView(DeleteView):
+class CampaignDeleteView(DeleteView):
     """
     Delete a survey
     """
-    model = SurveyModel
+    model = Campaign
     slug_url_kwarg = 'survey'
     success_url = reverse_lazy('survey_list')
 
 
-class SurveyListView(AccountMixin, ListView):
+class CampaignListView(AccountMixin, ListView):
     """
     List of surveys for an account.
     """
-    model = SurveyModel
+    model = Campaign
     slug_url_kwarg = 'survey'
 
     def get_queryset(self):
         if self.account:
-            queryset = SurveyModel.objects.filter(account=self.account)
+            queryset = Campaign.objects.filter(account=self.account)
         else:
-            queryset = SurveyModel.objects.all()
+            queryset = Campaign.objects.all()
         return queryset
 
     def get_context_data(self, *args, **kwargs):
-        context = super(SurveyListView, self).get_context_data(*args, **kwargs)
+        context = super(CampaignListView, self).get_context_data(
+            *args, **kwargs)
         return context
 
 
-class SurveyPublishView(RedirectView):
+class CampaignPublishView(RedirectView):
     """
     Toggle Publish/Publish for a survey.
     """
@@ -101,32 +102,31 @@ class SurveyPublishView(RedirectView):
     slug_url_kwarg = 'survey'
 
     def post(self, request, *args, **kwargs):
-        survey = get_object_or_404(SurveyModel,
+        survey = get_object_or_404(Campaign,
             slug__exact=kwargs.get('survey'))
-        if survey.published:
-            survey.published = False
-            survey.ends_at = datetime.datetime.now()
+        if survey.active:
+            survey.active = False
         else:
-            survey.published = True
+            survey.active = True
             if not survey.created_at:
                 survey.created_at = datetime.datetime.now()
         survey.save()
-        return super(SurveyPublishView, self).post(request, *args, **kwargs)
+        return super(CampaignPublishView, self).post(request, *args, **kwargs)
 
 
-class SurveyResultView(DetailView):
+class CampaignResultView(DetailView):
     """
     Show the results of a survey.
     """
 
-    model = SurveyModel
+    model = Campaign
     slug_url_kwarg = 'survey'
     template_name = 'survey/result.html'
 
     def get_context_data(self, **kwargs):
         #pylint:disable=too-many-locals
-        context = super(SurveyResultView, self).get_context_data(**kwargs)
-        number_interviewees = Response.objects.filter(
+        context = super(CampaignResultView, self).get_context_data(**kwargs)
+        number_interviewees = Sample.objects.filter(
             survey=self.object).count()
         questions = Question.objects.filter(
             survey=self.object).order_by('rank')
@@ -135,7 +135,7 @@ class SurveyResultView(DetailView):
         # The structure of the aggregated dataset returned to the client will
         # look like:
         # [ { "key": ``slug for Question``,
-        #     "values": [ ``Answer.text`` ... ] },
+        #     "values": [ ``Answer.measured`` ... ] },
         #   ... ]
         individuals = []
         for question in Question.objects.filter(
@@ -169,7 +169,7 @@ class SurveyResultView(DetailView):
             # Populate the aggregate
             for answer in Answer.objects.filter(question=question):
                 if question.question_type == Question.INTEGER:
-                    choice = answer.text
+                    choice = answer.measured
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
                     else:
@@ -177,7 +177,7 @@ class SurveyResultView(DetailView):
                             question, []) + [answer]
 
                 elif question.question_type == Question.RADIO:
-                    choice = answer.text
+                    choice = answer.measured
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
                     else:
@@ -222,28 +222,28 @@ class SurveyResultView(DetailView):
         return context
 
 
-class SurveySendView(SingleObjectMixin, FormView):
+class CampaignSendView(SingleObjectMixin, FormView):
     """
     Send an email to a set of users to take a survey.
     """
 
-    model = SurveyModel
-    form_class = SendSurveyForm
+    model = Campaign
+    form_class = SendCampaignForm
     slug_url_kwarg = 'survey'
     template_name = 'survey/send.html'
     success_url = reverse_lazy('survey_list')
 
     def __init__(self, *args, **kwargs):
-        super(SurveySendView, self).__init__(*args, **kwargs)
+        super(CampaignSendView, self).__init__(*args, **kwargs)
         self.object = None
 
     def get_initial(self):
         self.object = self.get_object()
-        kwargs = super(SurveySendView, self).get_initial()
+        kwargs = super(CampaignSendView, self).get_initial()
         kwargs.update({'from_address': settings.DEFAULT_FROM_EMAIL,
             'message': "Please complete our quick survey at %s"
             % self.request.build_absolute_uri(
-                    reverse('survey_response_new', args=(self.object,)))})
+                    reverse('survey_sample_new', args=(self.object,)))})
         return kwargs
 
     def form_valid(self, form):
@@ -252,15 +252,15 @@ class SurveySendView(SingleObjectMixin, FormView):
                   form.cleaned_data['message'],
                   form.cleaned_data['from_address'],
                   email_addresses, fail_silently=False)
-        return super(SurveySendView, self).form_valid(form)
+        return super(CampaignSendView, self).form_valid(form)
 
 
-class SurveyUpdateView(UpdateView):
+class CampaignUpdateView(UpdateView):
     """
     Update an existing survey.
     """
 
-    model = SurveyModel
-    form_class = SurveyForm
+    model = Campaign
+    form_class = CampaignForm
     slug_url_kwarg = 'survey'
     success_url = reverse_lazy('survey_list')

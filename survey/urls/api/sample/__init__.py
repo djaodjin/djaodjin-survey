@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,29 +22,9 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from distutils.core import setup
-import survey
+from django.conf.urls import url, include
 
-setup(
-    name='djaodjin-survey',
-    version=survey.__version__,
-    author='The DjaoDjin Team',
-    author_email='support@djaodjin.com',
-    packages=['survey',
-              'survey.api',
-              'survey.templatetags',
-              'survey.urls',
-              'survey.urls.api',
-              'survey.urls.api.sample',
-              'survey.views'],
-    package_data={'survey': [
-        'static/css/*', 'static/js/*',
-        'static/vendor/css/*', 'static/vendor/js/*',
-        'templates/survey/*']},
-    url='https://github.com/djaodjin/djaodjin-survey/',
-    download_url='https://github.com/djaodjin/djaodjin-survey/tarball/%s' \
-        % survey.__version__,
-    license='BSD',
-    description='Survey Django app',
-    long_description=open('README.md').read(),
-)
+urlpatterns = [
+    url(r'^', include('survey.urls.api.sample.reset')),
+    url(r'^', include('survey.urls.api.sample.update')),
+]

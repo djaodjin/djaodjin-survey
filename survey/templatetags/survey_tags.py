@@ -44,8 +44,8 @@ def field_for(form, answer):
     return {key: form.fields[key]}
 
 @register.filter()
-def answers_by_rank(response):
+def answers_by_rank(sample):
     """
-    Returns the answers on a ``Response`` in a stable increasing rank.
+    Returns the answers on a ``Sample`` in a stable increasing rank.
     """
-    return response.get_answers_by_rank()
+    return sample.get_answers_by_rank()

@@ -144,7 +144,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
     question_model = get_question_serializer().Meta.model
 
     def aggregate_scores(self, metric, cohorts, cut=None, accounts=None):
-        #pylint:disable=unused-argument
+        #pylint:disable=unused-argument,too-many-locals
         if accounts is None:
             accounts = get_account_model().objects.all()
         scores = {}
@@ -164,7 +164,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
                     if nb_accounts > 0:
                         nb_correct_answers = Answer.objects.filter(
                             question__in=questions,
-                            response__account__in=qs_accounts).filter(
+                            sample__account__in=qs_accounts).filter(
                                 text=F('question__correct_answer')).count()
                         score = nb_correct_answers * 100 / (
                             nb_questions * nb_accounts)

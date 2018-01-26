@@ -7,7 +7,7 @@
 </div>
 
 <div>
-{% if survey.published %}
+{% if survey.active %}
 <form method="post" action=".">
         {% csrf_token %}
         <div>

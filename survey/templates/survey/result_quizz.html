@@ -3,14 +3,14 @@
 {% block content %}
 <div>
 	<h1>
-		{% if response.survey.quizz_mode %}
-		Results for {{response.survey.title}} quizz &dash; Your score : {{score}}%
+		{% if sample.survey.quizz_mode %}
+		Results for {{sample.survey.title}} quizz &dash; Your score : {{score}}%
 		{% else %}
-		Your Answers for {{response.survey.title}}
+		Your Answers for {{sample.survey.title}}
 		{% endif %}
 	</h1>
 	<h3>Description</h3>
-	<p>{{response.survey.description}}</p>
+	<p>{{sample.survey.description}}</p>
 </div>
 
 <div>
@@ -19,13 +19,13 @@
 		{% if answer.question.get_choices %}
 		{% for choice in answer.question.get_choices %}
 		<div>
-			<input type="{{ answer.question.question_type }}" disabled="true" {% if choice.0 in answer.text %}checked="true"{% endif %}>
+			<input type="{{ answer.question.question_type }}" disabled="true" {% if choice.0 == answer.measured %}checked="true"{% endif %}>
 			<span>{{choice.0}}
-			{% if response.survey.quizz_mode %}
-				{% if choice.0 in answer.question.get_correct_answer %}
+			{% if sample.survey.quizz_mode %}
+				{% if choice.0 == answer.question.get_correct_answer %}
 					V
 				{% else %}
-					{% if choice.0 in answer.text %}
+					{% if choice.0 == answer.measured %}
 					X
 					{% endif %}
 				{% endif %}
@@ -34,7 +34,7 @@
 		</div>
 		{% endfor %}
 		{% else %}
-		{{answer.text}}
+		{{answer.as_text_value}}
 		{% endif %}
 	{% endfor %}
 </div>

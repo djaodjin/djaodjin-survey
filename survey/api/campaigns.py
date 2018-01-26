@@ -22,10 +22,60 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+import logging
 
-urlpatterns = [
-    url(r'^campaign/', include('survey.urls.api.campaigns')),
-    url(r'^matrix/', include('survey.urls.api.matrix')),
-    url(r'^sample/', include('survey.urls.api.sample')),
-]
+from rest_framework import generics
+
+from ..mixins import CampaignMixin
+from .serializers import CampaignSerializer
+
+
+LOGGER = logging.getLogger(__name__)
+
+
+class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
+    """
+    ``GET`` returns the details of a ``Campaign``.
+
+    **Example request**:
+
+    .. sourcecode:: http
+
+        GET /api/campaign/best-practices/
+
+    **Example response**:
+
+    .. sourcecode:: http
+
+        {
+            "slug": "best-practices",
+            "account": "envconnect",
+            "title": "Assessment on Best Practices",
+            "active": true,
+            "quizz_mode": false,
+            "questions": [
+                {
+                    "path": "/product-design",
+                    "title": "Product Design",
+                    "unit": "assessment-choices",
+                },
+                {
+                    "path": "/packaging-design",
+                    "title": "Packaging Design",
+                    "unit": "assessment-choices",
+                }
+            ]
+        }
+
+    ``DELETE`` removes a ``Campaign`` and all associated ``Sample``
+    from the database.
+
+    .. sourcecode:: http
+
+        DELETE /api/campaign/best-practices/
+    """
+
+    serializer_class = CampaignSerializer
+
+    def get_object(self):
+        return self.campaign

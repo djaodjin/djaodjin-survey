@@ -17,7 +17,7 @@
         this.$element = $(el);
         this.options = options;
 
-        this.responses = [];
+        this.samples = [];
         this.cohorts = [];
         this.accounts = [];
         this.questions = [];
@@ -208,7 +208,7 @@
         },
 
         /** This function will recompute the scores by applying the filters
-            on a Response set on the client in Javascript.
+            on a Sample set on the client in Javascript.
 
             (Currently not used)
          */
@@ -278,16 +278,16 @@
 
                 var correctAnswerCount = 0;
                 var matchingQuestionCount = 0;
-                for(var i = 0; i < self.responses.length; i ++){
-                    var response = self.responses[i];
+                for(var i = 0; i < self.samples.length; i ++){
+                    var sample = self.samples[i];
 
-                    if ( !accountSet.contains(response.account)){
+                    if ( !accountSet.contains(sample.account)){
                         continue;
                     }
 
 
-                    for (var j = 0; j < response.answers.length; j ++){
-                        var answer = response.answers[j];
+                    for (var j = 0; j < sample.answers.length; j ++){
+                        var answer = sample.answers[j];
                         if ( !questionSet.contains(answer.question) ){
                             continue;
                         }

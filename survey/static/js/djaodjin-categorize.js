@@ -151,9 +151,9 @@ if (!Array.prototype.filter) {
                 data: JSON.stringify(category),
                 datatype: "json",
                 contentType: "application/json; charset=utf-8",
-                success: function(category,response){
+                success: function(category, resp){
                     if ( !category.slug ){
-                        category.slug = response.slug;
+                        category.slug = resp.slug;
                     }
                 }.bind(null, category)
             });
