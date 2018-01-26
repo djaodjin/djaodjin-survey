@@ -35,6 +35,7 @@ setup(
               'survey.templatetags',
               'survey.urls',
               'survey.urls.api',
+              'survey.urls.api.sample',
               'survey.views'],
     package_data={'survey': [
         'static/css/*', 'static/js/*',
