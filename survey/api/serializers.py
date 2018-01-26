@@ -73,7 +73,6 @@ class SampleAnswerSerializer(serializers.ModelSerializer):
     """
     Serializer of ``Answer`` when used in list.
     """
-
     question = serializers.SlugRelatedField(slug_field='path',
         queryset=Question.objects.all())
     measured = serializers.CharField(required=True)
