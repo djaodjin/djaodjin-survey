@@ -189,6 +189,7 @@ class Campaign(SlugTitleMixin, models.Model):
         return self.questions.exists()
 
 
+@python_2_unicode_compatible
 class EnumeratedQuestions(models.Model):
 
     campaign = models.ForeignKey(Campaign)
@@ -200,6 +201,9 @@ class EnumeratedQuestions(models.Model):
 
     class Meta:
         unique_together = ('campaign', 'question', 'rank')
+
+    def __str__(self):
+        return self.question.path
 
 
 class SampleManager(models.Manager):
