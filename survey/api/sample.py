@@ -24,8 +24,9 @@
 
 import logging
 
-from rest_framework import generics, mixins, status
+from rest_framework import generics, mixins
 from rest_framework import response as http
+from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
 from ..mixins import SampleMixin, IntervieweeMixin
 from ..models import Answer, Question, EnumeratedQuestions
@@ -59,23 +60,27 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
         context.update({'question': self.question})
         return context
 
+    @staticmethod
+    def get_http_response(serializer, status=HTTP_200_OK, headers=None):
+        return http.Response(serializer.data, status=status, headers=headers)
+
     def update(self, request, *args, **kwargs):
         #pylint:disable=unused-argument
         partial = kwargs.pop('partial', False)
         serializer = self.get_serializer(data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
+        status = HTTP_200_OK
+        headers = None
         try:
             serializer.instance = Answer.objects.get(
                 sample=self.sample, question=self.question)
             self.perform_update(serializer)
         except Answer.DoesNotExist:
             self.perform_create(serializer)
+            status = HTTP_201_CREATED
             headers = self.get_success_headers(serializer.data)
-            return http.Response(serializer.data,
-                status=status.HTTP_201_CREATED, headers=headers)
-
-        return http.Response(serializer.data)
-
+        return self.get_http_response(
+            serializer, status=status, headers=headers)
 
     def perform_create(self, serializer):
         serializer.save(question=self.question,
@@ -193,7 +198,7 @@ class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
         self.sample.answers.all().delete()
         serializer = self.get_serializer(instance=self.sample)
         headers = self.get_success_headers(serializer.data)
-        return http.Response(serializer.data, status=status.HTTP_201_CREATED,
+        return http.Response(serializer.data, status=HTTP_201_CREATED,
             headers=headers)
 
 
