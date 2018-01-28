@@ -109,6 +109,9 @@ class Choice(models.Model):
     class Meta:
         unique_together = ('unit', 'rank')
 
+    def __str__(self):
+        return self.text
+
 
 @python_2_unicode_compatible
 class Question(models.Model):
