@@ -20,3 +20,8 @@ The source code is bundled with a sample django project.
 
     # Visit url at http://localhost:8000/
 
+
+Releases
+========
+
+Models have been completely re-designed between version 0.1.7 and 0.2.0
