@@ -114,6 +114,19 @@ class Choice(models.Model):
 
 
 @python_2_unicode_compatible
+class Metric(models.Model):
+    """
+    Metric on a ``Question``.
+    """
+    slug = models.SlugField(unique=True, db_index=True)
+    title = models.CharField(max_length=50)
+    unit = models.ForeignKey(Unit)
+
+    def __str__(self):
+        return self.slug
+
+
+@python_2_unicode_compatible
 class Question(models.Model):
 
     INTEGER = 'integer'
@@ -137,8 +150,8 @@ class Question(models.Model):
     question_type = models.CharField(
         max_length=9, choices=QUESTION_TYPES, default=TEXT,
         help_text=_("Choose the type of answser."))
-    unit = models.ForeignKey(Unit)
     correct_answer = models.ForeignKey(Choice, null=True)
+    default_metric = models.ForeignKey(Metric)
     extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):
@@ -300,6 +313,7 @@ class Answer(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     question = models.ForeignKey(Question)
+    metric = models.ForeignKey(Metric)
     measured = models.IntegerField(null=True)
     collected_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
     # Optional fields when the answer is part of a survey campaign.

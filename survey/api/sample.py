@@ -44,6 +44,12 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
     lookup_field = 'rank'
 
     @property
+    def metric(self):
+        if not hasattr(self, '_metric'):
+            self._metric = self.question.default_metric
+        return self._metric
+
+    @property
     def question(self):
         if not hasattr(self, '_question'):
             self._question = Question.objects.get(
@@ -83,7 +89,7 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
             serializer, status=status, headers=headers)
 
     def perform_create(self, serializer):
-        serializer.save(question=self.question,
+        serializer.save(question=self.question, metric=self.metric,
             sample=self.sample, rank=EnumeratedQuestions.objects.filter(
                 campaign=self.sample.survey,
                 question=self.question).first().rank)

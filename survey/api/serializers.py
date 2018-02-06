@@ -46,13 +46,12 @@ class AnswerSerializer(serializers.ModelSerializer):
         fields = ('created_at', 'measured')
 
     def validate_measured(self, data):
-        if self.context['question'].unit.system == Unit.SYSTEM_ENUMERATED:
+        unit = self.context['question'].default_metric.unit
+        if unit.system == Unit.SYSTEM_ENUMERATED:
             try:
-                data = Choice.objects.get(
-                    unit=self.context['question'].unit, text=data).pk
+                data = Choice.objects.get(unit=unit, text=data).pk
             except Choice.DoesNotExist:
-                choices = Choice.objects.filter(
-                    unit=self.context['question'].unit)
+                choices = Choice.objects.filter(unit=unit)
                 raise ValidationError(
                     "'%s' is not a valid choice. Expected one of %s." % (
                     data, [choice for choice in six.itervalues(choices)]))
