@@ -322,7 +322,7 @@ class Answer(models.Model):
         help_text=_("used to order answers when presenting a sample."))
 
     class Meta:
-        unique_together = ("question", "sample")
+        unique_together = ('sample', 'question', 'metric')
 
     def __str__(self):
         return '%s-%d' % (self.sample.slug, self.rank)

@@ -46,7 +46,8 @@ class AnswerSerializer(serializers.ModelSerializer):
         fields = ('created_at', 'measured')
 
     def validate_measured(self, data):
-        unit = self.context['question'].default_metric.unit
+        unit = Unit.objects.filter(
+            metric=self.context['question'].default_metric_id).get()
         if unit.system == Unit.SYSTEM_ENUMERATED:
             try:
                 data = Choice.objects.get(unit=unit, text=data).pk
@@ -54,7 +55,8 @@ class AnswerSerializer(serializers.ModelSerializer):
                 choices = Choice.objects.filter(unit=unit)
                 raise ValidationError(
                     "'%s' is not a valid choice. Expected one of %s." % (
-                    data, [choice for choice in six.itervalues(choices)]))
+                    data, [choice.get('text', "")
+                           for choice in six.itervalues(choices)]))
         return data
 
 

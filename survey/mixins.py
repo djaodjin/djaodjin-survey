@@ -200,7 +200,11 @@ class SampleMixin(IntervieweeMixin, CampaignMixin):
         if sample_slug:
             # We have an id for the sample, let's get it and check
             # the user has rights to it.
-            sample = get_object_or_404(Sample, slug=sample_slug)
+            try:
+                sample = Sample.objects.filter(slug=sample_slug).select_related(
+                    'survey').get()
+            except Sample.DoesNotExist:
+                raise Http404("Cannot find Sample(slug='%s')" % sample_slug)
         else:
             # Well no id, let's see if we can find a sample from
             # a survey slug and a account

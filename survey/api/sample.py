@@ -58,6 +58,10 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                     self.lookup_rank_kwarg))
         return self._question
 
+    @property
+    def rank(self):
+        return int(self.kwargs.get(self.lookup_rank_kwarg))
+
     def get_queryset(self):
         return Answer.objects.filter(sample=self.sample)
 
@@ -78,8 +82,8 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
         status = HTTP_200_OK
         headers = None
         try:
-            serializer.instance = Answer.objects.get(
-                sample=self.sample, question=self.question)
+            serializer.instance = self.get_queryset().filter(
+                question=self.question).get()
             self.perform_update(serializer)
         except Answer.DoesNotExist:
             self.perform_create(serializer)
