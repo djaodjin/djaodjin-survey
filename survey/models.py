@@ -315,6 +315,7 @@ class Answer(models.Model):
     question = models.ForeignKey(Question)
     metric = models.ForeignKey(Metric)
     measured = models.IntegerField(null=True)
+    denominator = models.IntegerField(null=True, default=1)
     collected_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
     # Optional fields when the answer is part of a survey campaign.
     sample = models.ForeignKey(Sample, related_name='answers')
