@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -63,6 +63,20 @@ def get_account_serializer():
         raise ImproperlyConfigured('Module "%s" does not define a "%s"'\
 ' check the value of ACCOUNT_SERIALIZER' % (module, attr))
     return cls
+
+
+def get_question_model():
+    """
+    Returns the ``Question`` model that is active in this project.
+    """
+    try:
+        return django_apps.get_model(settings.QUESTION_MODEL)
+    except ValueError:
+        raise ImproperlyConfigured(
+            "QUESTION_MODEL must be of the form 'app_label.model_name'")
+    except LookupError:
+        raise ImproperlyConfigured("QUESTION_MODEL refers to model '%s'"\
+" that has not been installed" % settings.QUESTION_MODEL)
 
 
 def get_question_serializer():

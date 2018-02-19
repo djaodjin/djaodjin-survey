@@ -29,8 +29,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 
 from ..models import (Answer, Campaign, Choice, Matrix, EditableFilter,
-    EditablePredicate, Question, Sample, Unit)
-from ..utils import get_account_model
+    EditablePredicate, Sample, Unit)
+from ..utils import get_account_model, get_question_model
+
 
 #pylint:disable=old-style-class,no-init
 
@@ -66,7 +67,7 @@ class QuestionSerializer(serializers.ModelSerializer):
         queryset=Unit.objects.all())
 
     class Meta:
-        model = Question
+        model = get_question_model()
         fields = ('path', 'title', 'text', 'unit', 'correct_answer', 'extra')
 
 
@@ -75,7 +76,7 @@ class SampleAnswerSerializer(serializers.ModelSerializer):
     Serializer of ``Answer`` when used in list.
     """
     question = serializers.SlugRelatedField(slug_field='path',
-        queryset=Question.objects.all())
+        queryset=get_question_model().objects.all())
     measured = serializers.CharField(required=True)
 
     class Meta(object):

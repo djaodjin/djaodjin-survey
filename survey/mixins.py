@@ -31,8 +31,8 @@ from django.utils.translation import ugettext as _
 from django.views.generic.detail import SingleObjectMixin
 
 from . import settings
-from .models import Matrix, EditableFilter, Question, Sample, Campaign
-from .utils import get_account_model
+from .models import Matrix, EditableFilter, Sample, Campaign
+from .utils import get_account_model, get_question_model
 
 
 class AccountMixin(object):
@@ -151,10 +151,8 @@ class QuestionMixin(SingleObjectMixin):
         """
         rank = self.kwargs.get(self.num_url_kwarg, 1)
         slug = self.kwargs.get(self.survey_url_kwarg, None)
-        survey = get_object_or_404(
-            Campaign, slug__exact=slug)
-        return get_object_or_404(
-            Question, survey=survey, rank=rank)
+        survey = get_object_or_404(Campaign, slug__exact=slug)
+        return get_object_or_404(get_question_model(), survey=survey, rank=rank)
 
 
 class CampaignMixin(object):

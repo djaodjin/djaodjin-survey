@@ -31,16 +31,18 @@ from django import forms
 from django.template.defaultfilters import slugify
 from django.utils import six
 
-from survey.models import Choice, Question, Sample, Campaign
+from .models import Choice, Sample, Campaign
+from .utils import get_question_model
 
 
 def _create_field(question_type, text,
                   has_other=False, required=False, choices=None):
     fields = (None, None)
-    if question_type == Question.TEXT:
+    question_model = get_question_model()
+    if question_type == question_model.TEXT:
         fields = (forms.CharField(label=text, required=required,
             widget=forms.Textarea), None)
-    elif question_type == Question.RADIO:
+    elif question_type == question_model.RADIO:
         radio = forms.ChoiceField(label=text, required=required,
             widget=forms.RadioSelect(), choices=choices)
         if has_other:
@@ -49,7 +51,7 @@ def _create_field(question_type, text,
                 widget=forms.TextInput(attrs={'class':'other-input'})))
         else:
             fields = (radio, None)
-    elif question_type == Question.DROPDOWN:
+    elif question_type == question_model.DROPDOWN:
         radio = forms.ChoiceField(label=text, required=required,
             widget=forms.Select(), choices=choices)
         if has_other:
@@ -58,7 +60,7 @@ def _create_field(question_type, text,
                 widget=forms.TextInput(attrs={'class':'other-input'})))
         else:
             fields = (radio, None)
-    elif question_type == Question.SELECT_MULTIPLE:
+    elif question_type == question_model.SELECT_MULTIPLE:
         multiple = forms.MultipleChoiceField(label=text, required=required,
             widget=forms.CheckboxSelectMultiple, choices=choices)
         if has_other:
@@ -67,7 +69,7 @@ def _create_field(question_type, text,
                 widget=forms.TextInput(attrs={'class':'other-input'})))
         else:
             fields = (multiple, None)
-    elif question_type == Question.INTEGER:
+    elif question_type == question_model.INTEGER:
         fields = (forms.IntegerField(label=text, required=required), None)
     return fields
 
@@ -98,7 +100,7 @@ class AnswerForm(forms.Form):
 class QuestionForm(forms.ModelForm):
 
     class Meta:
-        model = Question
+        model = get_question_model()
         exclude = ['survey', 'rank']
 
     def save(self, commit=True):

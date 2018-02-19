@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,12 +29,14 @@ from django.views.generic import (CreateView, DeleteView, ListView,
 
 from ..compat import csrf
 from ..forms import QuestionForm
-from ..models import Question, Campaign
+from ..models import Campaign
 from ..mixins import QuestionMixin, CampaignMixin
+from ..utils import get_question_model
+
 
 class QuestionFormMixin(QuestionMixin):
 
-    model = Question
+    model = get_question_model()
     form_class = QuestionForm
     success_url = 'survey_question_list'
 
@@ -49,7 +51,7 @@ class QuestionFormMixin(QuestionMixin):
         kwargs = super(QuestionFormMixin, self).get_initial()
         self.survey = get_object_or_404(
             Campaign, slug__exact=self.kwargs.get('survey'))
-        last_rank = Question.objects.filter(survey=self.survey).count()
+        last_rank = self.model.objects.filter(survey=self.survey).count()
         kwargs.update({'survey': self.survey,
                        'rank': last_rank + 1})
         return kwargs
@@ -79,7 +81,7 @@ class QuestionListView(CampaignMixin, ListView):
     """
     List of questions for a survey
     """
-    model = Question
+    model = get_question_model()
 
     def __init__(self, *args, **kwargs):
         super(QuestionListView, self).__init__(*args, **kwargs)
@@ -87,7 +89,8 @@ class QuestionListView(CampaignMixin, ListView):
 
     def get_queryset(self):
         self.survey = self.get_survey()
-        queryset = Question.objects.filter(survey=self.survey).order_by('rank')
+        queryset = self.model.objects.filter(
+            survey=self.survey).order_by('rank')
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -111,12 +114,12 @@ class QuestionRankView(QuestionMixin, RedirectView):
         question_rank = question.rank
         if self.direction < 0:
             if question_rank > 1:
-                swapped_question = Question.objects.get(
+                swapped_question = self.model.objects.get(
                     survey=question.survey, rank=question_rank - 1)
         else:
-            if question_rank < Question.objects.filter(
+            if question_rank < self.model.objects.filter(
                 survey=question.survey).count():
-                swapped_question = Question.objects.get(
+                swapped_question = self.model.objects.get(
                     survey=question.survey, rank=question_rank + 1)
         if swapped_question:
             question.rank = swapped_question.rank

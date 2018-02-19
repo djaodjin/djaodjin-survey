@@ -28,9 +28,10 @@ from rest_framework import generics, mixins
 from rest_framework import response as http
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
-from ..mixins import SampleMixin, IntervieweeMixin
-from ..models import Answer, Question, EnumeratedQuestions
 from .serializers import AnswerSerializer, SampleSerializer
+from ..mixins import SampleMixin, IntervieweeMixin
+from ..models import Answer, EnumeratedQuestions
+from ..utils import get_question_model
 
 
 LOGGER = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
     @property
     def question(self):
         if not hasattr(self, '_question'):
-            self._question = Question.objects.get(
+            self._question = get_question_model().objects.get(
                 enumeratedquestions__campaign=self.sample.survey,
                 enumeratedquestions__rank=self.kwargs.get(
                     self.lookup_rank_kwarg))

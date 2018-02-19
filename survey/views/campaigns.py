@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,9 @@ from django.utils import six
 
 from .. import settings
 from ..mixins import AccountMixin
-from ..models import Answer, Campaign, Sample, Question
+from ..models import Answer, Campaign, Sample
 from ..forms import CampaignForm, SendCampaignForm
+from ..utils import get_question_model
 
 
 LOGGER = logging.getLogger(__name__)
@@ -126,9 +127,10 @@ class CampaignResultView(DetailView):
     def get_context_data(self, **kwargs):
         #pylint:disable=too-many-locals
         context = super(CampaignResultView, self).get_context_data(**kwargs)
+        question_model = get_question_model()
         number_interviewees = Sample.objects.filter(
             survey=self.object).count()
-        questions = Question.objects.filter(
+        questions = question_model.objects.filter(
             survey=self.object).order_by('rank')
         # Answers that cannot be aggregated.
         #
@@ -138,8 +140,8 @@ class CampaignResultView(DetailView):
         #     "values": [ ``Answer.measured`` ... ] },
         #   ... ]
         individuals = []
-        for question in Question.objects.filter(
-            survey=self.object, question_type=Question.TEXT):
+        for question in question_model.objects.filter(
+            survey=self.object, question_type=question_model.TEXT):
             individuals += [{
                  'key': slugify("%d" % question.rank),
 # XXX Might be better
@@ -153,22 +155,22 @@ class CampaignResultView(DetailView):
         #
         # The structure of the aggregated dataset returned to the client will
         # look like:
-        # [ { "key": ``Question.slug``,
+        # [ { "key": ``question_model.slug``,
         #     "values": [ { "label": ``One possible choice for a Question``,
         #                   "value": ``Number of Answers for that choice``,
         #                 }, ...] },
         #   ... ]
         aggregates = []
         with_errors = {}
-        for question in Question.objects.filter(
-            survey=self.object).exclude(question_type=Question.TEXT):
+        for question in question_model.objects.filter(
+            survey=self.object).exclude(question_type=question_model.TEXT):
             aggregate = {}
             for choice, _ in question.get_choices():
                 aggregate[choice] = 0
 
             # Populate the aggregate
             for answer in Answer.objects.filter(question=question):
-                if question.question_type == Question.INTEGER:
+                if question.question_type == question_model.INTEGER:
                     choice = answer.measured
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
@@ -176,7 +178,7 @@ class CampaignResultView(DetailView):
                         with_errors[question] = with_errors.get(
                             question, []) + [answer]
 
-                elif question.question_type == Question.RADIO:
+                elif question.question_type == question_model.RADIO:
                     choice = answer.measured
                     if choice in aggregate:
                         aggregate[choice] = aggregate[choice] + 1
@@ -184,7 +186,7 @@ class CampaignResultView(DetailView):
                         with_errors[question] = with_errors.get(
                             question, []) + [answer]
 
-                elif question.question_type == Question.SELECT_MULTIPLE:
+                elif question.question_type == question_model.SELECT_MULTIPLE:
                     for choice in answer.get_multiple_choices():
                         if choice in aggregate:
                             aggregate[choice] = aggregate[choice] + 1

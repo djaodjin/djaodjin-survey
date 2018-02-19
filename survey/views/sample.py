@@ -34,7 +34,8 @@ from django.utils.timezone import utc
 
 from ..forms import AnswerForm, SampleCreateForm, SampleUpdateForm
 from ..mixins import IntervieweeMixin, SampleMixin, CampaignMixin
-from ..models import Choice, Question, Sample, Answer
+from ..models import Choice, Sample, Answer
+from ..utils import get_question_model
 
 
 def _datetime_now():
@@ -173,7 +174,8 @@ class SampleCreateView(CampaignMixin, IntervieweeMixin, CreateView):
         # We are going to create all the Answer records for that Sample here,
         # initialize them with a text when present in the submitted form.
         self.object = form.save()
-        for question in Question.objects.filter(survey=self.object.survey):
+        for question in get_question_model().objects.filter(
+                survey=self.object.survey):
             kwargs = {'sample': self.object,
                 'question': question, 'rank': question.rank}
             answer_text = form.cleaned_data.get(

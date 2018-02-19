@@ -31,7 +31,7 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from . import settings
-from .utils import get_account_model
+from .utils import get_account_model, get_question_model
 
 
 class SlugTitleMixin(object):
@@ -127,7 +127,7 @@ class Metric(models.Model):
 
 
 @python_2_unicode_compatible
-class Question(models.Model):
+class AbstractQuestion(models.Model):
 
     INTEGER = 'integer'
     RADIO = 'radio'
@@ -142,6 +142,9 @@ class Question(models.Model):
             (SELECT_MULTIPLE, 'Select Multiple'),
             (INTEGER, 'integer'),
     )
+
+    class Meta:
+        abstract = True
 
     path = models.CharField(max_length=1024, unique=True, db_index=True)
     title = models.CharField(max_length=50)
@@ -175,6 +178,15 @@ class Question(models.Model):
         return correct_answer_list
 
 
+class Question(AbstractQuestion):
+
+# XXX Before migration:
+    pass
+# XXX After migration
+    class Meta(AbstractQuestion.Meta):
+        swappable = 'QUESTION_MODEL'
+
+
 @python_2_unicode_compatible
 class Campaign(SlugTitleMixin, models.Model):
     #pylint: disable=super-on-old-class
@@ -194,7 +206,7 @@ class Campaign(SlugTitleMixin, models.Model):
 " else there will be one question per page."))
     one_response_only = models.BooleanField(default=False,
         help_text=_("Only allows to answer survey once."))
-    questions = models.ManyToManyField(Question,
+    questions = models.ManyToManyField(settings.QUESTION_MODEL,
         through='survey.EnumeratedQuestions', related_name='campaigns')
     extra = settings.get_extra_field_class()(null=True)
 
@@ -209,7 +221,7 @@ class Campaign(SlugTitleMixin, models.Model):
 class EnumeratedQuestions(models.Model):
 
     campaign = models.ForeignKey(Campaign)
-    question = models.ForeignKey(Question)
+    question = models.ForeignKey(settings.QUESTION_MODEL)
     rank = models.IntegerField(
         help_text=_("used to order questions when presenting a campaign."))
     required = models.BooleanField(default=True,
@@ -296,8 +308,8 @@ class AnswerManager(models.Manager):
         """
         answers = self.filter(sample=sample)
         if sample.survey:
-            questions = Question.objects.filter(survey=sample.survey).exclude(
-                pk__in=answers.values('question'))
+            questions = get_question_model().objects.filter(
+                survey=sample.survey).exclude(pk__in=answers.values('question'))
             answers = list(answers)
             for question in questions:
                 answers += [Answer(question=question)]
@@ -312,7 +324,7 @@ class Answer(models.Model):
     objects = AnswerManager()
 
     created_at = models.DateTimeField(auto_now_add=True)
-    question = models.ForeignKey(Question)
+    question = models.ForeignKey(settings.QUESTION_MODEL)
     metric = models.ForeignKey(Metric)
     measured = models.IntegerField(null=True)
     denominator = models.IntegerField(null=True, default=1)

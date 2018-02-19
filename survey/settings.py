@@ -36,6 +36,7 @@ _SETTINGS = {
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
     'ACCOUNT_LOOKUP_FIELD': 'username',
     'ACCOUNT_SERIALIZER': 'survey.api.serializers.AccountSerializer',
+    'QUESTION_MODEL': 'survey.Question',
     'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionSerializer',
     'BELONGS_MODEL': None,
     'CORRECT_MARKER': '(correct)',
@@ -48,6 +49,7 @@ AUTH_USER_MODEL = _SETTINGS.get('AUTH_USER_MODEL')
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
 ACCOUNT_LOOKUP_FIELD = _SETTINGS.get('ACCOUNT_LOOKUP_FIELD')
 ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')
+QUESTION_MODEL = _SETTINGS.get('QUESTION_MODEL')
 QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
 BELONGS_MODEL = (_SETTINGS.get('BELONGS_MODEL')
     if _SETTINGS.get('BELONGS_MODEL') else _SETTINGS.get('ACCOUNT_MODEL'))
