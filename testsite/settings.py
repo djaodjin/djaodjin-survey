@@ -62,9 +62,6 @@ INSTALLED_APPS = (
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '9j24plovjvx%-_bvfgd*))umqd_olg!=4#a4i9_rf*)fl9b4b_'
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 

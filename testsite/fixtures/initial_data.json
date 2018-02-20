@@ -14,51 +14,187 @@
     },
     "model": "auth.User", "pk": 2
 },
-{ "fields" : {
-	"slug" : "survey-example",
-	"title" : "Test Campaign",
-	"description" : "This is an example survey to test the app",
-	"account" : 2,
-	"active": true
-	},
-	"model" : "survey.campaign", "pk" : 1
+{
+  "fields" : {
+    "slug" : "survey-example",
+    "title" : "Test Campaign",
+    "description" : "This is an example survey to test the app",
+    "account" : 2,
+    "active": true
+  },
+  "model" : "survey.campaign", "pk" : 1
 },
-{ "fields" : {
-	"text" : "Do you like the djaodjin-survey app...",
-	"survey" : 1,
-	"question_type" : "radio",
-	"choices" : "Somewhat\nYes\nAwesome",
-	"rank" : 1,
-	"required" : true
-	},
-	"model" : "survey.question", "pk" : 1
+{ "fields": {
+    "slug": "q1",
+    "title": "Question 1",
+    "system": 3
+  },
+  "model" : "survey.unit", "pk" : 1
 },
-{ "fields" : {
-	"text" : "Which feature of the app do you use...",
-	"survey" : 1,
-	"question_type" : "checkbox",
-	"choices" : "Radio\nSelect Multiple\nFree form text\nInteger",
-	"rank" : 2,
-	"required" : true
-	},
-	"model" : "survey.question", "pk" : 2
+{ "fields": {
+    "slug": "q1",
+    "title": "Question 1",
+    "unit": 1
+  },
+  "model" : "survey.metric", "pk" : 1
 },
-{ "fields" : {
-	"text" : "Rate this app from 1 to 10...",
-	"survey" : 1,
-	"question_type" : "integer",
-	"rank" : 3,
-	"required" : true
-	},
-	"model" : "survey.question", "pk" : 3
+{ "fields": {
+    "unit": 1,
+    "rank": 1,
+    "text": "Somewhat"
+  },
+  "model" : "survey.choice", "pk" : 1
 },
-{ "fields" : {
-	"text" : "Additional Comments...",
-	"survey" : 1,
-	"question_type" : "text",
-	"rank" : 4,
-	"required" : true
-	},
-	"model" : "survey.question", "pk" : 4
+{ "fields": {
+    "unit": 1,
+    "rank": 2,
+    "text": "Yes"
+  },
+  "model" : "survey.choice", "pk" : 2
+},
+{ "fields": {
+    "unit": 1,
+    "rank": 3,
+    "text": "Awesome"
+  },
+  "model" : "survey.choice", "pk" : 3
+},
+{ "fields": {
+    "slug": "q2",
+    "title": "Question 2",
+    "system": 3
+  },
+  "model" : "survey.unit", "pk" : 2
+},
+{ "fields": {
+    "slug": "q2",
+    "title": "Question 2",
+    "unit": 1
+  },
+  "model" : "survey.metric", "pk" : 2
+},
+{ "fields": {
+    "unit": 2,
+    "rank": 4,
+    "text": "Radio"
+  },
+  "model" : "survey.choice", "pk" : 4
+},
+{ "fields": {
+    "unit": 2,
+    "rank": 5,
+    "text": "Select Multiple"
+  },
+  "model" : "survey.choice", "pk" : 5
+},
+{ "fields": {
+    "unit": 2,
+    "rank": 6,
+    "text": "Free form text"
+  },
+  "model" : "survey.choice", "pk" : 6
+},
+{ "fields": {
+    "unit": 2,
+    "rank": 7,
+    "text": "Integer"
+  },
+  "model" : "survey.choice", "pk" : 7
+},
+{ "fields": {
+    "slug": "q3",
+    "title": "Question 3",
+    "system": 3
+  },
+  "model" : "survey.unit", "pk" : 3
+},
+{ "fields": {
+    "slug": "q3",
+    "title": "Question 3",
+    "unit": 2
+  },
+  "model" : "survey.metric", "pk" : 3
+},
+{ "fields": {
+    "slug": "q4",
+    "title": "Question 4",
+    "system": 3
+  },
+  "model" : "survey.unit", "pk" : 4
+},
+{ "fields": {
+    "slug": "q4",
+    "title": "Question 4",
+    "unit": 4
+  },
+  "model" : "survey.metric", "pk" : 4
+},
+{
+  "fields" : {
+      "path": "/q1",
+      "text" : "Do you like the djaodjin-survey app...",
+      "question_type" : "radio",
+      "default_metric": 1
+  },
+  "model" : "survey.question", "pk" : 1
+},
+{
+  "fields": {
+    "campaign": 1,
+    "question": 1,
+    "rank": 1
+  },
+  "model": "survey.EnumeratedQuestions", "pk": 1
+},
+{
+  "fields" : {
+      "path": "/q2",
+      "text" : "Which feature of the app do you use...",
+      "question_type" : "checkbox",
+      "default_metric": 2
+  },
+  "model" : "survey.question", "pk" : 2
+},
+{
+  "fields": {
+    "campaign": 1,
+    "question": 2,
+    "rank": 2
+  },
+  "model": "survey.EnumeratedQuestions", "pk": 2
+},
+{
+  "fields" : {
+      "path": "/q3",
+      "text" : "Rate this app from 1 to 10...",
+      "question_type" : "integer",
+      "default_metric": 3
+  },
+  "model" : "survey.question", "pk" : 3
+},
+{
+  "fields": {
+    "campaign": 1,
+    "question": 3,
+    "rank": 3
+  },
+  "model": "survey.EnumeratedQuestions", "pk": 3
+},
+{
+  "fields" : {
+    "path": "/q4",
+    "text" : "Additional Comments...",
+    "question_type" : "text",
+    "default_metric": 4
+  },
+  "model" : "survey.question", "pk" : 4
+},
+{
+  "fields": {
+    "campaign": 1,
+    "question": 4,
+    "rank": 4
+  },
+  "model": "survey.EnumeratedQuestions", "pk": 4
 }
 ]

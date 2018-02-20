@@ -13,7 +13,7 @@
 	<div id="wrap">
 		<header>
 			<ul>
-			<li><a href="{% url 'campaign_list' %}">campaign list</a>
+			<li><a href="{% url 'survey_campaign_list' %}">campaign list</a>
 			{% if request.user.is_authenticated %}
 			<li><a href="{% url 'logout' %}">sign out</a>
 			{% else %}

@@ -31,7 +31,7 @@ from django import forms
 from django.template.defaultfilters import slugify
 from django.utils import six
 
-from .models import Choice, Sample, Campaign
+from .models import Answer, Choice, Sample, Campaign
 from .utils import get_question_model
 
 
@@ -74,10 +74,13 @@ def _create_field(question_type, text,
     return fields
 
 
-class AnswerForm(forms.Form):
+class AnswerForm(forms.ModelForm):
     """
     Form used to submit an Answer to a Question as part of Sample to a Campaign.
     """
+    class Meta:
+        model = Answer
+        fields = []
 
     def __init__(self, *args, **kwargs):
         super(AnswerForm, self).__init__(*args, **kwargs)

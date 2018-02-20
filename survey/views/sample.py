@@ -34,7 +34,7 @@ from django.utils.timezone import utc
 
 from ..forms import AnswerForm, SampleCreateForm, SampleUpdateForm
 from ..mixins import IntervieweeMixin, SampleMixin, CampaignMixin
-from ..models import Choice, Sample, Answer
+from ..models import Answer, Choice, EnumeratedQuestions, Sample
 from ..utils import get_question_model
 
 
@@ -174,15 +174,16 @@ class SampleCreateView(CampaignMixin, IntervieweeMixin, CreateView):
         # We are going to create all the Answer records for that Sample here,
         # initialize them with a text when present in the submitted form.
         self.object = form.save()
-        for question in get_question_model().objects.filter(
-                survey=self.object.survey):
+        for enum_q in EnumeratedQuestions.objects.filter(
+                campaign=self.object.survey):
             kwargs = {'sample': self.object,
-                'question': question, 'rank': question.rank}
+                'question': enum_q.question, 'rank': enum_q.rank}
             answer_text = form.cleaned_data.get(
-                'question-%d' % question.rank, None)
+                'question-%d' % enum_q.rank, None)
             if answer_text:
                 kwargs.update({'text': answer_text})
-            Answer.objects.create(**kwargs)
+            Answer.objects.create(
+                metric=enum_q.question.default_metric, **kwargs)
         return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):

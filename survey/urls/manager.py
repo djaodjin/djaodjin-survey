@@ -62,5 +62,5 @@ urlpatterns = [
    url(r'^(?P<survey>[a-zA-Z0-9-]+)/',
        QuestionListView.as_view(), name='survey_question_list'),
    url(r'^',
-       CampaignListView.as_view(), name='survey_list'),
+       CampaignListView.as_view(), name='survey_campaign_list'),
 ]
