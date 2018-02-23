@@ -26,12 +26,12 @@ from __future__ import unicode_literals
 
 from django.core.exceptions import ImproperlyConfigured
 from django.http import Http404
-from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext as _
-from django.views.generic.detail import SingleObjectMixin
+from rest_framework.generics import get_object_or_404
 
 from . import settings
-from .models import Matrix, EditableFilter, Sample, Campaign
+from .models import (Campaign, EnumeratedQuestions, EditableFilter, Matrix,
+    Sample)
 from .utils import get_account_model, get_question_model
 
 
@@ -114,7 +114,8 @@ class IntervieweeMixin(object):
             try:
                 kwargs = {'%s__exact' % settings.ACCOUNT_LOOKUP_FIELD:
                     self.kwargs.get(self.interviewee_slug)}
-                interviewee = get_object_or_404(account_model, **kwargs)
+                interviewee = get_object_or_404(
+                    account_model.objects.all(), **kwargs)
             except account_model.DoesNotExist:
                 interviewee = self.request.user
         else:
@@ -140,21 +141,6 @@ class IntervieweeMixin(object):
         return kwargs
 
 
-class QuestionMixin(SingleObjectMixin):
-
-    num_url_kwarg = 'num'
-    survey_url_kwarg = 'survey'
-
-    def get_object(self, queryset=None):
-        """
-        Returns a question object based on the URL.
-        """
-        rank = self.kwargs.get(self.num_url_kwarg, 1)
-        slug = self.kwargs.get(self.survey_url_kwarg, None)
-        survey = get_object_or_404(Campaign, slug__exact=slug)
-        return get_object_or_404(get_question_model(), survey=survey, rank=rank)
-
-
 class CampaignMixin(object):
     """
     Returns a ``Campaign`` object associated with the request URL.
@@ -168,8 +154,27 @@ class CampaignMixin(object):
         return self._campaign
 
     def get_survey(self):
-        return get_object_or_404(Campaign, slug=self.kwargs.get(
+        return get_object_or_404(Campaign.objects.all(), slug=self.kwargs.get(
                 self.survey_url_kwarg))
+
+
+class CampaignQuestionMixin(CampaignMixin):
+
+    num_url_kwarg = 'num'
+    model = EnumeratedQuestions
+
+    def get_queryset(self):
+        return self.model.objects.filter(
+            campaign=self.campaign).order_by('rank')
+
+    def get_object(self, queryset=None):
+        """
+        Returns a question object based on the URL.
+        """
+        if not queryset:
+            queryset = self.get_queryset()
+        return get_object_or_404(queryset,
+            rank=self.kwargs.get(self.num_url_kwarg, 1))
 
 
 class SampleMixin(IntervieweeMixin, CampaignMixin):
@@ -207,7 +212,7 @@ class SampleMixin(IntervieweeMixin, CampaignMixin):
             # Well no id, let's see if we can find a sample from
             # a survey slug and a account
             interviewee = self.get_interviewee()
-            sample = get_object_or_404(Sample,
+            sample = get_object_or_404(Sample.objects.all(),
                 survey=self.get_survey(), account=interviewee)
         return sample
 
@@ -219,7 +224,7 @@ class SampleMixin(IntervieweeMixin, CampaignMixin):
         return [self.interviewee_slug, 'survey', self.sample_url_kwarg]
 
 
-class MatrixQuerysetMixin(AccountMixin):
+class MatrixQuerysetMixin(object):
 
     @staticmethod
     def get_queryset():
@@ -233,18 +238,19 @@ class MatrixMixin(MatrixQuerysetMixin):
     @property
     def matrix(self):
         if not hasattr(self, '_matrix'):
-            self._matrix = get_object_or_404(Matrix,
+            self._matrix = get_object_or_404(self.get_queryset(),
                     slug=self.kwargs.get(self.matrix_url_kwarg))
         return self._matrix
 
 
-class EditableFilterMixin(AccountMixin):
+class EditableFilterMixin(object):
 
     editable_filter_url_kwarg = 'editable_filter'
 
     @property
     def editable_filter(self):
         if not hasattr(self, '_editable_filter'):
-            self._editable_filter = get_object_or_404(EditableFilter,
-                    slug=self.kwargs.get(self.editable_filter_url_kwarg))
+            self._editable_filter = get_object_or_404(
+                EditableFilter.objects.all(),
+                slug=self.kwargs.get(self.editable_filter_url_kwarg))
         return self._editable_filter

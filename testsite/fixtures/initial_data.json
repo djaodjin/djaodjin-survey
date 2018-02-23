@@ -25,15 +25,15 @@
   "model" : "survey.campaign", "pk" : 1
 },
 { "fields": {
-    "slug": "q1",
-    "title": "Question 1",
+    "slug": "sentiment",
+    "title": "Sentiment",
     "system": 3
   },
   "model" : "survey.unit", "pk" : 1
 },
 { "fields": {
-    "slug": "q1",
-    "title": "Question 1",
+    "slug": "sentiment",
+    "title": "Sentiment",
     "unit": 1
   },
   "model" : "survey.metric", "pk" : 1
@@ -60,16 +60,16 @@
   "model" : "survey.choice", "pk" : 3
 },
 { "fields": {
-    "slug": "q2",
-    "title": "Question 2",
+    "slug": "features",
+    "title": "Features",
     "system": 3
   },
   "model" : "survey.unit", "pk" : 2
 },
 { "fields": {
-    "slug": "q2",
-    "title": "Question 2",
-    "unit": 1
+    "slug": "features",
+    "title": "Features",
+    "unit": 2
   },
   "model" : "survey.metric", "pk" : 2
 },
@@ -102,29 +102,29 @@
   "model" : "survey.choice", "pk" : 7
 },
 { "fields": {
-    "slug": "q3",
-    "title": "Question 3",
-    "system": 3
+    "slug": "rating",
+    "title": "Rating",
+    "system": 2
   },
   "model" : "survey.unit", "pk" : 3
 },
 { "fields": {
-    "slug": "q3",
-    "title": "Question 3",
-    "unit": 2
+    "slug": "rating",
+    "title": "Rating",
+    "unit": 3
   },
   "model" : "survey.metric", "pk" : 3
 },
 { "fields": {
-    "slug": "q4",
-    "title": "Question 4",
+    "slug": "free-text",
+    "title": "Free Text",
     "system": 3
   },
   "model" : "survey.unit", "pk" : 4
 },
 { "fields": {
-    "slug": "q4",
-    "title": "Question 4",
+    "slug": "free-text",
+    "title": "Free Text",
     "unit": 4
   },
   "model" : "survey.metric", "pk" : 4

@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,9 +24,18 @@
 
 from django.contrib import admin
 
-from survey.models import Answer, Question, Sample, Campaign
+from survey.models import (Answer, Campaign, Choice, EditableFilter,
+    EditablePredicate, EnumeratedQuestions, Question, Matrix, Metric,
+    Sample, Unit)
 
-admin.site.register(Campaign)
-admin.site.register(Question)
-admin.site.register(Sample)
 admin.site.register(Answer)
+admin.site.register(Campaign)
+admin.site.register(Choice)
+admin.site.register(EditableFilter)
+admin.site.register(EditablePredicate)
+admin.site.register(EnumeratedQuestions)
+admin.site.register(Question)
+admin.site.register(Matrix)
+admin.site.register(Metric)
+admin.site.register(Sample)
+admin.site.register(Unit)

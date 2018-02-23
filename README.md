@@ -10,16 +10,15 @@ Five minutes evaluation
 
 The source code is bundled with a sample django project.
 
-    $ virtualenv-2.7 *virtual_env_dir*
+    $ virtualenv *virtual_env_dir*
     $ cd *virtual_env_dir*
     $ source bin/activate
-    $ pip install -r requirements.txt
-
-    $ python manage.py syncdb
+    $ pip install -r testsite/requirements.txt
+    $ make initdb
     $ python manage.py runserver
 
     # Visit url at http://localhost:8000/
-
+    # You can use username: donny, password: yoyo to test the manager options.
 
 Releases
 ========

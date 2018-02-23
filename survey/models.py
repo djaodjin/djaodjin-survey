@@ -151,23 +151,21 @@ class AbstractQuestion(models.Model):
     text = models.TextField(
         help_text=_("Detailed description about the question"))
     question_type = models.CharField(
-        max_length=9, choices=QUESTION_TYPES, default=TEXT,
+        max_length=9, choices=QUESTION_TYPES, default=RADIO,
         help_text=_("Choose the type of answser."))
-    correct_answer = models.ForeignKey(Choice, null=True)
+    correct_answer = models.ForeignKey(Choice, null=True, blank=True)
     default_metric = models.ForeignKey(Metric)
-    extra = settings.get_extra_field_class()(null=True)
+    extra = settings.get_extra_field_class()(null=True, blank=True)
 
     def __str__(self):
         return self.path
 
-    def get_choices(self):
-        choices_list = []
-        if self.choices:
-            #pylint: disable=no-member
-            for choice in self.choices.split('\n'):
-                choice = choice.strip()
-                choices_list += [(choice, choice)]
-        return choices_list
+    @property
+    def choices(self):
+        if self.default_metric.unit.system == Unit.SYSTEM_ENUMERATED:
+            return [choice.text for choice
+                in Choice.objects.filter(unit=self.default_metric.unit)]
+        return None
 
     def get_correct_answer(self):
         correct_answer_list = []
@@ -181,7 +179,7 @@ class AbstractQuestion(models.Model):
 class Question(AbstractQuestion):
 
 # XXX Before migration:
-    pass
+#    pass
 # XXX After migration
     class Meta(AbstractQuestion.Meta):
         swappable = 'QUESTION_MODEL'

@@ -104,23 +104,11 @@ class QuestionForm(forms.ModelForm):
 
     class Meta:
         model = get_question_model()
-        exclude = ['survey', 'rank']
-
-    def save(self, commit=True):
-        if 'survey' in self.initial:
-            self.instance.survey = self.initial['survey']
-        if 'rank' in self.initial and not self.instance.rank:
-            self.instance.rank = self.initial['rank']
-        return super(QuestionForm, self).save(commit)
+        fields = ('path', 'title', 'text', 'default_metric', 'extra')
 
     def clean_choices(self):
         self.cleaned_data['choices'] = self.cleaned_data['choices'].strip()
         return self.cleaned_data['choices']
-
-    def clean_correct_answer(self):
-        self.cleaned_data['correct_answer'] \
-            = self.cleaned_data['correct_answer'].strip()
-        return self.cleaned_data['correct_answer']
 
 
 class SampleCreateForm(forms.ModelForm):

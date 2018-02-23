@@ -23,41 +23,46 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from django.core.urlresolvers import reverse
+from django.db import transaction
+from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from django.views.generic import (CreateView, DeleteView, ListView,
     RedirectView, UpdateView)
 
 from ..compat import csrf
 from ..forms import QuestionForm
-from ..models import Campaign
-from ..mixins import QuestionMixin, CampaignMixin
+from ..models import EnumeratedQuestions
+from ..mixins import CampaignMixin, CampaignQuestionMixin
 from ..utils import get_question_model
 
 
-class QuestionFormMixin(QuestionMixin):
+class QuestionFormMixin(CampaignQuestionMixin):
 
     model = get_question_model()
     form_class = QuestionForm
     success_url = 'survey_question_list'
 
-    def __init__(self, *args, **kwargs):
-        super(QuestionFormMixin, self).__init__(*args, **kwargs)
-        self.survey = None
+    def get_object(self, queryset=None):
+        """
+        Returns a question object based on the URL.
+        """
+        return super(QuestionFormMixin, self).get_object(
+            queryset=queryset).question
 
-    def get_initial(self):
-        """
-        Returns the initial data to use for forms on this view.
-        """
-        kwargs = super(QuestionFormMixin, self).get_initial()
-        self.survey = get_object_or_404(
-            Campaign, slug__exact=self.kwargs.get('survey'))
-        last_rank = self.model.objects.filter(survey=self.survey).count()
-        kwargs.update({'survey': self.survey,
-                       'rank': last_rank + 1})
-        return kwargs
+    def form_valid(self, form):
+        with transaction.atomic():
+            result = super(QuestionFormMixin, self).form_valid(form)
+            last_rank = EnumeratedQuestions.objects.filter(
+                campaign=self.campaign).aggregate(Max('rank')).get(
+                    'rank__max', 0)
+            _ = EnumeratedQuestions.objects.get_or_create(
+                question=self.object,
+                campaign=self.campaign,
+                defaults={'rank': last_rank})
+        return result
 
     def get_success_url(self):
-        return reverse(self.success_url, args=(self.object.survey,))
+        return reverse(self.success_url, args=(self.campaign,))
 
 
 class QuestionCreateView(QuestionFormMixin, CreateView):
@@ -67,40 +72,30 @@ class QuestionCreateView(QuestionFormMixin, CreateView):
     pass
 
 
-class QuestionDeleteView(QuestionMixin, DeleteView):
+class QuestionDeleteView(CampaignQuestionMixin, DeleteView):
     """
     Delete a question.
     """
     success_url = 'survey_question_list'
 
     def get_success_url(self):
-        return reverse(self.success_url, args=(self.object.survey,))
+        return reverse(self.success_url, args=(self.campaign,))
 
 
-class QuestionListView(CampaignMixin, ListView):
+class QuestionListView(CampaignQuestionMixin, ListView):
     """
     List of questions for a survey
     """
-    model = get_question_model()
-
-    def __init__(self, *args, **kwargs):
-        super(QuestionListView, self).__init__(*args, **kwargs)
-        self.survey = None
-
-    def get_queryset(self):
-        self.survey = self.get_survey()
-        queryset = self.model.objects.filter(
-            survey=self.survey).order_by('rank')
-        return queryset
+    template_name = 'survey/question_list.html'
 
     def get_context_data(self, **kwargs):
         context = super(QuestionListView, self).get_context_data(**kwargs)
         context.update(csrf(self.request))
-        context.update({'survey': self.survey})
+        context.update({'campaign': self.campaign})
         return context
 
 
-class QuestionRankView(QuestionMixin, RedirectView):
+class QuestionRankView(CampaignQuestionMixin, RedirectView):
     """
     Update the rank of a question in a survey
     """
@@ -109,24 +104,26 @@ class QuestionRankView(QuestionMixin, RedirectView):
     direction = 1                   # defaults to "down"
 
     def post(self, request, *args, **kwargs):
-        question = self.get_object()
-        swapped_question = None
-        question_rank = question.rank
+        enum_question = self.get_object()
+        swapped_enum_question = None
+        question_rank = enum_question.rank
         if self.direction < 0:
             if question_rank > 1:
-                swapped_question = self.model.objects.get(
-                    survey=question.survey, rank=question_rank - 1)
+                swapped_enum_question = self.model.objects.get(
+                    campaign=enum_question.campaign, rank=question_rank - 1)
         else:
             if question_rank < self.model.objects.filter(
-                survey=question.survey).count():
-                swapped_question = self.model.objects.get(
-                    survey=question.survey, rank=question_rank + 1)
-        if swapped_question:
-            question.rank = swapped_question.rank
-            swapped_question.rank = question_rank
-            question.save()
-            swapped_question.save()
-        kwargs = {'slug': kwargs['survey']}
+                campaign=enum_question.campaign).count():
+                swapped_enum_question = self.model.objects.get(
+                    campaign=enum_question.campaign, rank=question_rank + 1)
+        print("XXX %d swap %s(%d) for %s(%d)" % (question_rank, enum_question, enum_question.rank, swapped_enum_question, swapped_enum_question.rank))
+        if swapped_enum_question:
+            enum_question.rank = swapped_enum_question.rank
+            swapped_enum_question.rank = question_rank
+            print("XXX updated to %s(%d) for %s(%d)" % (enum_question, enum_question.rank, swapped_enum_question, swapped_enum_question.rank))
+            enum_question.save()
+            swapped_enum_question.save()
+        del kwargs[self.num_url_kwarg]
         return super(QuestionRankView, self).post(request, *args, **kwargs)
 
 

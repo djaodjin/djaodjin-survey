@@ -1,4 +1,4 @@
-# Copyright (c) 2017, DjaoDjin inc.
+# Copyright (c) 2018, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -46,7 +46,7 @@ $(srcDir)/credentials: $(srcDir)/testsite/etc/credentials
 # XXX Enter a superuser when asked otherwise the fixtures won't load
 # correctly.
 initdb: install-conf
-	-rm -f db.sqlite3
+	-rm -f $(srcDir)/db.sqlite3
 	cd $(srcDir) && $(PYTHON) ./manage.py migrate $(RUNSYNCDB) --noinput
 	cd $(srcDir) && $(PYTHON) ./manage.py loaddata \
 		testsite/fixtures/initial_data.json
