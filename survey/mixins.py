@@ -32,7 +32,7 @@ from rest_framework.generics import get_object_or_404
 from . import settings
 from .models import (Campaign, EnumeratedQuestions, EditableFilter, Matrix,
     Sample)
-from .utils import get_account_model, get_question_model
+from .utils import get_account_model
 
 
 class AccountMixin(object):

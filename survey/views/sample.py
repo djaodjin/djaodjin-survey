@@ -35,7 +35,6 @@ from django.utils.timezone import utc
 from ..forms import AnswerForm, SampleCreateForm, SampleUpdateForm
 from ..mixins import IntervieweeMixin, SampleMixin, CampaignMixin
 from ..models import Answer, Choice, EnumeratedQuestions, Sample
-from ..utils import get_question_model
 
 
 def _datetime_now():

@@ -176,6 +176,7 @@ class AbstractQuestion(models.Model):
         return correct_answer_list
 
 
+@python_2_unicode_compatible
 class Question(AbstractQuestion):
 
 # XXX Before migration:

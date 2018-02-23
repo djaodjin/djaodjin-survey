@@ -25,14 +25,13 @@
 from django.core.urlresolvers import reverse
 from django.db import transaction
 from django.db.models import Max
-from django.shortcuts import get_object_or_404
 from django.views.generic import (CreateView, DeleteView, ListView,
     RedirectView, UpdateView)
 
 from ..compat import csrf
 from ..forms import QuestionForm
 from ..models import EnumeratedQuestions
-from ..mixins import CampaignMixin, CampaignQuestionMixin
+from ..mixins import CampaignQuestionMixin
 from ..utils import get_question_model
 
 
@@ -116,11 +115,9 @@ class QuestionRankView(CampaignQuestionMixin, RedirectView):
                 campaign=enum_question.campaign).count():
                 swapped_enum_question = self.model.objects.get(
                     campaign=enum_question.campaign, rank=question_rank + 1)
-        print("XXX %d swap %s(%d) for %s(%d)" % (question_rank, enum_question, enum_question.rank, swapped_enum_question, swapped_enum_question.rank))
         if swapped_enum_question:
             enum_question.rank = swapped_enum_question.rank
             swapped_enum_question.rank = question_rank
-            print("XXX updated to %s(%d) for %s(%d)" % (enum_question, enum_question.rank, swapped_enum_question, swapped_enum_question.rank))
             enum_question.save()
             swapped_enum_question.save()
         del kwargs[self.num_url_kwarg]
