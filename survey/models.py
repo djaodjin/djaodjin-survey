@@ -185,6 +185,9 @@ class Question(AbstractQuestion):
     class Meta(AbstractQuestion.Meta):
         swappable = 'QUESTION_MODEL'
 
+    def __str__(self):
+        return self.path
+
 
 @python_2_unicode_compatible
 class Campaign(SlugTitleMixin, models.Model):
