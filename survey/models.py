@@ -87,8 +87,8 @@ class Unit(models.Model):
             (SYSTEM_ENUMERATED, 'enum'),
         ]
 
-    slug = models.SlugField(unique=True, db_index=True)
-    title = models.CharField(max_length=50)
+    slug = models.SlugField(max_length=150, unique=True, db_index=True)
+    title = models.CharField(max_length=150)
     system = models.PositiveSmallIntegerField(
         choices=SYSTEMS, default=SYSTEM_STANDARD)
 
@@ -118,8 +118,8 @@ class Metric(models.Model):
     """
     Metric on a ``Question``.
     """
-    slug = models.SlugField(unique=True, db_index=True)
-    title = models.CharField(max_length=50)
+    slug = models.SlugField(max_length=150, unique=True, db_index=True)
+    title = models.CharField(max_length=150)
     unit = models.ForeignKey(Unit)
 
     def __str__(self):
