@@ -31,7 +31,7 @@ from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 from .serializers import AnswerSerializer, SampleSerializer
 from ..mixins import SampleMixin, IntervieweeMixin
 from ..models import Answer, EnumeratedQuestions
-from ..utils import get_question_model
+from ..utils import datetime_or_now, get_question_model
 
 
 LOGGER = logging.getLogger(__name__)
@@ -92,6 +92,9 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
             headers = self.get_success_headers(serializer.data)
         return self.get_http_response(
             serializer, status=status, headers=headers)
+
+    def perform_update(self, serializer):
+        serializer.save(created_at=datetime_or_now())
 
     def perform_create(self, serializer):
         serializer.save(question=self.question, metric=self.metric,
