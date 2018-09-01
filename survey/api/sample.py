@@ -72,7 +72,8 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
         return context
 
     @staticmethod
-    def get_http_response(serializer, status=HTTP_200_OK, headers=None):
+    def get_http_response(serializer, status=HTTP_200_OK, headers=None,
+                          first_answer=False):#pylint:disable=unused-argument
         return http.Response(serializer.data, status=status, headers=headers)
 
     def update(self, request, *args, **kwargs):
@@ -82,6 +83,8 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
         serializer.is_valid(raise_exception=True)
         status = HTTP_200_OK
         headers = None
+        first_answer = not(Answer.objects.filter(
+            collected_by=self.request.user).exists())
         try:
             serializer.instance = self.get_queryset().filter(
                 question=self.question).get()
@@ -90,18 +93,19 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
             self.perform_create(serializer)
             status = HTTP_201_CREATED
             headers = self.get_success_headers(serializer.data)
-        return self.get_http_response(
-            serializer, status=status, headers=headers)
+        return self.get_http_response(serializer,
+            status=status, headers=headers, first_answer=first_answer)
 
     def perform_update(self, serializer):
-        serializer.save(created_at=datetime_or_now())
+        serializer.save(created_at=datetime_or_now(),
+            collected_by=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(question=self.question, metric=self.metric,
-            sample=self.sample, rank=EnumeratedQuestions.objects.filter(
+            sample=self.sample, collected_by=self.request.user,
+            rank=EnumeratedQuestions.objects.filter(
                 campaign=self.sample.survey,
                 question=self.question).first().rank)
-
 
 
 class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
