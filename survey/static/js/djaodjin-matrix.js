@@ -108,20 +108,25 @@
             }
         },
 
+        /** *data* is an array whose 1st component will be used for bars
+            and (optional) second component used for horizontal lines.
+         */
         _update: function(data) {
             var self = this;
-            self.scores = data.values;
-            for( var idx = 0; idx < data.cohorts.length; ++idx ) {
-                if( !data.cohorts[idx].hasOwnProperty('title') ) {
-                    if( data.cohorts[idx].hasOwnProperty('printable_name') ) {
-                        data.cohorts[idx].title = data.cohorts[idx].printable_name;
+            var bData = data[0];
+            self.scores = bData.values;
+            for( var idx = 0; idx < bData.cohorts.length; ++idx ) {
+                if( !bData.cohorts[idx].hasOwnProperty('title') ) {
+                    if( bData.cohorts[idx].hasOwnProperty('printable_name') ) {
+                        bData.cohorts[idx].title =
+                            data.cohorts[idx].printable_name;
                     } else {
-                        data.cohorts[idx].title = "cohort-" + idx;
+                        bData.cohorts[idx].title = "cohort-" + idx;
                     }
                 }
             }
-            self.selectedCohorts = data.cohorts;
-            self.selectedMetric = data.metric;
+            self.selectedCohorts = bData.cohorts;
+            self.selectedMetric = bData.metric;
             if( data.length > 1 ) {
                 self.aggregates = data[1].cohorts;
                 self.aggregateScores = data[1].values;
@@ -142,7 +147,7 @@
                 data: data,
                 contentType: "application/json; charset=utf-8",
                 success: function(data) {
-                    self._update(data[0]);
+                    self._update(data);
                     self.$element.trigger("matrix.loaded");
                 },
                 error: function(resp) {

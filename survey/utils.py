@@ -22,12 +22,26 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import datetime
 from importlib import import_module
 
 from django.core.exceptions import ImproperlyConfigured
 from django.apps import apps as django_apps
+from django.utils import six
+from django.utils.dateparse import parse_datetime
+from django.utils.timezone import utc
 
 from . import settings
+
+
+def datetime_or_now(dtime_at=None):
+    if not dtime_at:
+        return datetime.datetime.utcnow().replace(tzinfo=utc)
+    if isinstance(dtime_at, six.string_types):
+        dtime_at = parse_datetime(dtime_at)
+    if dtime_at.tzinfo is None:
+        dtime_at = dtime_at.replace(tzinfo=utc)
+    return dtime_at
 
 
 def get_account_model():
