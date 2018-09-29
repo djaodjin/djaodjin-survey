@@ -101,7 +101,7 @@ class Choice(models.Model):
     """
     Choice for a multiple choice question.
     """
-    unit = models.ForeignKey(Unit)
+    unit = models.ForeignKey(Unit, on_delete=models.PROTECT)
     rank = models.IntegerField(
         help_text=_("used to order choice when presenting a question"))
     text = models.TextField()
@@ -120,7 +120,7 @@ class Metric(models.Model):
     """
     slug = models.SlugField(unique=True, db_index=True)
     title = models.CharField(max_length=50)
-    unit = models.ForeignKey(Unit)
+    unit = models.ForeignKey(Unit, on_delete=models.PROTECT)
 
     def __str__(self):
         return self.slug
@@ -153,8 +153,9 @@ class AbstractQuestion(models.Model):
     question_type = models.CharField(
         max_length=9, choices=QUESTION_TYPES, default=RADIO,
         help_text=_("Choose the type of answser."))
-    correct_answer = models.ForeignKey(Choice, null=True, blank=True)
-    default_metric = models.ForeignKey(Metric)
+    correct_answer = models.ForeignKey(Choice,
+        null=True, on_delete=models.PROTECT, blank=True)
+    default_metric = models.ForeignKey(Metric, on_delete=models.PROTECT)
     extra = settings.get_extra_field_class()(null=True, blank=True)
 
     def __str__(self):
@@ -199,7 +200,8 @@ class Campaign(SlugTitleMixin, models.Model):
         help_text=_("Enter a survey title."))
     description = models.TextField(null=True, blank=True,
         help_text=_("This description will be displayed to interviewees."))
-    account = models.ForeignKey(settings.BELONGS_MODEL, null=True)
+    account = models.ForeignKey(settings.BELONGS_MODEL,
+        on_delete=models.PROTECT, null=True)
     active = models.BooleanField(default=False)
     quizz_mode = models.BooleanField(default=False,
         help_text=_("If checked, correct answser are required"))
@@ -222,8 +224,9 @@ class Campaign(SlugTitleMixin, models.Model):
 @python_2_unicode_compatible
 class EnumeratedQuestions(models.Model):
 
-    campaign = models.ForeignKey(Campaign)
-    question = models.ForeignKey(settings.QUESTION_MODEL)
+    campaign = models.ForeignKey(Campaign, on_delete=models.PROTECT)
+    question = models.ForeignKey(settings.QUESTION_MODEL,
+        on_delete=models.PROTECT)
     rank = models.IntegerField(
         help_text=_("used to order questions when presenting a campaign."))
     required = models.BooleanField(default=True,
@@ -277,8 +280,9 @@ class Sample(models.Model):
 
     slug = models.SlugField()
     created_at = models.DateTimeField(auto_now_add=True)
-    survey = models.ForeignKey(Campaign, null=True)
-    account = models.ForeignKey(settings.ACCOUNT_MODEL, null=True)
+    survey = models.ForeignKey(Campaign, null=True, on_delete=models.PROTECT)
+    account = models.ForeignKey(settings.ACCOUNT_MODEL,
+        null=True, on_delete=models.PROTECT)
     time_spent = models.DurationField(default=datetime.timedelta,
         help_text="Total recorded time to complete the survey")
     is_frozen = models.BooleanField(default=False,
@@ -326,13 +330,16 @@ class Answer(models.Model):
     objects = AnswerManager()
 
     created_at = models.DateTimeField(auto_now_add=True)
-    question = models.ForeignKey(settings.QUESTION_MODEL)
-    metric = models.ForeignKey(Metric)
+    question = models.ForeignKey(settings.QUESTION_MODEL,
+        on_delete=models.PROTECT)
+    metric = models.ForeignKey(Metric, on_delete=models.PROTECT)
     measured = models.IntegerField(null=True)
     denominator = models.IntegerField(null=True, default=1)
-    collected_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True)
+    collected_by = models.ForeignKey(settings.AUTH_USER_MODEL,
+        null=True, on_delete=models.PROTECT)
     # Optional fields when the answer is part of a survey campaign.
-    sample = models.ForeignKey(Sample, related_name='answers')
+    sample = models.ForeignKey(Sample, on_delete=models.PROTECT,
+        related_name='answers')
     rank = models.IntegerField(default=0,
         help_text=_("used to order answers when presenting a sample."))
 
@@ -385,7 +392,7 @@ class EditablePredicate(models.Model):
     """
     rank = models.IntegerField()
     editable_filter = models.ForeignKey(
-        EditableFilter, related_name='predicates')
+        EditableFilter, on_delete=models.CASCADE, related_name='predicates')
     operator = models.CharField(max_length=255)
     operand = models.CharField(max_length=255)
     field = models.CharField(max_length=255) # field on a Question.
@@ -417,11 +424,13 @@ class Matrix(SlugTitleMixin, models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True,
         help_text=_("Long form description of the matrix"))
-    account = models.ForeignKey(settings.BELONGS_MODEL, null=True)
+    account = models.ForeignKey(settings.BELONGS_MODEL,
+        null=True, on_delete=models.CASCADE)
     metric = models.ForeignKey(EditableFilter, related_name='measured',
-        null=True)
+        null=True, on_delete=models.PROTECT)
     cohorts = models.ManyToManyField(EditableFilter, related_name='matrices')
-    cut = models.ForeignKey(EditableFilter, related_name='cuts', null=True)
+    cut = models.ForeignKey(EditableFilter,
+        null=True, on_delete=models.SET_NULL, related_name='cuts')
     extra = settings.get_extra_field_class()(null=True)
 
     def __str__(self):
