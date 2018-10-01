@@ -224,9 +224,9 @@ class Campaign(SlugTitleMixin, models.Model):
 @python_2_unicode_compatible
 class EnumeratedQuestions(models.Model):
 
-    campaign = models.ForeignKey(Campaign, on_delete=models.PROTECT)
+    campaign = models.ForeignKey(Campaign, on_delete=models.CASCADE)
     question = models.ForeignKey(settings.QUESTION_MODEL,
-        on_delete=models.PROTECT)
+        on_delete=models.CASCADE)
     rank = models.IntegerField(
         help_text=_("used to order questions when presenting a campaign."))
     required = models.BooleanField(default=True,
