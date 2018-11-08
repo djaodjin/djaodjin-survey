@@ -105,6 +105,7 @@ class Choice(models.Model):
     rank = models.IntegerField(
         help_text=_("used to order choice when presenting a question"))
     text = models.TextField()
+    descr = models.TextField()
 
     class Meta:
         unique_together = ('unit', 'rank')
