@@ -283,7 +283,7 @@ class Sample(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     survey = models.ForeignKey(Campaign, null=True, on_delete=models.PROTECT)
     account = models.ForeignKey(settings.ACCOUNT_MODEL,
-        null=True, on_delete=models.PROTECT)
+        null=True, on_delete=models.PROTECT, related_name='samples')
     time_spent = models.DurationField(default=datetime.timedelta,
         help_text="Total recorded time to complete the survey")
     is_frozen = models.BooleanField(default=False,
@@ -334,7 +334,7 @@ class Answer(models.Model):
     question = models.ForeignKey(settings.QUESTION_MODEL,
         on_delete=models.PROTECT)
     metric = models.ForeignKey(Metric, on_delete=models.PROTECT)
-    measured = models.IntegerField(null=True)
+    measured = models.BigIntegerField(null=True)
     denominator = models.IntegerField(null=True, default=1)
     collected_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.PROTECT)
