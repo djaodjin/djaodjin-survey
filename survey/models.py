@@ -334,7 +334,7 @@ class Answer(models.Model):
     question = models.ForeignKey(settings.QUESTION_MODEL,
         on_delete=models.PROTECT)
     metric = models.ForeignKey(Metric, on_delete=models.PROTECT)
-    measured = models.BigIntegerField(null=True)
+    measured = models.IntegerField(null=True)
     denominator = models.IntegerField(null=True, default=1)
     collected_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.PROTECT)
