@@ -15,6 +15,8 @@ nv.models.matrixChart = function() {
         , tooltip = nv.models.tooltip()
         ;
 
+    var line = nv.models.line();
+
     var margin = {top: 15, right: 10, bottom: 50, left: 60}
         , width = null
         , height = null
@@ -63,6 +65,7 @@ nv.models.matrixChart = function() {
     function chart(selection) {
         renderWatch.reset();
         renderWatch.models(discretebar);
+        renderWatch.models(line);
         if (showXAxis) renderWatch.models(xAxis);
         if (showYAxis) renderWatch.models(yAxis);
 
@@ -101,7 +104,7 @@ nv.models.matrixChart = function() {
             gEnter.append('g').attr('class', 'nv-y nv-axis')
                 .append('g').attr('class', 'nv-zeroLine')
                 .append('line');
-            
+
             var aggGroup = g.selectAll('g.nv-aggLine').data(data[0].aggregates);
             var aggGroupEnter = aggGroup.enter().append('g').attr('class','nv-aggLine');
             aggGroupEnter.append('text');
@@ -131,11 +134,10 @@ nv.models.matrixChart = function() {
                 wrap.select('.nv-legendWrap')
                     .attr('transform', 'translate(0,' + (-margin.top) +')')
             }
-            
             if (rightAlignYAxis) {
                 g.select(".nv-y.nv-axis")
                     .attr("transform", "translate(" + availableWidth + ",0)");
-            }	    
+            }
 
             // Main Chart Component(s)
             discretebar
@@ -146,7 +148,6 @@ nv.models.matrixChart = function() {
                 .datum(data.filter(function(d) { return !d.disabled }));
 
             barsWrap.transition().call(discretebar);
-
 
             defsEnter.append('clipPath')
                 .attr('id', 'nv-x-label-clip-' + discretebar.id())
@@ -204,19 +205,40 @@ nv.models.matrixChart = function() {
                 .attr("y1", y(0))
                 .attr("y2", y(0))
             ;
-            
-            // Agg Line
-            aggGroup.select("line")
-                .attr("x1",0)
-                .attr("x2",(rightAlignYAxis) ? -availableWidth : availableWidth)
-                .attr("y1", function(d){return y(d.value)})
-                .attr("y2", function(d){return y(d.value)})
-            ;
-            aggGroup.select("text")
-                .text(function(d){return d.label})
-                .attr('transform', function(d,i,j) { return 'translate(' + (availableWidth - this.getBBox().width) + ',' + y(d.value) + ')' });
 
-
+            // This will create a line accross all bars.
+            if( false ) {
+                // disabled straight line in profit of line matching bars.
+                aggGroup.select("line")
+                    .attr("x1",0)
+                    .attr("x2",(rightAlignYAxis) ? -availableWidth : availableWidth)
+                    .attr("y1", function(d){return y(d.value)})
+                    .attr("y2", function(d){return y(d.value)})
+                ;
+                aggGroup.select("text")
+                    .text(function(d){return d.label})
+                    .attr('transform', function(d,i,j) { return 'translate(' + (availableWidth - this.getBBox().width) + ',' + y(d.value) + ')' });
+            } else {
+                // discretebar computes bar as:
+                //  translate = (x(getX(d,i)) + x.rangeBand() * .05 )
+                //  width = x.rangeBand() * .9 / data.length
+                var xRangeLine = [];
+                var xRangeDiscreteBar = x.range();
+                for( var rangeIdx = 0; rangeIdx < xRangeDiscreteBar.length;
+                     ++rangeIdx ) {
+                    xRangeLine.push(xRangeDiscreteBar[rangeIdx]
+                        + x.rangeBand() * .9 / (data.length * 2));
+                }
+                line.width(availableWidth)
+                    .height(availableHeight)
+                    .xScale(x)
+                    .yScale(y)
+                    .xDomain(x.domain())
+                    .xRange(xRangeLine)
+                    .yDomain(y.domain())
+                    .yRange(y.range());
+                aggGroup.transition().call(line);
+            }
 
         });
 
@@ -302,7 +324,15 @@ nv.models.matrixChart = function() {
         rightAlignYAxis: {get: function(){return rightAlignYAxis;}, set: function(_){
             rightAlignYAxis = _;
             yAxis.orient( (_) ? 'right' : 'left');
-        }}
+        }},
+        x: {
+            get: function(){ return discretebar.x(); },
+            set: function(_){ discretebar.x(_); line.x(_); }
+        },
+        y: {
+            get: function(){ return discretebar.y(); },
+            set: function(_){ discretebar.y(_); line.y(_); }
+        },
     });
 
     nv.utils.inheritOptions(chart, discretebar);

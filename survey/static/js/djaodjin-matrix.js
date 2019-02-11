@@ -347,15 +347,14 @@
                 var aggregate = self.aggregates[i];
                 var score = self.aggregateScores[aggregate.slug] || 0.0;
                 aggregates.push({
-                    "label": aggregate.title
-                        + " " + d3.format(',.1f')(score) + '%',
+                    "label": aggregate.title,
                     "value": score
                 });
             }
 
             var chartData = [{
                 "values": chartValues,
-                "aggregates": aggregates
+                "aggregates": [[{"values": aggregates}]]
             }];
 
             nv.addGraph(function() {
