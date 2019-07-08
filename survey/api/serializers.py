@@ -40,7 +40,7 @@ class AnswerSerializer(serializers.ModelSerializer):
     Serializer of ``Answer`` when used individually.
     """
 
-    measured = serializers.CharField(required=True)
+    measured = serializers.CharField(required=True, allow_blank=True)
 
     class Meta(object):
         model = Answer

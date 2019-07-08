@@ -89,6 +89,12 @@ class Unit(models.Model):
             (SYSTEM_FREETEXT, 'freetext'),
         ]
 
+    NUMERICAL_SYSTEMS = [
+        SYSTEM_STANDARD,
+        SYSTEM_IMPERIAL,
+        SYSTEM_RANK
+    ]
+
     slug = models.SlugField(max_length=150, unique=True, db_index=True)
     title = models.CharField(max_length=150)
     system = models.PositiveSmallIntegerField(

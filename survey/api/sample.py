@@ -114,10 +114,12 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                             serializer.validated_data['measured'].replace(
                                 '"', '\\"'))
                     measured = serializer.instance.measured
-                    choice = Choice.objects.get(pk=measured)
-                    choice.update(text=serializer.validated_data['measured'])
-                serializer.instance.update(created_at=created_at,
-                    measured=measured, collected_by=self.request.user)
+                    Choice.objects.filter(pk=measured).update(
+                        text=serializer.validated_data['measured'])
+                serializer.instance.created_at = created_at
+                serializer.instance.measured = measured
+                serializer.instance.collected_by = self.request.user
+                serializer.instance.save()
         except DataError as err:
             LOGGER.exception(err)
             errors += [
