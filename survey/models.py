@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -79,12 +79,14 @@ class Unit(models.Model):
     SYSTEM_IMPERIAL = 1
     SYSTEM_RANK = 2
     SYSTEM_ENUMERATED = 3
+    SYSTEM_FREETEXT = 4
 
     SYSTEMS = [
             (SYSTEM_STANDARD, 'standard'),
             (SYSTEM_IMPERIAL, 'imperial'),
             (SYSTEM_RANK, 'rank'),
             (SYSTEM_ENUMERATED, 'enum'),
+            (SYSTEM_FREETEXT, 'freetext'),
         ]
 
     slug = models.SlugField(max_length=150, unique=True, db_index=True)

@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,13 +24,17 @@
 
 import logging
 
+from django.db import transaction
+from django.db.models import Max
+from django.db.utils import DataError
 from rest_framework import generics, mixins
 from rest_framework import response as http
+from rest_framework.exceptions import ValidationError
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
 from .serializers import AnswerSerializer, SampleSerializer
 from ..mixins import SampleMixin, IntervieweeMixin
-from ..models import Answer, EnumeratedQuestions
+from ..models import Answer, Choice, EnumeratedQuestions, Unit
 from ..utils import datetime_or_now, get_question_model
 
 
@@ -97,15 +101,81 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
             status=status, headers=headers, first_answer=first_answer)
 
     def perform_update(self, serializer):
-        serializer.save(created_at=datetime_or_now(),
-            collected_by=self.request.user)
+        created_at = datetime_or_now()
+        errors = []
+        try:
+            with transaction.atomic():
+                metric = self.question.default_metric
+                try:
+                    measured = int(serializer.validated_data['measured'])
+                except ValueError:
+                    if metric.unit.system != Unit.SYSTEM_FREETEXT:
+                        raise DataError("\"%s\" is invalid" %
+                            serializer.validated_data['measured'].replace(
+                                '"', '\\"'))
+                    measured = serializer.instance.measured
+                    choice = Choice.objects.get(pk=measured)
+                    choice.update(text=serializer.validated_data['measured'])
+                serializer.instance.update(created_at=created_at,
+                    measured=measured, collected_by=self.request.user)
+        except DataError as err:
+            LOGGER.exception(err)
+            errors += [
+                "\"%(measured)s\": %(err)s for question of type '%(metric)s'" %
+                {
+                    'measured': serializer.validated_data['measured'].replace(
+                        '"', '\\"'),
+                    'err': str(err),
+                    'metric': metric.title}
+            ]
+        if errors:
+            raise ValidationError(errors)
 
     def perform_create(self, serializer):
-        serializer.save(question=self.question, metric=self.metric,
-            sample=self.sample, collected_by=self.request.user,
-            rank=EnumeratedQuestions.objects.filter(
-                campaign=self.sample.survey,
-                question=self.question).first().rank)
+        created_at = datetime_or_now()
+        errors = []
+        try:
+            with transaction.atomic():
+                metric = self.question.default_metric
+                try:
+                    measured = int(serializer.validated_data['measured'])
+                except ValueError:
+                    if metric.unit.system != Unit.SYSTEM_FREETEXT:
+                        raise DataError("\"%s\" is invalid" %
+                            serializer.validated_data['measured'].replace(
+                                '"', '\\"'))
+                    choice_rank = Choice.objects.filter(
+                        unit=metric.unit).aggregate(Max('rank')).get(
+                            'rank__max', 0)
+                    choice_rank = choice_rank + 1 if choice_rank else 1
+                    choice = Choice.objects.create(
+                        text=serializer.validated_data['measured'],
+                        unit=metric.unit,
+                        rank=choice_rank)
+                    measured = choice.id
+                Answer.objects.update_or_create(
+                    sample=self.sample,
+                    question=self.question,
+                    metric=metric,
+                    defaults={
+                        'created_at': created_at,
+                        'measured': measured,
+                        'collected_by': self.request.user,
+                        'rank': EnumeratedQuestions.objects.filter(
+                            campaign=self.sample.survey,
+                            question=self.question).first().rank})
+        except DataError as err:
+            LOGGER.exception(err)
+            errors += [
+                "\"%(measured)s\": %(err)s for question of type '%(metric)s'" %
+                {
+                    'measured': serializer.validated_data['measured'].replace(
+                        '"', '\\"'),
+                    'err': str(err),
+                    'metric': metric.title}
+            ]
+        if errors:
+            raise ValidationError(errors)
 
 
 class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
