@@ -39,12 +39,12 @@ class AnswerSerializer(serializers.ModelSerializer):
     """
     Serializer of ``Answer`` when used individually.
     """
-
+    unit = serializers.CharField(required=False, allow_blank=True)
     measured = serializers.CharField(required=True, allow_blank=True)
 
     class Meta(object):
         model = Answer
-        fields = ('created_at', 'measured')
+        fields = ('created_at', 'measured', 'unit')
 
     def validate_measured(self, data):
         unit = Unit.objects.filter(

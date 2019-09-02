@@ -136,6 +136,8 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
     def perform_create(self, serializer):
         created_at = datetime_or_now()
         errors = []
+        if not serializer.validated_data['measured']:
+            return
         try:
             with transaction.atomic():
                 metric = self.question.default_metric
