@@ -1,6 +1,6 @@
 Django==1.9.9
 django-extra-views==0.9.0
-djangorestframework==3.7.0
+djangorestframework==3.9.1
 
 # testsite-only
 django-debug-toolbar==1.5
