@@ -23,6 +23,7 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging
+from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Max
@@ -116,6 +117,10 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                 unit = datapoint.get('unit', metric.unit)
                 if unit.system in Unit.NUMERICAL_SYSTEMS:
                     try:
+                        try:
+                            measured = str(int(measured))
+                        except ValueError:
+                            measured = '{:.0f}'.format(Decimal(measured))
                         Answer.objects.update_or_create(
                             sample=self.sample, question=self.question,
                             metric=metric, defaults={
@@ -129,10 +134,10 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                         # or the value exceeds 32-bit representation.
                         # XXX We store as a text value so it is not lost.
                         LOGGER.warning(
-                            "\"%(measured)s\": %(err)s for '%(metric)s'",
-                            measured=measured.replace('"', '\\"'),
-                            err=str(err).strip(),
-                            metric=metric.title)
+                            "\"%(measured)s\": %(err)s for '%(metric)s'" % {
+                            'measured': measured.replace('"', '\\"'),
+                            'err': str(err).strip(),
+                            'metric': metric.title})
                         unit = Unit.objects.get(slug='freetext')
 
                 if unit.system not in Unit.NUMERICAL_SYSTEMS:
