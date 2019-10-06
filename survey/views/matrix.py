@@ -37,8 +37,8 @@ class MatrixListView(MatrixQuerysetMixin, ListView):
 
     template_name = "survey/matrix/index.html"
 
-    def get_context_data(self, *args, **kwargs):
-        context = super(MatrixListView, self).get_context_data(*args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(MatrixListView, self).get_context_data(**kwargs)
         url_kwargs = self.get_url_kwargs()
         context.update({
             'editable_filter_api': reverse(
@@ -65,9 +65,8 @@ class MatrixDetailView(MatrixMixin, DetailView):
                 cohort.is_selected = True
         return cohorts
 
-    def get_context_data(self, *args, **kwargs):
-        context = super(MatrixDetailView, self).get_context_data(
-            *args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(MatrixDetailView, self).get_context_data(**kwargs)
         metrics = EditableFilter.objects.filter(tags='metric')
         for metric in metrics:
             if metric == self.object.metric:
@@ -117,9 +116,8 @@ class EditableFilterView(EditableFilterMixin, TemplateView):
     api_url = None
     template_name = "survey/categorize.html"
 
-    def get_context_data(self, *args, **kwargs):
-        context = super(EditableFilterView, self).get_context_data(
-            *args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(EditableFilterView, self).get_context_data(**kwargs)
         context.update(csrf(self.request))
         url_kwargs = self.get_url_kwargs()
         url_kwargs.update({'editable_filter': self.editable_filter})

@@ -101,85 +101,72 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
             status=status, headers=headers, first_answer=first_answer)
 
     def perform_update(self, serializer):
+        datapoint = serializer.validated_data
+        measured = datapoint.get('measured', None)
+        if measured is None:
+            return
         created_at = datetime_or_now()
+        rank = EnumeratedQuestions.objects.get(
+            campaign=self.sample.survey,
+            question=self.question).rank
         errors = []
         try:
             with transaction.atomic():
-                metric = self.question.default_metric
-                try:
-                    measured = int(serializer.validated_data['measured'])
-                except ValueError:
-                    if metric.unit.system != Unit.SYSTEM_FREETEXT:
-                        raise DataError("\"%s\" is invalid" %
-                            serializer.validated_data['measured'].replace(
-                                '"', '\\"'))
-                    measured = serializer.instance.measured
-                    Choice.objects.filter(pk=measured).update(
-                        text=serializer.validated_data['measured'])
-                serializer.instance.created_at = created_at
-                serializer.instance.measured = measured
-                serializer.instance.collected_by = self.request.user
-                serializer.instance.save()
+                metric = datapoint.get('metric', self.question.default_metric)
+                unit = datapoint.get('unit', metric.unit)
+                if unit.system in Unit.NUMERICAL_SYSTEMS:
+                    try:
+                        Answer.objects.update_or_create(
+                            sample=self.sample, question=self.question,
+                            metric=metric, defaults={
+                                'measured': int(measured),
+                                'unit': unit,
+                                'created_at': created_at,
+                                'collected_by': self.request.user,
+                                'rank': rank})
+                    except (ValueError, DataError) as err:
+                        # We cannot convert to integer (ex: "12.8kW/h")
+                        # or the value exceeds 32-bit representation.
+                        # XXX We store as a text value so it is not lost.
+                        LOGGER.warning(
+                            "\"%(measured)s\": %(err)s for '%(metric)s'",
+                            measured=measured.replace('"', '\\"'),
+                            err=str(err).strip(),
+                            metric=metric.title)
+                        unit = Unit.objects.get(slug='freetext')
+
+                if unit.system not in Unit.NUMERICAL_SYSTEMS:
+                    if unit.system != Unit.SYSTEM_ENUMERATED:
+                        choice_rank = Choice.objects.filter(
+                            unit=unit).aggregate(Max('rank')).get(
+                                'rank__max', 0)
+                        choice_rank = choice_rank + 1 if choice_rank else 1
+                        choice = Choice.objects.create(
+                            text=measured,
+                            unit=unit,
+                            rank=choice_rank)
+                        measured = choice.pk
+                    Answer.objects.update_or_create(
+                        sample=self.sample, question=self.question,
+                        metric=metric, defaults={
+                            'measured': measured,
+                            'unit': unit,
+                            'created_at': created_at,
+                            'collected_by': self.request.user,
+                            'rank': rank})
         except DataError as err:
             LOGGER.exception(err)
             errors += [
-                "\"%(measured)s\": %(err)s for question of type '%(metric)s'" %
-                {
-                    'measured': serializer.validated_data['measured'].replace(
-                        '"', '\\"'),
-                    'err': str(err),
+                "\"%(measured)s\": %(err)s for '%(metric)s'" % {
+                    'measured': measured.replace('"', '\\"'),
+                    'err': str(err).strip(),
                     'metric': metric.title}
             ]
         if errors:
             raise ValidationError(errors)
 
     def perform_create(self, serializer):
-        created_at = datetime_or_now()
-        errors = []
-        if not serializer.validated_data['measured']:
-            return
-        try:
-            with transaction.atomic():
-                metric = self.question.default_metric
-                try:
-                    measured = int(serializer.validated_data['measured'])
-                except ValueError:
-                    if metric.unit.system != Unit.SYSTEM_FREETEXT:
-                        raise DataError("\"%s\" is invalid" %
-                            serializer.validated_data['measured'].replace(
-                                '"', '\\"'))
-                    choice_rank = Choice.objects.filter(
-                        unit=metric.unit).aggregate(Max('rank')).get(
-                            'rank__max', 0)
-                    choice_rank = choice_rank + 1 if choice_rank else 1
-                    choice = Choice.objects.create(
-                        text=serializer.validated_data['measured'],
-                        unit=metric.unit,
-                        rank=choice_rank)
-                    measured = choice.id
-                Answer.objects.update_or_create(
-                    sample=self.sample,
-                    question=self.question,
-                    metric=metric,
-                    defaults={
-                        'created_at': created_at,
-                        'measured': measured,
-                        'collected_by': self.request.user,
-                        'rank': EnumeratedQuestions.objects.filter(
-                            campaign=self.sample.survey,
-                            question=self.question).first().rank})
-        except DataError as err:
-            LOGGER.exception(err)
-            errors += [
-                "\"%(measured)s\": %(err)s for question of type '%(metric)s'" %
-                {
-                    'measured': serializer.validated_data['measured'].replace(
-                        '"', '\\"'),
-                    'err': str(err),
-                    'metric': metric.title}
-            ]
-        if errors:
-            raise ValidationError(errors)
+        return self.perform_update(serializer)
 
 
 class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
