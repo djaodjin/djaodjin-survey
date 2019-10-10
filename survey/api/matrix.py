@@ -25,7 +25,6 @@
 import logging, re
 from collections import OrderedDict
 
-from django.core.urlresolvers import reverse
 from django.db.models import F
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -34,6 +33,7 @@ from rest_framework import generics
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import response as http
 
+from ..compat import reverse
 from ..mixins import MatrixMixin
 from ..models import Answer, Matrix, EditableFilter
 from ..utils import (get_account_model, get_account_serializer,

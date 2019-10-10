@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,13 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.core.urlresolvers import reverse
 from django.db import transaction
 from django.db.models import Max
 from django.views.generic import (CreateView, DeleteView, ListView,
     RedirectView, UpdateView)
 
-from ..compat import csrf
+from ..compat import csrf, reverse
 from ..forms import QuestionForm
 from ..models import EnumeratedQuestions
 from ..mixins import CampaignQuestionMixin

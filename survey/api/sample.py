@@ -22,8 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
-from decimal import Decimal
+import decimal, logging
 
 from django.db import transaction
 from django.db.models import Max
@@ -104,7 +103,7 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
     def perform_update(self, serializer):
         datapoint = serializer.validated_data
         measured = datapoint.get('measured', None)
-        if measured is None:
+        if not measured:
             return
         created_at = datetime_or_now()
         rank = EnumeratedQuestions.objects.get(
@@ -120,7 +119,7 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                         try:
                             measured = str(int(measured))
                         except ValueError:
-                            measured = '{:.0f}'.format(Decimal(measured))
+                            measured = '{:.0f}'.format(decimal.Decimal(measured))
                         Answer.objects.update_or_create(
                             sample=self.sample, question=self.question,
                             metric=metric, defaults={
@@ -129,7 +128,7 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                                 'created_at': created_at,
                                 'collected_by': self.request.user,
                                 'rank': rank})
-                    except (ValueError, DataError) as err:
+                    except (ValueError, decimal.InvalidOperation, DataError) as err:
                         # We cannot convert to integer (ex: "12.8kW/h")
                         # or the value exceeds 32-bit representation.
                         # XXX We store as a text value so it is not lost.

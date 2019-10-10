@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,11 +22,11 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.core.urlresolvers import reverse
 from django.views.generic import DeleteView
 
-from survey.models import Sample
-from survey.mixins import SampleMixin
+from ..compat import reverse
+from ..models import Sample
+from ..mixins import SampleMixin
 
 
 class QuizzSampleDeleteView(SampleMixin, DeleteView):
