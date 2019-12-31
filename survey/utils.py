@@ -79,6 +79,20 @@ def get_account_serializer():
     return cls
 
 
+def get_belongs_model():
+    """
+    Returns the ``Account`` model that owns campaigns and matrices.
+    """
+    try:
+        return django_apps.get_model(settings.BELONGS_MODEL)
+    except ValueError:
+        raise ImproperlyConfigured(
+            "BELONGS_MODEL must be of the form 'app_label.model_name'")
+    except LookupError:
+        raise ImproperlyConfigured("BELONGS_MODEL refers to model '%s'"\
+" that has not been installed" % settings.BELONGS_MODEL)
+
+
 def get_question_model():
     """
     Returns the ``Question`` model that is active in this project.

@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,6 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #pylint: disable=no-member
-#pylint: disable=super-on-old-class
 
 import uuid
 
@@ -31,12 +30,13 @@ from django import forms
 from django.template.defaultfilters import slugify
 from django.utils import six
 
-from .models import Answer, Choice, Sample, Campaign
+from .models import Answer, Campaign, Choice, EnumeratedQuestions, Sample, Unit
 from .utils import get_question_model
 
 
 def _create_field(question_type, text,
                   has_other=False, required=False, choices=None):
+    choices = [(choice, choice) for choice in choices]
     fields = (None, None)
     question_model = get_question_model()
     if question_type == question_model.TEXT:
@@ -84,19 +84,31 @@ class AnswerForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(AnswerForm, self).__init__(*args, **kwargs)
-        if 'question' in self.initial:
-            setattr(self.instance, 'question', self.initial['question'])
-        if 'sample' in self.initial:
-            setattr(self.instance, 'sample', self.initial['sample'])
-        question = self.instance.question
+        if self.instance.question:
+            question = self.instance.question
+        elif 'question' in kwargs.get('initial', {}):
+            question = kwargs['initial']['question']
+        required = True
+        if self.instance.sample and self.instance.sample.survey:
+            campaign_attrs = EnumeratedQuestions.objects.filter(
+                campaign=self.instance.sample.survey,
+                question=question).first()
+            if campaign_attrs:
+                required = campaign_attrs.required
         fields = _create_field(question.question_type, question.text,
-            required=question.required, choices=question.get_choices())
+            required=required, choices=question.choices)
         self.fields['text'] = fields[0]
 
     def save(self, commit=True):
-        self.instance.measured, _ = Choice.objects.get_or_create(
-            unit=self.instance.question.unit,
-            text=self.cleaned_data['text'])
+        if not self.instance.metric:
+            self.instance.metric = self.instance.question.default_metric
+        if self.instance.metric.unit in Unit.NUMERICAL_SYSTEMS:
+            self.instance.measured = int(self.cleaned_data['text'])
+        else:
+            choice, _ = Choice.objects.get_or_create(
+                unit=self.instance.metric.unit,
+                text=self.cleaned_data['text'])
+            self.instance.measured = choice.pk
         return super(AnswerForm, self).save(commit)
 
 
@@ -121,9 +133,14 @@ class SampleCreateForm(forms.ModelForm):
         super(SampleCreateForm, self).__init__(*args, **kwargs)
         for idx, question in enumerate(self.initial.get('questions', [])):
             key = 'question-%d' % (idx + 1)
+            required = True
+            campaign_attrs = EnumeratedQuestions.objects.filter(
+                campaign=self.instance.survey,
+                question=question).first()
+            if campaign_attrs:
+                required = campaign_attrs.required
             fields = _create_field(question.question_type, question.text,
-                has_other=question.has_other, required=question.required,
-                choices=question.get_choices())
+                required=required, choices=question.choices)
             self.fields[key] = fields[0]
             if fields[1]:
                 self.fields[key.replace('question-', 'other-')] = fields[1]
@@ -161,9 +178,14 @@ class SampleUpdateForm(forms.ModelForm):
         super(SampleUpdateForm, self).__init__(*args, **kwargs)
         for answer in self.instance.answers.order_by('rank'):
             question = answer.question
+            required = True
+            campaign_attrs = EnumeratedQuestions.objects.filter(
+                campaign=self.instance.survey,
+                question=question).first()
+            if campaign_attrs:
+                required = campaign_attrs.required
             fields = _create_field(question.question_type, question.text,
-                has_other=question.has_other, required=question.required,
-                choices=question.get_choices())
+                required=required, choices=question.choices)
             # XXX set value.
             self.fields['question-%d' % answer.rank] = fields[0]
             if fields[1]:

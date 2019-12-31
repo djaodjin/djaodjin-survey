@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,13 +25,13 @@
 import datetime
 
 from django.db import transaction
-from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import (CreateView, RedirectView, TemplateView,
     UpdateView)
 from django.utils.timezone import utc
 
+from ..compat import reverse
 from ..forms import AnswerForm, SampleCreateForm, SampleUpdateForm
 from ..mixins import IntervieweeMixin, SampleMixin, CampaignMixin
 from ..models import Answer, Choice, EnumeratedQuestions, Sample
@@ -72,7 +72,7 @@ class AnswerUpdateView(SampleMixin, UpdateView):
 
     def get_next_answer(self):
         return Answer.objects.filter(
-            sample=self.sample, text=None).order_by('rank').first()
+            sample=self.sample, measured=None).order_by('rank').first()
 
     def get_object(self, queryset=None):
         rank = self.kwargs.get('rank', None)

@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,22 +22,20 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.core.urlresolvers import reverse
 from django.db import transaction
 from django.db.models import Max
+from django.template.defaultfilters import slugify
 from django.views.generic import (CreateView, DeleteView, ListView,
     RedirectView, UpdateView)
 
-from ..compat import csrf
+from ..compat import csrf, reverse
 from ..forms import QuestionForm
-from ..models import EnumeratedQuestions
+from ..models import Choice, EnumeratedQuestions, Metric, Unit
 from ..mixins import CampaignQuestionMixin
-from ..utils import get_question_model
 
 
 class QuestionFormMixin(CampaignQuestionMixin):
 
-    model = get_question_model()
     form_class = QuestionForm
     success_url = 'survey_question_list'
 
@@ -50,6 +48,22 @@ class QuestionFormMixin(CampaignQuestionMixin):
 
     def form_valid(self, form):
         with transaction.atomic():
+            if form.cleaned_data['question_type'] == 'radio':
+                enum_slug = slugify(form.cleaned_data['text'])
+                unit = Unit.objects.create(
+                    slug=enum_slug,
+                    system=Unit.SYSTEM_ENUMERATED)
+                form.instance.default_metric = Metric.objects.create(
+                    slug=enum_slug, unit=unit)
+                correct_answer = form.cleaned_data['correct_answer']
+                for rank, choice in enumerate(
+                        form.cleaned_data['choices'].split('\n')):
+                    choice = Choice.objects.create(
+                        text=choice.strip(),
+                        unit=unit,
+                        rank=rank)
+                    if correct_answer and choice.text in correct_answer:
+                        form.instance.correct_answer = choice
             result = super(QuestionFormMixin, self).form_valid(form)
             last_rank = EnumeratedQuestions.objects.filter(
                 campaign=self.campaign).aggregate(Max('rank')).get(
@@ -57,7 +71,7 @@ class QuestionFormMixin(CampaignQuestionMixin):
             _ = EnumeratedQuestions.objects.get_or_create(
                 question=self.object,
                 campaign=self.campaign,
-                defaults={'rank': last_rank})
+                defaults={'rank': last_rank + 1})
         return result
 
     def get_success_url(self):
@@ -68,7 +82,7 @@ class QuestionCreateView(QuestionFormMixin, CreateView):
     """
     Create a new question within a survey.
     """
-    pass
+    template_name = 'survey/question_form.html'
 
 
 class QuestionDeleteView(CampaignQuestionMixin, DeleteView):
@@ -128,4 +142,4 @@ class QuestionUpdateView(QuestionFormMixin, UpdateView):
     """
     Update a question
     """
-    pass
+    template_name = 'survey/question_form.html'

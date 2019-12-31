@@ -38,18 +38,20 @@ class SlugTitleMixin(object):
     """
     Generate a unique slug from title on ``save()`` when none is specified.
     """
+    slug_field = 'slug'
+
     def save(self, force_insert=False, force_update=False,
              using=None, update_fields=None):
-        if self.slug: #pylint:disable=access-member-before-definition
+        if getattr(self, self.slug_field):
             # serializer will set created slug to '' instead of None.
             return super(SlugTitleMixin, self).save(
                 force_insert=force_insert, force_update=force_update,
                 using=using, update_fields=update_fields)
-        max_length = self._meta.get_field('slug').max_length
+        max_length = self._meta.get_field(self.slug_field).max_length
         slug_base = slugify(self.title)
         if len(slug_base) > max_length:
             slug_base = slug_base[:max_length]
-        self.slug = slug_base
+        setattr(self, self.slug_field, slug_base)
         for _ in range(1, 10):
             try:
                 with transaction.atomic():
@@ -62,9 +64,10 @@ class SlugTitleMixin(object):
                 suffix = '-%s' % "".join([random.choice("abcdef0123456789")
                     for _ in range(7)])
                 if len(slug_base) + len(suffix) > max_length:
-                    self.slug = slug_base[:(max_length - len(suffix))] + suffix
+                    setattr(self, self.slug_field,
+                        slug_base[:(max_length - len(suffix))] + suffix)
                 else:
-                    self.slug = slug_base + suffix
+                    setattr(self, self.slug_field, slug_base + suffix)
         raise ValidationError({'detail':
             "Unable to create a unique URL slug from title '%s'" % self.title})
 
@@ -136,7 +139,9 @@ class Metric(models.Model):
 
 
 @python_2_unicode_compatible
-class AbstractQuestion(models.Model):
+class AbstractQuestion(SlugTitleMixin, models.Model):
+
+    slug_field = 'path'
 
     INTEGER = 'integer'
     RADIO = 'radio'
@@ -177,12 +182,21 @@ class AbstractQuestion(models.Model):
                 in Choice.objects.filter(unit=self.default_metric.unit)]
         return None
 
+    def save(self, force_insert=False, force_update=False,
+             using=None, update_fields=None):
+        if not self.title:
+            max_length = self._meta.get_field('title').max_length
+            self.title = self.text[:max_length]
+        return super(AbstractQuestion, self).save(
+            force_insert=force_insert, force_update=force_update,
+            using=using, update_fields=update_fields)
+
     def get_correct_answer(self):
         correct_answer_list = []
         if self.correct_answer:
             #pylint: disable=no-member
             correct_answer_list = [
-                asw.strip() for asw in self.correct_answer.split('\n')]
+                asw.strip() for asw in self.correct_answer.text.split('\n')]
         return correct_answer_list
 
 
@@ -201,7 +215,6 @@ class Question(AbstractQuestion):
 
 @python_2_unicode_compatible
 class Campaign(SlugTitleMixin, models.Model):
-    #pylint: disable=super-on-old-class
 
     slug = models.SlugField(unique=True)
     created_at = models.DateTimeField(null=True)
@@ -242,7 +255,7 @@ class EnumeratedQuestions(models.Model):
         help_text=_("If checked, an answer is required"))
 
     class Meta:
-        unique_together = ('campaign', 'question', 'rank')
+        unique_together = ('campaign', 'rank')
 
     def __str__(self):
         return self.question.path
@@ -261,7 +274,7 @@ class SampleManager(models.Manager):
         nb_questions = len(answers)
         for answer in answers:
             if answer.question.question_type == Question.RADIO:
-                if answer.text in answer.question.get_correct_answer():
+                if answer.measured in answer.question.get_correct_answer():
                     nb_correct_answers += 1
             elif answer.question.question_type == Question.SELECT_MULTIPLE:
                 multiple_choices = answer.get_multiple_choices()
@@ -324,10 +337,11 @@ class AnswerManager(models.Manager):
         answers = self.filter(sample=sample)
         if sample.survey:
             questions = get_question_model().objects.filter(
-                survey=sample.survey).exclude(pk__in=answers.values('question'))
+                campaigns__pk=sample.survey.pk).exclude(
+                pk__in=answers.values('question'))
             answers = list(answers)
             for question in questions:
-                answers += [Answer(question=question)]
+                answers += [Answer(question=question, sample=sample)]
         return answers
 
 
@@ -348,7 +362,7 @@ class Answer(models.Model):
     collected_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.PROTECT)
     # Optional fields when the answer is part of a survey campaign.
-    sample = models.ForeignKey(Sample, on_delete=models.PROTECT,
+    sample = models.ForeignKey(Sample, on_delete=models.CASCADE,
         related_name='answers')
     rank = models.IntegerField(default=0,
         help_text=_("used to order answers when presenting a sample."))

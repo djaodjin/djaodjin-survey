@@ -16,8 +16,8 @@
 <div>
 	{% for answer in answers %}
 	<h1>{{answer.question.text}}</h1>
-		{% if answer.question.get_choices %}
-		{% for choice in answer.question.get_choices %}
+		{% if answer.question.choices %}
+		{% for choice in answer.question.choices %}
 		<div>
 			<input type="{{ answer.question.question_type }}" disabled="true" {% if choice.0 == answer.measured %}checked="true"{% endif %}>
 			<span>{{choice.0}}
