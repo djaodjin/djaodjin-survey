@@ -29,12 +29,11 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 
-from ..models import (Answer, Campaign, Choice, Matrix, EditableFilter,
-    EditablePredicate, Sample, Unit)
-from ..utils import get_account_model, get_question_model
+from .. import settings
+from ..models import (Answer, Campaign, Choice, EditableFilter,
+    EditablePredicate, Matrix, Metric, Sample, Unit)
+from ..utils import get_account_model, get_belongs_model, get_question_model
 
-
-#pylint:disable=old-style-class,no-init
 
 class AnswerSerializer(serializers.ModelSerializer):
     """
@@ -71,12 +70,26 @@ class AnswerSerializer(serializers.ModelSerializer):
 
 class QuestionSerializer(serializers.ModelSerializer):
 
-    unit = serializers.SlugRelatedField(slug_field='slug',
-        queryset=Unit.objects.all())
+    title = serializers.CharField(allow_blank=True)
+    default_metric = serializers.SlugRelatedField(slug_field='slug',
+        queryset=Metric.objects.all())
 
     class Meta:
         model = get_question_model()
-        fields = ('path', 'title', 'text', 'unit', 'correct_answer', 'extra')
+        fields = ('path', 'title', 'text', 'default_metric', 'correct_answer',
+            'extra')
+
+
+class QuestionCreateSerializer(serializers.ModelSerializer):
+
+    title = serializers.CharField(allow_blank=True)
+    default_metric = serializers.SlugRelatedField(slug_field='slug',
+        queryset=Metric.objects.all())
+
+    class Meta:
+        model = get_question_model()
+        fields = ('title', 'text', 'default_metric', 'correct_answer',
+            'extra')
 
 
 class SampleAnswerSerializer(serializers.ModelSerializer):
@@ -128,8 +141,9 @@ class SampleSerializer(serializers.ModelSerializer):
 
 class CampaignSerializer(serializers.ModelSerializer):
 
-    account = serializers.SlugRelatedField(slug_field='slug',
-        queryset=get_account_model().objects.all(),
+    account = serializers.SlugRelatedField(
+        slug_field=settings.BELONGS_LOOKUP_FIELD,
+        queryset=get_belongs_model().objects.all(),
         help_text=("Account this sample belongs to."))
     questions = QuestionSerializer(many=True)
 
@@ -138,6 +152,21 @@ class CampaignSerializer(serializers.ModelSerializer):
         fields = ('slug', 'account', 'title', 'description', 'active',
             'quizz_mode', 'questions')
         read_only_fields = ('slug',)
+
+
+class CampaignCreateSerializer(serializers.ModelSerializer):
+
+    # XXX The `slug` might be useful in order to create survey aliases
+    # (ref. feedback survey)
+    account = serializers.SlugRelatedField(
+        slug_field=settings.BELONGS_LOOKUP_FIELD,
+        queryset=get_belongs_model().objects.all())
+    questions = QuestionCreateSerializer(many=True)
+
+    class Meta(object):
+        model = Campaign
+        fields = ('account', 'title', 'description', 'active',
+            'quizz_mode', 'questions')
 
 
 class EditablePredicateSerializer(serializers.ModelSerializer):

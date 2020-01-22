@@ -165,7 +165,7 @@ class CampaignResultView(DetailView):
         for question in question_model.objects.filter(
             survey=self.object).exclude(question_type=question_model.TEXT):
             aggregate = {}
-            for choice, _ in question.get_choices():
+            for choice, _ in question.choices:
                 aggregate[choice] = 0
 
             # Populate the aggregate

@@ -32,16 +32,18 @@ from django.conf import settings
 _SETTINGS = {
     'AUTH_USER_MODEL': getattr(
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
+    'ACCOUNT_LOOKUP_FIELD': 'username',
     'ACCOUNT_MODEL': getattr(
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
-    'ACCOUNT_LOOKUP_FIELD': 'username',
     'ACCOUNT_SERIALIZER': 'survey.api.serializers.AccountSerializer',
-    'QUESTION_MODEL': 'survey.Question',
-    'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionSerializer',
+    'BELONGS_LOOKUP_FIELD': None,
     'BELONGS_MODEL': None,
+    'BELONGS_SERIALIZER': None,
     'CORRECT_MARKER': '(correct)',
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None),
     'EXTRA_FIELD': None,
+    'QUESTION_MODEL': 'survey.Question',
+    'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionSerializer',
 }
 _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 
@@ -49,12 +51,18 @@ AUTH_USER_MODEL = _SETTINGS.get('AUTH_USER_MODEL')
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
 ACCOUNT_LOOKUP_FIELD = _SETTINGS.get('ACCOUNT_LOOKUP_FIELD')
 ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')
-QUESTION_MODEL = _SETTINGS.get('QUESTION_MODEL')
-QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
+BELONGS_LOOKUP_FIELD = (_SETTINGS.get('BELONGS_LOOKUP_FIELD')
+    if _SETTINGS.get('BELONGS_LOOKUP_FIELD')
+    else _SETTINGS.get('ACCOUNT_LOOKUP_FIELD'))
 BELONGS_MODEL = (_SETTINGS.get('BELONGS_MODEL')
     if _SETTINGS.get('BELONGS_MODEL') else _SETTINGS.get('ACCOUNT_MODEL'))
+BELONGS_SERIALIZER = (_SETTINGS.get('BELONGS_SERIALIZER')
+    if _SETTINGS.get('BELONGS_SERIALIZER')
+    else _SETTINGS.get('ACCOUNT_SERIALIZER'))
 CORRECT_MARKER = _SETTINGS.get('CORRECT_MARKER')
 DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
+QUESTION_MODEL = _SETTINGS.get('QUESTION_MODEL')
+QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
 
 SLUG_RE = r'[a-zA-Z0-9-]+'
 PATH_RE = SLUG_RE + r'(/[a-zA-Z0-9\-]+)*'
@@ -66,6 +74,6 @@ def get_extra_field_class():
         from django.db.models import TextField
         extra_class = TextField
     elif isinstance(extra_class, str):
-        from saas.compat import import_string
+        from .compat import import_string
         extra_class = import_string(extra_class)
     return extra_class

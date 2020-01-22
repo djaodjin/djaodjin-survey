@@ -72,7 +72,7 @@ class AnswerUpdateView(SampleMixin, UpdateView):
 
     def get_next_answer(self):
         return Answer.objects.filter(
-            sample=self.sample, text=None).order_by('rank').first()
+            sample=self.sample, measured=None).order_by('rank').first()
 
     def get_object(self, queryset=None):
         rank = self.kwargs.get('rank', None)

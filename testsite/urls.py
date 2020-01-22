@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@ URLs for the djaodjin-survey django app testsite.
 """
 
 from django.views.generic import RedirectView, TemplateView
-from django.core.urlresolvers import reverse_lazy
+from survey.compat import reverse_lazy
 from urldecorators import include, url
 
 # Uncomment the next two lines to enable the admin:

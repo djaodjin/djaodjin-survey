@@ -213,10 +213,10 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                         # or the value exceeds 32-bit representation.
                         # XXX We store as a text value so it is not lost.
                         LOGGER.warning(
-                            "\"%(measured)s\": %(err)s for '%(metric)s'" % {
-                            'measured': measured.replace('"', '\\"'),
-                            'err': str(err).strip(),
-                            'metric': metric.title})
+                            "\"%(measured)s\": %(err)s for '%(metric)s'",
+                            measured=measured.replace('"', '\\"'),
+                            err=str(err).strip(),
+                            metric=metric.title)
                         unit = Unit.objects.get(slug='freetext')
 
                 if unit.system not in Unit.NUMERICAL_SYSTEMS:
