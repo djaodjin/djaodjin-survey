@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@ from django.db.utils import DataError
 from rest_framework import generics, mixins
 from rest_framework import response as http
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
 from .serializers import AnswerSerializer, SampleSerializer
@@ -43,7 +44,31 @@ LOGGER = logging.getLogger(__name__)
 
 class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                     generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieve a survey datapoint
 
+    Providing {sample} is a set of datapoints for {interviewee}, returns
+    the datapoint in {sample} for question ranked {rank} in the campaign
+    {sample} is part of.
+
+    **Tags**: survey
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/xia/sample/0123456789abcdef/1/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "created_at": "2020-01-01T00:00:00Z",
+            "measured": 12,
+            "unit": "liters"
+        }
+    """
     serializer_class = AnswerSerializer
     lookup_rank_kwarg = 'rank'
     lookup_field = 'rank'
@@ -57,15 +82,70 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
     @property
     def question(self):
         if not hasattr(self, '_question'):
-            self._question = get_question_model().objects.get(
-                enumeratedquestions__campaign=self.sample.survey,
-                enumeratedquestions__rank=self.kwargs.get(
-                    self.lookup_rank_kwarg))
+            if self.sample:
+                self._question = get_object_or_404(
+                    get_question_model().objects.all(),
+                    enumeratedquestions__campaign=self.sample.survey,
+                    enumeratedquestions__rank=self.kwargs.get(
+                        self.lookup_rank_kwarg))
+            else:
+                self._question = None  # API docs get here.
         return self._question
 
     @property
     def rank(self):
         return int(self.kwargs.get(self.lookup_rank_kwarg))
+
+    def put(self, request, *args, **kwargs):
+        """
+        Update a survey datapoint
+
+        Providing {sample} is a set of datapoints for {interviewee}, updates
+        the datapoint in {sample} for question ranked {rank} in the campaign
+        {sample} is part of.
+
+        **Tags**: survey
+
+        **Examples**
+
+        .. code-block:: http
+
+             PUT /api/xia/sample/0123456789abcdef/1/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "measured": 12
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "created_at": "2020-01-01T00:00:00Z",
+                "measured": 12
+            }
+        """
+        return super(AnswerAPIView, self).put(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Delete  a survey datapoint
+
+        Providing {sample} is a set of datapoints for {interviewee}, deletes
+        the datapoint in {sample} for question ranked {rank} in the campaign
+        {sample} is part of.
+
+        **Tags**: survey
+
+        **Examples**
+
+        .. code-block:: http
+
+             DELETE /api/xia/sample/0123456789abcdef/1/ HTTP/1.1
+        """
+        return super(AnswerAPIView, self).delete(request, *args, **kwargs)
 
     def get_queryset(self):
         return Answer.objects.filter(sample=self.sample)
@@ -175,18 +255,20 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
 
 class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
     """
-    ``GET`` returns the state of a ``Sample`` and the list of associated
+    Returns the state of a ``Sample`` and the list of associated
     ``Answer``.
 
-    **Example request**:
+    **Tags**: survey
 
-    .. sourcecode:: http
+    **Examples**
 
-        GET /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/
+    .. code-block:: http
 
-    **Example response**:
+         GET /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/ HTTP/1.1
 
-    .. sourcecode:: http
+    responds
+
+    .. code-block:: json
 
     {
         "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
@@ -228,46 +310,110 @@ class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
             }
         ]
     }
-
-    ``PUT`` updates a ``Sample``. For example, mark the Sample as read-only.
-
-    .. sourcecode:: http
-
-        PUT /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/
-
-    **Example response**:
-
-    .. sourcecode:: http
-
-        {
-            "is_frozen": false
-        }
-
-    ``DELETE`` removes a ``Sample`` and all associated ``Answer``
-    from the database.
-
-    .. sourcecode:: http
-
-        DELETE /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/
     """
-
     serializer_class = SampleSerializer
 
     def get_object(self):
         return self.sample
 
+    def put(self, request, *args, **kwargs):
+        """
+        Updates a ``Sample``. For example, mark the Sample as read-only.
+
+        **Tags**: survey
+
+        **Examples**
+
+        .. code-block:: http
+
+            PUT /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "is_frozen": false
+            }
+
+        responds
+
+        .. code-block:: json
+
+    .. code-block:: json
+
+        {
+            "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
+            "created_at": "2018-01-24T17:03:34.926193Z",
+            "time_spent": "00:00:00",
+            "is_frozen": false,
+            "answers": [
+                {
+                    "question": "the-assessment-process-is-rigorous",
+                    "measured": "1"
+                },
+                {
+                    "question": "a-policy-is-in-place",
+                    "measured": "2"
+                },
+                {
+                    "question": "product-design",
+                    "measured": "2"
+                },
+                {
+                    "question": "packaging-design",
+                    "measured": "3"
+                },
+                {
+                    "question": "reduce-combustion-air-flow-to-optimum",
+                    "measured": "2"
+                },
+                {
+                    "question": "adjust-air-fuel-ratio",
+                    "measured": "2"
+                },
+                {
+                    "question": "recover-heat-from-hot-waste-water",
+                    "measured": "4"
+                },
+                {
+                    "question": "educe-hot-water-temperature-to-minimum-required",
+                    "measured": "4"
+                }
+            ]
+        }
+        """
+        return super(SampleAPIView, self).put(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Removes a ``Sample`` and all associated ``Answer``
+        from the database.
+
+        **Tags**: survey
+
+        **Examples**
+
+        .. code-block:: http
+
+            DELETE /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/ HTTP/1.1
+        """
+        return super(SampleAPIView, self).delete(request, *args, **kwargs)
+
 
 class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
     """
-    ``POST`` resets all answers in the ``Sample``.
+    Resets all answers in the ``Sample``.
 
-    .. sourcecode:: http
+    **Tags**: survey
 
-        POST /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/reset/
+    **Examples**
 
-    **Example response**:
+    .. code-block:: http
 
-    .. sourcecode:: http
+        POST /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/reset/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
 
         {
             "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
@@ -285,20 +431,25 @@ class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
             headers=headers)
 
 
-class SampleCreateAPIView(IntervieweeMixin, generics.CreateAPIView):
+class SampleRecentCreateAPIView(IntervieweeMixin, mixins.RetrieveModelMixin,
+                                generics.CreateAPIView):
     """
-    ``POST`` creates a ``Sample`` from the ``Campaign``.
+    Creates a ``Sample`` from the ``Campaign``.
 
-    .. sourcecode:: http
+    **Tags**: survey
 
-        POST /api/sample/
+    **Examples**
+
+    .. code-block:: http
+
+        POST /api/sample/ HTTP/1.1
         {
             "campaign": "best-practices"
         }
 
-    **Example response**:
+    responds
 
-    .. sourcecode:: http
+    .. code-block:: json
 
         {
             "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
@@ -307,6 +458,41 @@ class SampleCreateAPIView(IntervieweeMixin, generics.CreateAPIView):
         }
     """
     serializer_class = SampleSerializer
+
+    def get_object(self):
+        return Sample.objects.filter(
+            account=self.account).order_by('-created_at').first()
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Creates a ``Sample`` from the ``Campaign``.
+
+        **Tags**: survey
+
+        **Examples**
+
+        .. code-block:: http
+
+            POST /api/sample/ HTTP/1.1
+            {
+                "campaign": "best-practices"
+            }
+
+        responds
+
+        .. code-block:: http
+
+            {
+                "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
+                "created_at": "2018-01-24T17:03:34.926193Z",
+                "campaign": "best-practices"
+            }
+        """
+        return super(SampleRecentCreateAPIView, self).post(
+            request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(account=self.interviewee)

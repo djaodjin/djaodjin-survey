@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -35,17 +35,19 @@ LOGGER = logging.getLogger(__name__)
 
 class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
     """
-    ``GET`` returns the details of a ``Campaign``.
+    Retrieves the details of a ``Campaign``.
 
-    **Example request**:
+    **Tags**: survey
 
-    .. sourcecode:: http
+    **Examples**
 
-        GET /api/campaign/best-practices/
+    .. code-block:: http
 
-    **Example response**:
+        GET /api/campaign/best-practices/ HTTP/1.1
 
-    .. sourcecode:: http
+    responds
+
+    .. code-block:: json
 
         {
             "slug": "best-practices",
@@ -70,9 +72,9 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
     ``DELETE`` removes a ``Campaign`` and all associated ``Sample``
     from the database.
 
-    .. sourcecode:: http
+    .. code-block:: http
 
-        DELETE /api/campaign/best-practices/
+        DELETE /api/campaign/best-practices/ HTTP/1.1
     """
 
     serializer_class = CampaignSerializer

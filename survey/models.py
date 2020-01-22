@@ -287,8 +287,10 @@ class Sample(models.Model):
     """
     objects = SampleManager()
 
-    slug = models.SlugField()
-    created_at = models.DateTimeField(auto_now_add=True)
+    slug = models.SlugField(unique=True,
+        help_text="Unique identifier for the sample. It can be used in a URL.")
+    created_at = models.DateTimeField(auto_now_add=True,
+        help_text="Date/time of creation (in ISO format)")
     survey = models.ForeignKey(Campaign, null=True, on_delete=models.PROTECT)
     account = models.ForeignKey(settings.ACCOUNT_MODEL,
         null=True, on_delete=models.PROTECT, related_name='samples')
@@ -376,9 +378,12 @@ class EditableFilter(SlugTitleMixin, models.Model):
     of the rows of a model type
     """
 
-    slug = models.SlugField(unique=True)
-    title = models.CharField(max_length=255)
-    tags = models.CharField(max_length=255)
+    slug = models.SlugField(unique=True,
+        help_text="Unique identifier for the sample. It can be used in a URL.")
+    title = models.CharField(max_length=255,
+        help_text="Title for the filter")
+    tags = models.CharField(max_length=255,
+        help_text="Helpful tags")
 
     def __str__(self):
         return self.slug

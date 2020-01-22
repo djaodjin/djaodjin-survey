@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2019, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,7 +24,8 @@
 
 from django.conf.urls import url
 
-from ....api.sample import AnswerAPIView, SampleAPIView, SampleCreateAPIView
+from ....api.sample import (AnswerAPIView, SampleAPIView,
+    SampleRecentCreateAPIView)
 from ....settings import SLUG_RE
 
 urlpatterns = [
@@ -33,5 +34,5 @@ urlpatterns = [
    url(r'^(?P<sample>%s)/' % SLUG_RE,
        SampleAPIView.as_view(), name='survey_api_sample'),
    url(r'^$',
-       SampleCreateAPIView.as_view(), name='survey_api_sample_new'),
+       SampleRecentCreateAPIView.as_view(), name='survey_api_sample_new'),
 ]

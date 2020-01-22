@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,6 +24,7 @@
 
 from django.db import transaction
 from django.utils import six
+from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
@@ -39,16 +40,23 @@ class AnswerSerializer(serializers.ModelSerializer):
     """
     Serializer of ``Answer`` when used individually.
     """
-    unit = serializers.CharField(required=False, allow_blank=True)
-    measured = serializers.CharField(required=True, allow_blank=True)
+    created_at = serializers.DateTimeField(read_only=True,
+        help_text=_("Date/time of creation (in ISO format)"))
+    unit = serializers.CharField(required=False, allow_blank=True,
+        help_text=_("Unit the measured field is in."))
+    measured = serializers.CharField(required=True, allow_blank=True,
+        help_text=_("measurement in unit"))
 
     class Meta(object):
         model = Answer
         fields = ('created_at', 'measured', 'unit')
+        read_only_fields = ('created_at',)
 
     def validate_measured(self, data):
-        unit = Unit.objects.filter(
-            metric=self.context['question'].default_metric_id).get()
+        question = self.context.get('question')
+        if not question:
+            return data    # XXX API docs get here. Is it the only one?
+        unit = Unit.objects.filter(metric=question.default_metric_id).get()
         if unit.system == Unit.SYSTEM_ENUMERATED:
             try:
                 data = Choice.objects.get(unit=unit, text=data).pk
@@ -84,7 +92,11 @@ class SampleAnswerSerializer(serializers.ModelSerializer):
         fields = ('question', 'measured')
 
     def validate_measured(self, data):
-        if self.context['question'].unit.system == Unit.SYSTEM_ENUMERATED:
+        # XXX identical to `AnswerSerializer.validate_measured`?
+        question = self.context.get('question')
+        if not question:
+            return data    # XXX API docs get here. Is it the only one?
+        if question.unit.system == Unit.SYSTEM_ENUMERATED:
             try:
                 data = Choice.objects.get(
                     unit=self.context['question'].unit, text=data).pk
@@ -100,9 +112,11 @@ class SampleAnswerSerializer(serializers.ModelSerializer):
 class SampleSerializer(serializers.ModelSerializer):
 
     campaign = serializers.SlugRelatedField(source='survey', slug_field='slug',
-        queryset=Campaign.objects.all(), required=False)
+        queryset=Campaign.objects.all(), required=False,
+        help_text=("Campaign this sample is part of."))
     account = serializers.SlugRelatedField(slug_field='slug',
-        queryset=get_account_model().objects.all(), required=False)
+        queryset=get_account_model().objects.all(), required=False,
+        help_text=("Account this sample belongs to."))
     answers = SampleAnswerSerializer(many=True, required=False)
 
     class Meta(object):
@@ -115,7 +129,8 @@ class SampleSerializer(serializers.ModelSerializer):
 class CampaignSerializer(serializers.ModelSerializer):
 
     account = serializers.SlugRelatedField(slug_field='slug',
-        queryset=get_account_model().objects.all())
+        queryset=get_account_model().objects.all(),
+        help_text=("Account this sample belongs to."))
     questions = QuestionSerializer(many=True)
 
     class Meta(object):

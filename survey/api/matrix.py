@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,7 @@ class MatrixCreateAPIView(generics.ListCreateAPIView):
 
     **Examples**:
 
-    .. sourcecode:: http
+    .. code-block:: http
 
         GET /api/matrix/
 
@@ -72,7 +72,7 @@ class MatrixCreateAPIView(generics.ListCreateAPIView):
         }
 
 
-    .. sourcecode:: http
+    .. code-block:: http
 
         POST /api/matrix/
 
@@ -122,7 +122,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
     **Examples**:
 
-    .. sourcecode:: http
+    .. code-block:: http
 
         GET /api/matrix/languages
 
@@ -273,19 +273,212 @@ class EditableFilterQuerysetMixin(object):
 
 class EditableFilterListAPIView(SearchableListMixin,
                 EditableFilterQuerysetMixin, generics.ListCreateAPIView):
+    """
+    List fitlers
 
+    **Tags**: survey
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/xia/matrix/filters/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "count": 2,
+            previous: null,
+            next: null,
+            results: [
+                {
+                    "slug": "all",
+                    "title": "All",
+                    "tags": "",
+                    "predicates": [
+                        "rank": 1,
+                        "operator": "",
+                        "operand": "",
+                        "field": "",
+                        "selector": ""
+                    ],
+                    "likely_metric": ""
+                },
+                {
+                    "slug": "none",
+                    "title": "None",
+                    "tags": "",
+                    "predicates": [
+                        "rank": 1,
+                        "operator": "",
+                        "operand": "",
+                        "field": "",
+                        "selector": ""
+                    ],
+                    "likely_metric": ""
+                }
+            ]
+        }
+    """
     search_fields = ['tags']
     serializer_class = EditableFilterSerializer
 
+    def post(self, request, *args, **kwargs):
+        """
+        Create a fitler
+
+        **Tags**: survey
+
+        **Examples**
+
+        .. code-block:: http
+
+             POST /api/xia/matrix/filters/ HTTP/1.1
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "count": 2,
+                previous: null,
+                next: null,
+                results: [
+                    {
+                        "slug": "all",
+                        "title": "All",
+                        "tags": "",
+                        "predicates": [
+                            "rank": 1,
+                            "operator": "",
+                            "operand": "",
+                            "field": "",
+                            "selector": ""
+                        ],
+                        "likely_metric": ""
+                    },
+                    {
+                        "slug": "none",
+                        "title": "None",
+                        "tags": "",
+                        "predicates": [
+                            "rank": 1,
+                            "operator": "",
+                            "operand": "",
+                            "field": "",
+                            "selector": ""
+                        ],
+                        "likely_metric": ""
+                    }
+                ]
+            }
+        """
+        return super(EditableFilterListAPIView, self).post(
+            request, *args, **kwargs)
+
 
 class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieve a fitler
 
+    **Tags**: survey
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/xia/matrix/filters/all/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "slug": "all",
+            "title": "All",
+            "tags": "",
+            "predicates": [
+                "rank": 1,
+                "operator": "",
+                "operand": "",
+                "field": "",
+                "selector": ""
+            ],
+            "likely_metric": ""
+        }
+    """
     serializer_class = EditableFilterSerializer
     lookup_field = 'slug'
     lookup_url_kwarg = 'editable_filter'
 
     def get_queryset(self):
         return EditableFilter.objects.all()
+
+    def put(self, request, *args, **kwargs):
+        """
+        Updates a fitler
+
+        **Tags**: survey
+
+        **Examples**
+
+        .. code-block:: http
+
+             PUT /api/xia/matrix/filters/all/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "slug": "all",
+                "title": "All",
+                "tags": "",
+                "predicates": [
+                    "rank": 1,
+                    "operator": "",
+                    "operand": "",
+                    "field": "",
+                    "selector": ""
+                ],
+                "likely_metric": ""
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "slug": "all",
+                "title": "All",
+                "tags": "",
+                "predicates": [
+                    "rank": 1,
+                    "operator": "",
+                    "operand": "",
+                    "field": "",
+                    "selector": ""
+                ],
+                "likely_metric": ""
+            }
+        """
+        return super(EditableFilterDetailAPIView, self).put(
+            request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Deletes a fitler
+
+        **Tags**: survey
+
+        **Examples**
+
+        .. code-block:: http
+
+             DELETE /api/xia/matrix/filters/all/ HTTP/1.1
+        """
+        return super(EditableFilterDetailAPIView, self).delete(
+            request, *args, **kwargs)
 
 
 class EditableFilterPagination(PageNumberPagination):
@@ -307,7 +500,26 @@ class EditableFilterPagination(PageNumberPagination):
 
 
 class EditableFilterObjectsAPIView(generics.ListAPIView):
+    """
+    List filter objects
 
+    **Tags**: survey
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/xia/matrix/filters/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "created_at": "2020-01-01T00:00:00Z",
+            "measured": 12
+        }
+    """
     pagination_class = EditableFilterPagination
     serializer_class = None # override in subclasses
     lookup_field = 'slug'
@@ -330,7 +542,7 @@ class AccountListAPIView(EditableFilterObjectsAPIView):
 
     **Examples**:
 
-    .. sourcecode:: http
+    .. code-block:: http
 
         GET /api/questions/languages
 
@@ -356,7 +568,7 @@ class QuestionListAPIView(EditableFilterObjectsAPIView):
 
     **Examples**:
 
-    .. sourcecode:: http
+    .. code-block:: http
 
         GET /api/questions/languages
 

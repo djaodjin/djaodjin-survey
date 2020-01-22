@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -165,10 +165,6 @@ class SampleCreateView(CampaignMixin, IntervieweeMixin, CreateView):
 
     template_name = 'survey/sample_create.html'
 
-    def __init__(self, *args, **kwargs):
-        super(SampleCreateView, self).__init__(*args, **kwargs)
-        self.survey = None
-
     def form_valid(self, form):
         # We are going to create all the Answer records for that Sample here,
         # initialize them with a text when present in the submitted form.
@@ -187,7 +183,7 @@ class SampleCreateView(CampaignMixin, IntervieweeMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super(SampleCreateView, self).get_context_data(**kwargs)
-        context.update({'survey': self.survey})
+        context.update({'survey': self.campaign})
         return context
 
     def get_initial(self):
@@ -195,15 +191,14 @@ class SampleCreateView(CampaignMixin, IntervieweeMixin, CreateView):
         Returns the initial data to use for forms on this view.
         """
         kwargs = super(SampleCreateView, self).get_initial()
-        self.survey = self.get_survey()
-        kwargs.update({'survey': self.survey,
+        kwargs.update({'survey': self.campaign,
                        'account': self.get_interviewee()})
         return kwargs
 
     def get_success_url(self):
         kwargs = self.get_url_context()
         kwargs.update({SampleMixin.sample_url_kwarg: self.object.slug})
-        if self.survey and self.survey.defaults_single_page:
+        if self.campaign and self.campaign.defaults_single_page:
             next_step_url = self.single_page_next_step_url
         else:
             kwargs.update({'rank': Answer.objects.filter(

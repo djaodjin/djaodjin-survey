@@ -109,7 +109,8 @@ class IntervieweeMixin(object):
         return self._interviewee
 
     def get_interviewee(self):
-        if self.request.user.is_authenticated():
+        if (self.request and hasattr(self.request, 'user') and
+            self.request.user.is_authenticated()):
             account_model = get_account_model()
             try:
                 kwargs = {'%s__exact' % settings.ACCOUNT_LOOKUP_FIELD:
@@ -150,12 +151,9 @@ class CampaignMixin(object):
     @property
     def campaign(self):
         if not hasattr(self, '_campaign'):
-            self._campaign = self.get_survey()
+            self._campaign = get_object_or_404(Campaign.objects.all(),
+                slug=self.kwargs.get(self.survey_url_kwarg))
         return self._campaign
-
-    def get_survey(self):
-        return get_object_or_404(Campaign.objects.all(), slug=self.kwargs.get(
-                self.survey_url_kwarg))
 
 
 class CampaignQuestionMixin(CampaignMixin):
@@ -211,9 +209,16 @@ class SampleMixin(IntervieweeMixin, CampaignMixin):
         else:
             # Well no id, let's see if we can find a sample from
             # a survey slug and a account
-            interviewee = self.get_interviewee()
-            sample = get_object_or_404(Sample.objects.all(),
-                survey=self.get_survey(), account=interviewee)
+            campaign_slug = self.kwargs.get(self.survey_url_kwarg)
+            if campaign_slug:
+                interviewee = self.get_interviewee()
+                try:
+                    sample = Sample.objects.filter(account=interviewee,
+                        survey__slug=campaign_slug).select_related(
+                        'survey').get()
+                except Sample.DoesNotExist:
+                    raise Http404("Cannot find Sample(account__slug='%s',"\
+                        " survey__slug='%s')" % (interviewee, campaign_slug))
         return sample
 
     def get_reverse_kwargs(self):
