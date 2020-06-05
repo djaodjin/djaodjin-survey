@@ -1,4 +1,4 @@
-Django==1.11.26
+Django==1.11.29
 django-extra-views==0.13.0
 djangorestframework==3.9.4
 
