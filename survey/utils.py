@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,12 +27,11 @@ from importlib import import_module
 
 from django.core.exceptions import ImproperlyConfigured
 from django.apps import apps as django_apps
-from django.utils import six
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import utc
 
 from . import settings
-
+from .compat import six
 
 def datetime_or_now(dtime_at=None):
     if not dtime_at:
@@ -109,7 +108,8 @@ def get_question_model():
 
 def get_question_serializer():
     """
-    Returns the ``QuestionSerializer`` model that is active in this project.
+    Returns the ``QuestionDetailSerializer`` model that is active
+    in this project.
     """
     path = settings.QUESTION_SERIALIZER
     dot_pos = path.rfind('.')

@@ -22,15 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 
 from .. import settings
-from ..models import (Answer, Campaign, Choice, EditableFilter,
+from ..models import (Answer, Campaign, EditableFilter,
     EditablePredicate, Matrix, Metric, Sample, Unit)
 from ..utils import get_account_model, get_belongs_model, get_question_model
 
@@ -39,45 +38,27 @@ class AnswerSerializer(serializers.ModelSerializer):
     """
     Serializer of ``Answer`` when used individually.
     """
-    created_at = serializers.DateTimeField(read_only=True,
-        help_text=_("Date/time of creation (in ISO format)"))
-    unit = serializers.CharField(required=False, allow_blank=True,
-        help_text=_("Unit the measured field is in."))
+    metric = serializers.SlugRelatedField(required=False,
+        queryset=Metric.objects.all(), slug_field='slug',
+        help_text=_("Metric the measured field represents"))
+    unit = serializers.SlugRelatedField(required=False,
+        queryset=Unit.objects.all(), slug_field='slug',
+        help_text=_("Unit the measured field is in"))
     measured = serializers.CharField(required=True, allow_blank=True,
         help_text=_("measurement in unit"))
 
+    created_at = serializers.DateTimeField(read_only=True,
+        help_text=_("Date/time of creation (in ISO format)"))
+    # We are not using a `UserSerializer` here because retrieving profile
+    # information must go through the profiles API.
+    collected_by = serializers.SlugRelatedField(required=False,
+        queryset=get_user_model().objects.all(), slug_field='username',
+        help_text=_("User that collected the answer"))
+
     class Meta(object):
         model = Answer
-        fields = ('created_at', 'measured', 'unit')
-        read_only_fields = ('created_at',)
-
-    def validate_measured(self, data):
-        question = self.context.get('question')
-        if not question:
-            return data    # XXX API docs get here. Is it the only one?
-        unit = Unit.objects.filter(metric=question.default_metric_id).get()
-        if unit.system == Unit.SYSTEM_ENUMERATED:
-            try:
-                data = Choice.objects.get(unit=unit, text=data).pk
-            except Choice.DoesNotExist:
-                choices = Choice.objects.filter(unit=unit)
-                raise ValidationError(
-                    "'%s' is not a valid choice. Expected one of %s." % (
-                    data, [choice.get('text', "")
-                           for choice in six.itervalues(choices)]))
-        return data
-
-
-class QuestionSerializer(serializers.ModelSerializer):
-
-    title = serializers.CharField(allow_blank=True)
-    default_metric = serializers.SlugRelatedField(slug_field='slug',
-        queryset=Metric.objects.all())
-
-    class Meta:
-        model = get_question_model()
-        fields = ('path', 'title', 'text', 'default_metric', 'correct_answer',
-            'extra')
+        fields = ('metric', 'unit', 'measured', 'created_at', 'collected_by')
+        read_only_fields = ('created_at', 'collected_by')
 
 
 class QuestionCreateSerializer(serializers.ModelSerializer):
@@ -92,34 +73,34 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
             'extra')
 
 
-class SampleAnswerSerializer(serializers.ModelSerializer):
+class QuestionDetailSerializer(QuestionCreateSerializer):
+
+    class Meta:
+        model = QuestionCreateSerializer.Meta.model
+        fields = QuestionCreateSerializer.Meta.fields + ('path',)
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+
+    title = serializers.CharField(allow_blank=True)
+    default_metric = serializers.SlugRelatedField(slug_field='slug',
+        queryset=Metric.objects.all())
+
+    class Meta:
+        model = get_question_model()
+        fields = ('path', 'default_metric', 'title')
+
+
+class SampleAnswerSerializer(AnswerSerializer):
     """
     Serializer of ``Answer`` when used in list.
     """
-    question = serializers.SlugRelatedField(slug_field='path',
-        queryset=get_question_model().objects.all())
-    measured = serializers.CharField(required=True)
+    question = QuestionSerializer()
 
     class Meta(object):
-        model = Answer
-        fields = ('question', 'measured')
-
-    def validate_measured(self, data):
-        # XXX identical to `AnswerSerializer.validate_measured`?
-        question = self.context.get('question')
-        if not question:
-            return data    # XXX API docs get here. Is it the only one?
-        if question.unit.system == Unit.SYSTEM_ENUMERATED:
-            try:
-                data = Choice.objects.get(
-                    unit=self.context['question'].unit, text=data).pk
-            except Choice.DoesNotExist:
-                choices = Choice.objects.filter(
-                    unit=self.context['question'].unit)
-                raise ValidationError(
-                    "'%s' is not a valid choice. Expected one of %s." % (
-                    data, [choice for choice in six.itervalues(choices)]))
-        return data
+        model = AnswerSerializer.Meta.model
+        fields = AnswerSerializer.Meta.fields + ('question',)
+        read_only_fields = AnswerSerializer.Meta.read_only_fields
 
 
 class SampleSerializer(serializers.ModelSerializer):
@@ -130,13 +111,13 @@ class SampleSerializer(serializers.ModelSerializer):
     account = serializers.SlugRelatedField(slug_field='slug',
         queryset=get_account_model().objects.all(), required=False,
         help_text=("Account this sample belongs to."))
-    answers = SampleAnswerSerializer(many=True, required=False)
 
     class Meta(object):
         model = Sample
-        fields = ('slug', 'account', 'created_at', 'is_frozen', 'campaign',
-            'time_spent', 'answers')
-        read_only_fields = ('slug', 'account', 'created_at', 'time_spent')
+        fields = ('slug', 'account', 'created_at',
+            'campaign', 'time_spent', 'is_frozen')
+        read_only_fields = ('slug', 'account', 'created_at',
+            'campaign', 'time_spent')
 
 
 class CampaignSerializer(serializers.ModelSerializer):

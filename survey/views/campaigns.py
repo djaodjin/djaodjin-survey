@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,10 +30,9 @@ from django.views.generic import (CreateView, DeleteView, DetailView,
     FormView, ListView, RedirectView, UpdateView)
 from django.views.generic.detail import SingleObjectMixin
 from django.template.defaultfilters import slugify
-from django.utils import six
 
 from .. import settings
-from ..compat import reverse, reverse_lazy
+from ..compat import six, reverse, reverse_lazy
 from ..mixins import AccountMixin
 from ..models import Answer, Campaign, Sample
 from ..forms import CampaignForm, SendCampaignForm

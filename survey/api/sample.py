@@ -33,9 +33,11 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
-from .serializers import AnswerSerializer, SampleSerializer
+from ..compat import six
 from ..mixins import SampleMixin, IntervieweeMixin
-from ..models import Answer, Choice, EnumeratedQuestions, Unit
+from ..models import Answer, Choice, EnumeratedQuestions, Sample, Unit
+from .serializers import (AnswerSerializer, SampleAnswerSerializer,
+    SampleSerializer)
 from ..utils import datetime_or_now, get_question_model
 
 
@@ -199,7 +201,8 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                         try:
                             measured = str(int(measured))
                         except ValueError:
-                            measured = '{:.0f}'.format(decimal.Decimal(measured))
+                            measured = '{:.0f}'.format(
+                                decimal.Decimal(measured))
                         Answer.objects.update_or_create(
                             sample=self.sample, question=self.question,
                             metric=metric, defaults={
@@ -208,7 +211,8 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                                 'created_at': created_at,
                                 'collected_by': self.request.user,
                                 'rank': rank})
-                    except (ValueError, decimal.InvalidOperation, DataError) as err:
+                    except (ValueError, decimal.InvalidOperation,
+                            DataError) as err:
                         # We cannot convert to integer (ex: "12.8kW/h")
                         # or the value exceeds 32-bit representation.
                         # XXX We store as a text value so it is not lost.
@@ -220,7 +224,17 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                         unit = Unit.objects.get(slug='freetext')
 
                 if unit.system not in Unit.NUMERICAL_SYSTEMS:
-                    if unit.system != Unit.SYSTEM_ENUMERATED:
+                    if unit.system == Unit.SYSTEM_ENUMERATED:
+                        try:
+                            measured = Choice.objects.get(
+                                unit=unit, text=measured).pk
+                        except Choice.DoesNotExist:
+                            choices = Choice.objects.filter(unit=unit)
+                            raise ValidationError("'%s' is not a valid choice."\
+                                " Expected one of %s." % (measured, [
+                                    choice.get('text', "")
+                                       for choice in six.itervalues(choices)]))
+                    else:
                         choice_rank = Choice.objects.filter(
                             unit=unit).aggregate(Max('rank')).get(
                                 'rank__max', 0)
@@ -255,6 +269,8 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
 
 class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
     """
+    Retrieves a sample
+
     Returns the state of a ``Sample`` and the list of associated
     ``Answer``.
 
@@ -264,7 +280,7 @@ class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
 
     .. code-block:: http
 
-         GET /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/ HTTP/1.1
+         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/ HTTP/1.1
 
     responds
 
@@ -275,40 +291,8 @@ class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
         "created_at": "2018-01-24T17:03:34.926193Z",
         "time_spent": "00:00:00",
         "is_frozen": false,
-        "answers": [
-            {
-                "question": "the-assessment-process-is-rigorous",
-                "measured": "1"
-            },
-            {
-                "question": "a-policy-is-in-place",
-                "measured": "2"
-            },
-            {
-                "question": "product-design",
-                "measured": "2"
-            },
-            {
-                "question": "packaging-design",
-                "measured": "3"
-            },
-            {
-                "question": "reduce-combustion-air-flow-to-optimum",
-                "measured": "2"
-            },
-            {
-                "question": "adjust-air-fuel-ratio",
-                "measured": "2"
-            },
-            {
-                "question": "recover-heat-from-hot-waste-water",
-                "measured": "4"
-            },
-            {
-                "question": "educe-hot-water-temperature-to-minimum-required",
-                "measured": "4"
-            }
-        ]
+        "account": "steve=shop",
+        "campaign": "assessment"
     }
     """
     serializer_class = SampleSerializer
@@ -318,7 +302,9 @@ class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
 
     def put(self, request, *args, **kwargs):
         """
-        Updates a ``Sample``. For example, mark the Sample as read-only.
+        Updates a sample
+
+        For example, mark the Sample as read-only.
 
         **Tags**: survey
 
@@ -345,46 +331,13 @@ class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
             "created_at": "2018-01-24T17:03:34.926193Z",
             "time_spent": "00:00:00",
             "is_frozen": false,
-            "answers": [
-                {
-                    "question": "the-assessment-process-is-rigorous",
-                    "measured": "1"
-                },
-                {
-                    "question": "a-policy-is-in-place",
-                    "measured": "2"
-                },
-                {
-                    "question": "product-design",
-                    "measured": "2"
-                },
-                {
-                    "question": "packaging-design",
-                    "measured": "3"
-                },
-                {
-                    "question": "reduce-combustion-air-flow-to-optimum",
-                    "measured": "2"
-                },
-                {
-                    "question": "adjust-air-fuel-ratio",
-                    "measured": "2"
-                },
-                {
-                    "question": "recover-heat-from-hot-waste-water",
-                    "measured": "4"
-                },
-                {
-                    "question": "educe-hot-water-temperature-to-minimum-required",
-                    "measured": "4"
-                }
-            ]
-        }
-        """
+         """
         return super(SampleAPIView, self).put(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
         """
+        Deletes a sample
+
         Removes a ``Sample`` and all associated ``Answer``
         from the database.
 
@@ -397,6 +350,276 @@ class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
             DELETE /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/ HTTP/1.1
         """
         return super(SampleAPIView, self).delete(request, *args, **kwargs)
+
+
+class SampleAnswersAPIView(SampleMixin, generics.ListCreateAPIView):
+    """
+    Retrieves answers from a sample
+
+    **Tags**: survey
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/answers\
+ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+    {
+        "count": 4,
+        "results": [
+            {
+                "question": {
+                    "path": "the-assessment-process-is-rigorous",
+                    "default_metric": "weight",
+                    "title": "The assessment process is rigorous"
+                },
+                "metric": "weight",
+                "measured": "1",
+                "unit": "kilograms"
+            },
+            {
+                "question": {
+                    "path": "a-policy-is-in-place",
+                    "default_metric": "weight",
+                    "title": "A policy is in place"
+                },
+                "metric": "weight",
+                "measured": "2"
+                "unit": "kilograms"
+            },
+            {
+                "question": {
+                    "path": "product-design",
+                    "default_metric": "weight",
+                    "title": "Product design"
+                },
+                "metric": "weight",
+                "measured": "2"
+                "unit": "kilograms"
+            },
+            {
+                "question": {
+                    "path": "packaging-design",
+                    "default_metric": "weight",
+                    "title": "Packaging design"
+                },
+                "metric": "weight",
+                "measured": "3"
+                "unit": "kilograms"
+            }
+        ]
+    }
+    """
+    lookup_path_kwarg = 'path'
+    serializer_class = SampleAnswerSerializer
+
+    @property
+    def question(self):
+        if not hasattr(self, '_question'):
+            self._question = get_object_or_404(
+                get_question_model().objects.all(),
+                path=self.kwargs.get(self.lookup_path_kwarg))
+        return self._question
+
+    def get_queryset(self):
+        kwargs = {}
+        prefix = self.kwargs.get(self.lookup_path_kwarg)
+        if not prefix:
+            prefix = ""
+        if self.sample.is_frozen:
+            return Answer.objects.filter(sample=self.sample,
+                question__path__startswith=prefix).select_related(
+                    'question', 'metric', 'unit', 'collected_by')
+        queryset = Answer.objects.raw("""SELECT
+    answers.id AS id,
+    answers.created_at AS created_at,
+    survey_question.id AS question_id,
+    answers.metric_id AS metric_id,
+    answers.unit_id AS unit_id,
+    answers.measured AS measured,
+    answers.denominator AS denominator,
+    answers.collected_by_id AS collected_by_id,
+    answers.sample_id AS sample_id,
+    answers.rank AS rank
+FROM survey_question
+LEFT OUTER JOIN (SELECT * FROM survey_answer WHERE sample_id=%(sample)d)
+  AS answers ON survey_question.id = answers.question_id
+WHERE survey_question.path LIKE '%(path)s%%%%';
+""" % {'sample': self.sample.pk, 'path': prefix}).prefetch_related(
+    'question', 'question__default_metric', 'metric', 'unit', 'collected_by')
+        return queryset
+
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return AnswerSerializer
+        return super(SampleAnswersAPIView, self).get_serializer_class()
+
+    def get_serializer(self, *args, **kwargs):
+        if isinstance(self.request.data, list):
+            kwargs.update({'many': True})
+        return super(SampleAnswersAPIView, self).get_serializer(
+            *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Updates an answer in a sample
+
+        **Tags**: survey
+
+        **Examples**
+
+        .. code-block:: http
+
+            POST /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/answers/water-use\
+ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "metric": "weight",
+                "measured": "1",
+                "unit": "kilograms"
+            },
+
+        responds
+
+        .. code-block:: json
+
+    .. code-block:: json
+
+            {
+                "metric": "weight",
+                "measured": "1",
+                "unit": "kilograms"
+            },
+        """
+        return super(SampleAnswersAPIView, self).post(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        created_at = datetime_or_now()
+        results = []
+        at_least_one_created = False
+        rank = EnumeratedQuestions.objects.get(
+            campaign=self.sample.survey,
+            question=self.question).rank
+        errors = []
+        validated_data = serializer.validated_data
+        if not isinstance(serializer.validated_data, list):
+            validated_data = [serializer.validated_data]
+        for datapoint in validated_data:
+            measured = datapoint.get('measured', None)
+            try:
+                with transaction.atomic():
+                    metric = datapoint.get(
+                        'metric', self.question.default_metric)
+                    unit = datapoint.get('unit', metric.unit)
+                    if unit.system in Unit.NUMERICAL_SYSTEMS:
+                        try:
+                            try:
+                                measured = str(int(measured))
+                            except ValueError:
+                                measured = '{:.0f}'.format(
+                                    decimal.Decimal(measured))
+                            answer, created = Answer.objects.update_or_create(
+                                sample=self.sample, question=self.question,
+                                metric=metric, defaults={
+                                    'measured': int(measured),
+                                    'unit': unit,
+                                    'created_at': created_at,
+                                    'collected_by': self.request.user,
+                                    'rank': rank})
+                            results += [answer]
+                            if created:
+                                at_least_one_created = True
+                        except (ValueError,
+                            decimal.InvalidOperation, DataError) as err:
+                            # We cannot convert to integer (ex: "12.8kW/h")
+                            # or the value exceeds 32-bit representation.
+                            # XXX We store as a text value so it is not lost.
+                            LOGGER.warning(
+                                "\"%(measured)s\": %(err)s for '%(metric)s'" % {
+                                'measured': measured.replace('"', '\\"'),
+                                'err': str(err).strip(),
+                                'metric': metric.title})
+                            unit = Unit.objects.get(slug='freetext')
+
+                    if unit.system not in Unit.NUMERICAL_SYSTEMS:
+                        if unit.system == Unit.SYSTEM_ENUMERATED:
+                            try:
+                                measured = Choice.objects.get(
+                                    unit=unit, text=measured).pk
+                            except Choice.DoesNotExist:
+                                choices = Choice.objects.filter(unit=unit)
+                                raise ValidationError(
+                                    "'%s' is not a valid choice."\
+                                    " Expected one of %s." % (
+                                    measured, [choice.get('text', "")
+                                    for choice in six.itervalues(choices)]))
+                        else:
+                            choice_rank = Choice.objects.filter(
+                                unit=unit).aggregate(Max('rank')).get(
+                                    'rank__max', 0)
+                            choice_rank = choice_rank + 1 if choice_rank else 1
+                            choice = Choice.objects.create(
+                                text=measured,
+                                unit=unit,
+                                rank=choice_rank)
+                            measured = choice.pk
+                        answer, created = Answer.objects.update_or_create(
+                            sample=self.sample, question=self.question,
+                            metric=metric, defaults={
+                                'measured': measured,
+                                'unit': unit,
+                                'created_at': created_at,
+                                'collected_by': self.request.user,
+                                'rank': rank})
+                        results += [answer]
+                        if created:
+                            at_least_one_created = True
+            except DataError as err:
+                LOGGER.exception(err)
+                errors += [
+                    "\"%(measured)s\": %(err)s for '%(metric)s'" % {
+                        'measured': measured.replace('"', '\\"'),
+                        'err': str(err).strip(),
+                        'metric': metric.title}
+                ]
+        if errors:
+            raise ValidationError(errors)
+
+        first_answer = False #XXX
+        headers = self.get_success_headers(serializer.data)
+        return self.get_http_response(results,
+            status=HTTP_201_CREATED if at_least_one_created else HTTP_200_OK,
+            headers=headers, first_answer=first_answer)
+
+    def _expand_choices(self, results):
+        choices = []
+        for answer in results:
+            metric = (answer.metric if answer.metric
+                else answer.question.default_metric)
+            unit = answer.unit if answer.unit else metric.unit
+            if unit.system not in Unit.NUMERICAL_SYSTEMS:
+                choices += [int(answer.measured)]
+        choices = dict(Choice.objects.filter(
+            pk__in=choices).values_list('pk', 'text'))
+        for answer in results:
+            if unit.system not in Unit.NUMERICAL_SYSTEMS:
+                answer.measured = choices.get(int(answer.measured))
+        return results
+
+    def get_http_response(self, results, status=HTTP_200_OK, headers=None,
+                          first_answer=False):#pylint:disable=unused-argument
+        self._expand_choices(results)
+        return http.Response(results, status=status, headers=headers)
 
 
 class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
@@ -434,7 +657,7 @@ class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
 class SampleRecentCreateAPIView(IntervieweeMixin, mixins.RetrieveModelMixin,
                                 generics.CreateAPIView):
     """
-    Creates a ``Sample`` from the ``Campaign``.
+    Retrieves latest ``Sample`` for a profile.
 
     **Tags**: survey
 
@@ -442,10 +665,7 @@ class SampleRecentCreateAPIView(IntervieweeMixin, mixins.RetrieveModelMixin,
 
     .. code-block:: http
 
-        POST /api/sample/ HTTP/1.1
-        {
-            "campaign": "best-practices"
-        }
+        GET /api/supplier-1/sample/ HTTP/1.1
 
     responds
 
@@ -476,14 +696,17 @@ class SampleRecentCreateAPIView(IntervieweeMixin, mixins.RetrieveModelMixin,
 
         .. code-block:: http
 
-            POST /api/sample/ HTTP/1.1
+            POST /api/supplier-1/sample/ HTTP/1.1
+
+        .. code-block:: json
+
             {
                 "campaign": "best-practices"
             }
 
         responds
 
-        .. code-block:: http
+        .. code-block:: json
 
             {
                 "slug": "46f66f70f5ad41b29c4df08f683a9a7a",

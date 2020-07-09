@@ -28,8 +28,8 @@ import uuid
 
 from django import forms
 from django.template.defaultfilters import slugify
-from django.utils import six
 
+from .compat import six
 from .models import Answer, Campaign, Choice, EnumeratedQuestions, Sample, Unit
 from .utils import get_question_model
 

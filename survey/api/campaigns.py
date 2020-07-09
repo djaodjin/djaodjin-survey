@@ -35,6 +35,8 @@ LOGGER = logging.getLogger(__name__)
 
 class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
     """
+    Retrieves a campaign
+
     Retrieves the details of a ``Campaign``.
 
     **Tags**: survey
@@ -68,16 +70,25 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
                 }
             ]
         }
-
-    ``DELETE`` removes a ``Campaign`` and all associated ``Sample``
-    from the database.
-
-    .. code-block:: http
-
-        DELETE /api/campaign/best-practices/ HTTP/1.1
     """
-
     serializer_class = CampaignSerializer
 
     def get_object(self):
         return self.campaign
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Deletes a campaign
+
+        Removes a ``Campaign`` and all associated ``Sample``
+        from the database.
+
+        **Tags**: survey
+
+        **Examples**
+
+        .. code-block:: http
+
+            DELETE /api/campaign/best-practices/ HTTP/1.1
+        """
+        return super(CampaignAPIView, self).delete(request, *args, **kwargs)

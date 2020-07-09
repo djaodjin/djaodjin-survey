@@ -43,7 +43,7 @@ _SETTINGS = {
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None),
     'EXTRA_FIELD': None,
     'QUESTION_MODEL': 'survey.Question',
-    'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionSerializer',
+    'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionDetailSerializer',
 }
 _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 
