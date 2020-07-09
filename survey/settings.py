@@ -65,7 +65,7 @@ QUESTION_MODEL = _SETTINGS.get('QUESTION_MODEL')
 QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
 
 SLUG_RE = r'[a-zA-Z0-9-]+'
-PATH_RE = SLUG_RE + r'(/[a-zA-Z0-9\-]+)*'
+PATH_RE = r'(/[a-zA-Z0-9\-]+)*'
 
 
 def get_extra_field_class():

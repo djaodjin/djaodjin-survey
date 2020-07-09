@@ -157,15 +157,20 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
             nb_questions = len(questions)
             if nb_questions > 0:
                 for cohort in cohorts:
-                    includes, excludes = cohort.as_kwargs()
-                    qs_accounts = accounts.filter(**includes).exclude(
-                        **excludes)
+                    if isinstance(cohort, EditableFilter):
+                        includes, excludes = cohort.as_kwargs()
+                        qs_accounts = accounts.filter(
+                            **includes).exclude(**excludes)
+                    else:
+                        # If `matrix.cohorts is None`, the `cohorts` argument
+                        # will be a list of single account objects.
+                        qs_accounts = [cohort]
                     nb_accounts = len(qs_accounts)
                     if nb_accounts > 0:
                         nb_correct_answers = Answer.objects.filter(
                             question__in=questions,
                             sample__account__in=qs_accounts).filter(
-                                text=F('question__correct_answer')).count()
+                                measured=F('question__correct_answer')).count()
                         score = nb_correct_answers * 100 / (
                             nb_questions * nb_accounts)
                         LOGGER.debug("score for '%s' = (%d * 100) "\
@@ -231,6 +236,8 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
             else:
                 accounts = self.get_accounts()
             cohort_serializer = get_account_serializer()
+            # Implementation Note: switch cohorts from an queryset
+            # of `EditableFilter` to a queryset of `Account` ...
             cohorts = accounts
 
         result = []

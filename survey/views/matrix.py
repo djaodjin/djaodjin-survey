@@ -77,7 +77,7 @@ class MatrixDetailView(MatrixMixin, DetailView):
             'editable_filter_api_base': reverse(
                 'editable_filter_api_base', kwargs=url_kwargs),
         })
-        url_kwargs.update({self.matrix_url_kwarg: self.object})
+        url_kwargs.update({self.matrix_url_kwarg: "/%s" % self.object})
         context.update({
             'matrix_api': reverse('matrix_api', kwargs=url_kwargs),
         })
