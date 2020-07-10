@@ -1,12 +1,14 @@
-Django==1.11.26
+Django==2.2.13
 django-extra-views==0.13.0
-djangorestframework==3.9.4
+djangorestframework==3.10
 
 # testsite-only
-django-debug-toolbar==1.11
-django-extensions==2.1.4
-django-urldecorators==0.6
+django-debug-toolbar==2.1
+django-extensions==3.0.2
+djaodjin-rules==2.5
 
 # development
-Sphinx==1.7.5
-sphinxcontrib-httpdomain==1.6.1
+pylint==2.5.3
+pylint-django==2.0.15
+Sphinx==3.1.2
+sphinxcontrib-httpdomain==1.7.0
