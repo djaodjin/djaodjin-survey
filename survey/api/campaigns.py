@@ -45,7 +45,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
     .. code-block:: http
 
-        GET /api/campaign/best-practices/ HTTP/1.1
+        GET /api/cowork/campaign/best-practices/ HTTP/1.1
 
     responds
 
@@ -89,6 +89,6 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
         .. code-block:: http
 
-            DELETE /api/campaign/best-practices/ HTTP/1.1
+            DELETE /api/cowork/campaign/best-practices/ HTTP/1.1
         """
         return super(CampaignAPIView, self).delete(request, *args, **kwargs)
