@@ -418,6 +418,7 @@ class SampleAnswersAPIView(SampleMixin, generics.ListCreateAPIView):
     lookup_path_kwarg = 'path'
     serializer_class = SampleAnswerSerializer
 
+    # Used to POST and create an answer.
     @property
     def question(self):
         if not hasattr(self, '_question'):
@@ -435,6 +436,7 @@ class SampleAnswersAPIView(SampleMixin, generics.ListCreateAPIView):
             return Answer.objects.filter(sample=self.sample,
                 question__path__startswith=prefix).select_related(
                     'question', 'metric', 'unit', 'collected_by')
+
         queryset = Answer.objects.raw("""SELECT
     answers.id AS id,
     answers.created_at AS created_at,
@@ -445,13 +447,20 @@ class SampleAnswersAPIView(SampleMixin, generics.ListCreateAPIView):
     answers.denominator AS denominator,
     answers.collected_by_id AS collected_by_id,
     answers.sample_id AS sample_id,
-    answers.rank AS rank
+    answers.rank AS rank,
+    survey_enumeratedquestions.required AS required
 FROM survey_question
+INNER JOIN survey_enumeratedquestions
+  ON survey_question.id = survey_enumeratedquestions.question_id
 LEFT OUTER JOIN (SELECT * FROM survey_answer WHERE sample_id=%(sample)d)
   AS answers ON survey_question.id = answers.question_id
-WHERE survey_question.path LIKE '%(path)s%%%%';
-""" % {'sample': self.sample.pk, 'path': prefix}).prefetch_related(
-    'question', 'question__default_metric', 'metric', 'unit', 'collected_by')
+WHERE survey_enumeratedquestions.campaign_id = %(campaign)d
+  AND survey_question.path LIKE '%(prefix)s%%%%';""" % {
+      'sample': self.sample.pk,
+      'campaign': self.sample.survey.pk,
+      'prefix': prefix
+  }).prefetch_related(
+      'question', 'question__default_metric', 'metric', 'unit', 'collected_by')
         return queryset
 
     def get_serializer_class(self):

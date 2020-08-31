@@ -80,7 +80,7 @@ class QuestionDetailSerializer(QuestionCreateSerializer):
         fields = QuestionCreateSerializer.Meta.fields + ('path',)
 
 
-class QuestionSerializer(serializers.ModelSerializer):
+class CampaignQuestionSerializer(serializers.ModelSerializer):
 
     title = serializers.CharField(allow_blank=True)
     default_metric = serializers.SlugRelatedField(slug_field='slug',
@@ -95,11 +95,12 @@ class SampleAnswerSerializer(AnswerSerializer):
     """
     Serializer of ``Answer`` when used in list.
     """
-    question = QuestionSerializer()
+    question = CampaignQuestionSerializer()
+    required = serializers.BooleanField(required=False)
 
     class Meta(object):
         model = AnswerSerializer.Meta.model
-        fields = AnswerSerializer.Meta.fields + ('question',)
+        fields = AnswerSerializer.Meta.fields + ('question', 'required')
         read_only_fields = AnswerSerializer.Meta.read_only_fields
 
 
@@ -126,7 +127,7 @@ class CampaignSerializer(serializers.ModelSerializer):
         slug_field=settings.BELONGS_LOOKUP_FIELD,
         queryset=get_belongs_model().objects.all(),
         help_text=("Account this sample belongs to."))
-    questions = QuestionSerializer(many=True)
+    questions = CampaignQuestionSerializer(many=True)
 
     class Meta(object):
         model = Campaign
