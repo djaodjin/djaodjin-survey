@@ -40,6 +40,11 @@ def load_config(confpath):
 
 load_config(os.path.join(BASE_DIR, 'credentials'))
 
+if not hasattr(sys.modules[__name__], "SECRET_KEY"):
+    from random import choice
+    SECRET_KEY = "".join([choice(
+        "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)])
+
 # Application definition
 INSTALLED_APPS = (
     'debug_toolbar',
@@ -49,8 +54,8 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.admin',
     'rest_framework',
+    'rules',
     'survey',
     'testsite'
 )
@@ -62,7 +67,7 @@ INSTALLED_APPS = (
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE = (
     'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -114,6 +119,10 @@ USE_TZ = True
 
 REST_FRAMEWORK = {
     'PAGE_SIZE': 25,
+    'DEFAULT_PAGINATION_CLASS':
+        'rest_framework.pagination.PageNumberPagination',
+    'ORDERING_PARAM': 'o',
+    'SEARCH_PARAM': 'q'
 }
 
 # Static files (CSS, JavaScript, Images)

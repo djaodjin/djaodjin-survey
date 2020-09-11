@@ -65,15 +65,4 @@ QUESTION_MODEL = _SETTINGS.get('QUESTION_MODEL')
 QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
 
 SLUG_RE = r'[a-zA-Z0-9-]+'
-PATH_RE = r'(/[a-zA-Z0-9\-]+)*'
-
-
-def get_extra_field_class():
-    extra_class = _SETTINGS.get('EXTRA_FIELD')
-    if extra_class is None:
-        from django.db.models import TextField
-        extra_class = TextField
-    elif isinstance(extra_class, str):
-        from .compat import import_string
-        extra_class = import_string(extra_class)
-    return extra_class
+PATH_RE = r'([a-zA-Z0-9-]+(/[a-zA-Z0-9\-]+)*)?'

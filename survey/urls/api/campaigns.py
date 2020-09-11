@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,6 @@ from ...api.campaigns import CampaignAPIView
 from ...settings import SLUG_RE
 
 urlpatterns = [
-   url(r'^(?P<survey>%s)/' % SLUG_RE,
+   url(r'^(?P<campaign>%s)/?' % SLUG_RE,
        CampaignAPIView.as_view(), name='survey_api_campaign'),
 ]

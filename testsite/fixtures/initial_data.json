@@ -116,14 +116,14 @@
   "model" : "survey.metric", "pk" : 3
 },
 { "fields": {
-    "slug": "free-text",
+    "slug": "freetext",
     "title": "Free Text",
-    "system": 3
+    "system": 4
   },
   "model" : "survey.unit", "pk" : 4
 },
 { "fields": {
-    "slug": "free-text",
+    "slug": "freetext",
     "title": "Free Text",
     "unit": 4
   },

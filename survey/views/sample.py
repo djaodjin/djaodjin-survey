@@ -22,23 +22,25 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime
+import logging
 
+from django.core.exceptions import NON_FIELD_ERRORS
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import (CreateView, RedirectView, TemplateView,
     UpdateView)
-from django.utils.timezone import utc
+from rest_framework.exceptions import ValidationError
 
-from ..compat import reverse
+from ..api.sample import update_or_create_answer
+from ..compat import is_authenticated, reverse
 from ..forms import AnswerForm, SampleCreateForm, SampleUpdateForm
-from ..mixins import IntervieweeMixin, SampleMixin, CampaignMixin
-from ..models import Answer, Choice, EnumeratedQuestions, Sample
+from ..mixins import AccountMixin, SampleMixin
+from ..models import Answer, Campaign, Choice, EnumeratedQuestions, Sample
+from ..utils import datetime_or_now, get_question_model
 
 
-def _datetime_now():
-    return datetime.datetime.utcnow().replace(tzinfo=utc)
+LOGGER = logging.getLogger(__name__)
 
 
 class AnswerUpdateView(SampleMixin, UpdateView):
@@ -48,8 +50,25 @@ class AnswerUpdateView(SampleMixin, UpdateView):
 
     model = Answer
     form_class = AnswerForm
+    lookup_rank_kwarg = 'rank'
     next_step_url = 'survey_answer_update'
     complete_url = 'survey_sample_results'
+
+    @property
+    def rank(self):
+        return int(self.kwargs.get(self.lookup_rank_kwarg))
+
+    @property
+    def question(self):
+        if not hasattr(self, '_question'):
+            if self.sample:
+                self._question = get_object_or_404(
+                    get_question_model().objects.all(),
+                    enumeratedquestions__campaign=self.sample.campaign,
+                    enumeratedquestions__rank=self.rank)
+            else:
+                self._question = None  # API docs get here.
+        return self._question
 
     def dispatch(self, request, *args, **kwargs):
         """
@@ -62,38 +81,58 @@ class AnswerUpdateView(SampleMixin, UpdateView):
         self.object = self.get_object()
         if not self.object or self.object.sample.is_frozen:
             return redirect(reverse(self.complete_url,
-                kwargs=self.get_url_context()))
+                kwargs=self.get_url_kwargs()))
         return super(AnswerUpdateView, self).dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super(AnswerUpdateView, self).get_context_data(**kwargs)
-        context.update(self.get_url_context())
+        context.update(self.get_url_kwargs())
         return context
 
     def get_next_answer(self):
-        return Answer.objects.filter(
-            sample=self.sample, measured=None).order_by('rank').first()
+        return self.sample.get_answers_by_rank().filter(measured=None).first()
 
     def get_object(self, queryset=None):
-        rank = self.kwargs.get('rank', None)
-        if rank:
+        if self.rank:
             return get_object_or_404(Answer,
-                sample=self.sample, rank=rank)
+                sample=self.sample, question=self.question)
         return self.get_next_answer()
 
     def get_success_url(self):
-        kwargs = self.get_url_context()
+        kwargs = self.get_url_kwargs()
         next_answer = self.get_next_answer()
         if not next_answer:
             return reverse(self.complete_url,
-                kwargs=self.get_url_context())
-        kwargs.update({'rank': next_answer.rank})
+                kwargs=self.get_url_kwargs())
+        kwargs.update({'rank': next_answer.rank}) #XXX rank
         return reverse(self.next_step_url, kwargs=kwargs)
 
     def form_valid(self, form):
-        sample = self.object.sample
-        sample.time_spent = _datetime_now() - sample.created_at
-        sample.save()
+        user = self.request.user if is_authenticated(self.request) else None
+
+        errors = []
+        datapoints = []
+        if isinstance(form.cleaned_data['text'], list):
+            for measured in form.cleaned_data['text']:
+                datapoints += [{'measured': measured}]
+        else:
+            datapoints = [{'measured': form.cleaned_data['text']}]
+        for datapoint in datapoints:
+            try:
+                with transaction.atomic():
+                    created_at = datetime_or_now()
+                    sample = self.object.sample
+                    update_or_create_answer(
+                        datapoint, question=self.object.question,
+                        sample=self.object.sample, created_at=created_at,
+                        collected_by=user)
+                    sample.time_spent = created_at - sample.created_at
+                    sample.save()
+            except ValidationError as err:
+                errors += [err]
+        if errors:
+            form.add_error(NON_FIELD_ERRORS, errors)
+            return super(AnswerUpdateView, self).form_invalid(form)
         return super(AnswerUpdateView, self).form_valid(form)
 
 
@@ -120,11 +159,11 @@ class AnswerNextView(AnswerUpdateView):
         return super(AnswerNextView, self).form_valid(form)
 
     def get_success_url(self):
-        kwargs = self.get_url_context()
+        kwargs = self.get_url_kwargs()
         next_answer = self.get_next_answer()
         if not next_answer:
             return reverse(self.complete_url,
-                kwargs=self.get_url_context())
+                kwargs=self.get_url_kwargs())
         return reverse(self.next_step_url, kwargs=kwargs)
 
 
@@ -139,21 +178,21 @@ class SampleResultView(SampleMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super(SampleResultView, self).get_context_data(**kwargs)
         score, answers = Sample.objects.get_score(self.sample)
-        context.update(self.get_url_context())
+        context.update(self.get_url_kwargs())
         context.update({'sample': self.sample,
-            # only sample slug available through get_url_context()
+            # only sample slug available through get_url_kwargs()
             'answers': answers, 'score': score})
         return context
 
     def post(self, request, *args, **kwargs):
         # The csrftoken in valid when we get here. That's all that matters.
-        self.sample.time_spent = _datetime_now() - self.sample.created_at
+        self.sample.time_spent = datetime_or_now() - self.sample.created_at
         self.sample.is_frozen = True
         self.sample.save()
         return self.get(request, *args, **kwargs)
 
 
-class SampleCreateView(CampaignMixin, IntervieweeMixin, CreateView):
+class SampleCreateView(AccountMixin, CreateView):
     """
     Creates a ``Sample`` of a ``Account`` to a ``Campaign``
     """
@@ -162,17 +201,23 @@ class SampleCreateView(CampaignMixin, IntervieweeMixin, CreateView):
     form_class = SampleCreateForm
     next_step_url = 'survey_answer_update'
     single_page_next_step_url = 'survey_sample_update'
-
     template_name = 'survey/sample_create.html'
+    campaign_url_kwarg = 'campaign'
+
+    @property
+    def campaign(self):
+        if not hasattr(self, '_campaign'):
+            self._campaign = get_object_or_404(Campaign.objects.all(),
+                slug=self.kwargs.get(self.campaign_url_kwarg))
+        return self._campaign
 
     def form_valid(self, form):
         # We are going to create all the Answer records for that Sample here,
         # initialize them with a text when present in the submitted form.
         self.object = form.save()
         for enum_q in EnumeratedQuestions.objects.filter(
-                campaign=self.object.survey):
-            kwargs = {'sample': self.object,
-                'question': enum_q.question, 'rank': enum_q.rank}
+                campaign=self.object.campaign):
+            kwargs = {'sample': self.object, 'question': enum_q.question}
             answer_text = form.cleaned_data.get(
                 'question-%d' % enum_q.rank, None)
             if answer_text:
@@ -183,7 +228,7 @@ class SampleCreateView(CampaignMixin, IntervieweeMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super(SampleCreateView, self).get_context_data(**kwargs)
-        context.update({'survey': self.campaign})
+        context.update({'campaign': self.campaign})
         return context
 
     def get_initial(self):
@@ -191,18 +236,18 @@ class SampleCreateView(CampaignMixin, IntervieweeMixin, CreateView):
         Returns the initial data to use for forms on this view.
         """
         kwargs = super(SampleCreateView, self).get_initial()
-        kwargs.update({'survey': self.campaign,
-                       'account': self.get_interviewee()})
+        kwargs.update({'campaign': self.campaign,
+                       'account': self.account})
         return kwargs
 
     def get_success_url(self):
-        kwargs = self.get_url_context()
+        kwargs = self.get_url_kwargs()
         kwargs.update({SampleMixin.sample_url_kwarg: self.object.slug})
         if self.campaign and self.campaign.defaults_single_page:
             next_step_url = self.single_page_next_step_url
         else:
-            kwargs.update({'rank': Answer.objects.filter(
-                sample=self.object).order_by('rank').first().rank})
+            first_answer = self.object.get_answers_by_rank().first()
+            kwargs.update({'rank': first_answer.rank})
             next_step_url = self.next_step_url
         return reverse(next_step_url, kwargs=kwargs)
 
@@ -215,7 +260,7 @@ class SampleResetView(SampleMixin, RedirectView):
     pattern_name = 'survey_sample_update'
 
     def get(self, request, *args, **kwargs):
-        if self.sample.survey and not self.sample.survey.one_sample_only:
+        if self.sample.campaign and not self.sample.campaign.one_sample_only:
             with transaction.atomic():
                 for answer in self.sample.answers.all():
                     answer.measured = None
@@ -225,7 +270,7 @@ class SampleResetView(SampleMixin, RedirectView):
         return super(SampleResetView, self).get(request, *args, **kwargs)
 
 
-class SampleUpdateView(SampleMixin, IntervieweeMixin, UpdateView):
+class SampleUpdateView(SampleMixin, UpdateView):
     """
     Updates all ``Answer`` of a ``Sample`` from a ``Account``
     in a single shot.
@@ -237,10 +282,10 @@ class SampleUpdateView(SampleMixin, IntervieweeMixin, UpdateView):
 
     def form_valid(self, form):
         # We are updating all ``Answer`` for the ``Sample`` here.
-        for answer in self.sample.answers.order_by('rank'):
+        for answer in self.sample.get_answers_by_rank():
             answer.measured, _ = Choice.objects.get_or_create(
                 unit=answer.question.unit,
-                text=form.cleaned_data['question-%d' % answer.rank])
+                text=form.cleaned_data['question-%d' % answer.rank]) # XXX rank
             answer.save()
         return super(SampleUpdateView, self).form_valid(form)
 
@@ -249,11 +294,8 @@ class SampleUpdateView(SampleMixin, IntervieweeMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super(SampleUpdateView, self).get_context_data(**kwargs)
-        context.update({'survey': self.sample.survey})
+        context.update({'campaign': self.sample.campaign})
         return context
 
     def get_success_url(self):
-        kwargs = self.get_url_context()
-        # XXX not sure we need to set this.
-        kwargs.update({self.sample_url_kwarg: self.sample.slug})
-        return reverse(self.next_step_url, kwargs=kwargs)
+        return reverse(self.next_step_url, kwargs=self.get_url_kwargs())

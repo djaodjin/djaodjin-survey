@@ -24,42 +24,43 @@
 
 from django.conf.urls import url
 
-from survey.views.campaigns import (CampaignCreateView, CampaignDeleteView,
+from ..settings import SLUG_RE
+from ..views.campaigns import (CampaignCreateView, CampaignDeleteView,
     CampaignListView, CampaignPublishView, CampaignResultView, CampaignSendView,
     CampaignUpdateView)
-from survey.views.createquestion import (QuestionCreateView, QuestionDeleteView,
+from ..views.createquestion import (QuestionCreateView, QuestionDeleteView,
     QuestionListView, QuestionRankView, QuestionUpdateView)
-from survey.views.matrix import RespondentListView
+from ..views.matrix import RespondentListView
 
 
 urlpatterns = [
    url(r'^new/',
        CampaignCreateView.as_view(), name='survey_create'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/send/',
+   url(r'^(?P<campaign>%s)/send/' % SLUG_RE,
        CampaignSendView.as_view(), name='survey_send'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/result/',
+   url(r'^(?P<campaign>%s)/result/' % SLUG_RE,
        CampaignResultView.as_view(), name='survey_result'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/respondents/',
+   url(r'^(?P<campaign>%s)/respondents/' % SLUG_RE,
        RespondentListView.as_view(), name='survey_respondent_list'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/publish/',
+   url(r'^(?P<campaign>%s)/publish/' % SLUG_RE,
        CampaignPublishView.as_view(), name='survey_publish'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/edit/',
+   url(r'^(?P<campaign>%s)/edit/' % SLUG_RE,
        CampaignUpdateView.as_view(), name='survey_edit'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/delete/',
+   url(r'^(?P<campaign>%s)/delete/' % SLUG_RE,
        CampaignDeleteView.as_view(), name='survey_delete'),
 
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/new/',
+   url(r'^(?P<campaign>%s)/new/' % SLUG_RE,
        QuestionCreateView.as_view(), name='survey_question_new'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/(?P<num>\d+)/down/',
+   url(r'^(?P<campaign>%s)/(?P<num>\d+)/down/' % SLUG_RE,
        QuestionRankView.as_view(), name='survey_question_down'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/(?P<num>\d+)/up/',
+   url(r'^(?P<campaign>%s)/(?P<num>\d+)/up/' % SLUG_RE,
        QuestionRankView.as_view(direction=-1), name='survey_question_up'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/(?P<num>\d+)/delete/',
+   url(r'^(?P<campaign>%s)/(?P<num>\d+)/delete/' % SLUG_RE,
        QuestionDeleteView.as_view(), name='survey_question_delete'),
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/(?P<num>\d+)/edit/',
+   url(r'^(?P<campaign>%s)/(?P<num>\d+)/edit/' % SLUG_RE,
        QuestionUpdateView.as_view(), name='survey_question_edit'),
 
-   url(r'^(?P<survey>[a-zA-Z0-9-]+)/',
+   url(r'^(?P<campaign>%s)/' % SLUG_RE,
        QuestionListView.as_view(), name='survey_question_list'),
    url(r'^',
        CampaignListView.as_view(), name='survey_campaign_list'),

@@ -38,7 +38,7 @@ class QuizzSampleDeleteView(SampleMixin, DeleteView):
 
     def get_success_url(self):
         return reverse('survey_sample_new',
-            kwargs={'survey':self.object.survey.slug})
+            kwargs={'campaign':self.object.campaign.slug})
 
     def get_object(self, queryset=None):
         #pylint:disable=not-a-mapping

@@ -1,25 +1,26 @@
 {% extends "base.html" %}
 
 {% block content %}
-{% with form.instance.question.survey as survey %}
-<h1>Welcome to {{survey.title}} survey</h1>
+{% with form.instance.sample.campaign as campaign %}
 <div>
-        {{survey.description|safe}}
-</div>
-
-<div>
-{% if survey.active %}
-#{{form.instance.question.rank}}
-<form method="post" action=".">
-        {% csrf_token %}
-        {{ form }}
-        <div>
-                <input type="submit" name="submit" value="Next" id="submit-id-submit">
-        </div>
-</form>
-{% else %}
-<em>Sorry, this {% if survey.quizz_mode %}quizz{% else %}survey{% endif %} is no longer available. Thank you.</em>
-{% endif %}
+  <h1>Welcome to {{campaign.title}}</h1>
+  <div>
+    {{campaign.description|safe}}
+  </div>
+  <div>
+  {% if campaign.active %}
+  {% if rank %}<span>#{{rank}}</span>{% endif %}
+    <form method="post" action=".">
+      {% csrf_token %}
+      {{ form }}
+      <div>
+        <input type="submit" name="submit" value="Next" id="submit-id-submit">
+      </div>
+    </form>
+  {% else %}
+    <em>Sorry, this {% if campaign.quizz_mode %}quizz{% else %}survey{% endif %} is no longer available. Thank you.</em>
+  {% endif %}
+  </div>
 </div>
 {% endwith %}
 {% endblock %}

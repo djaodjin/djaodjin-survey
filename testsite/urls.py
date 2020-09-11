@@ -30,16 +30,11 @@ from django.views.generic import RedirectView, TemplateView
 from survey.compat import reverse_lazy
 from rules.urldecorators import include, url
 
-# Uncomment the next two lines to enable the admin:
-from django.contrib import admin
-admin.autodiscover()
-
 import debug_toolbar
 
 urlpatterns = [
     url(r'^__debug__/', include(debug_toolbar.urls)),
     url(r'^$', TemplateView.as_view(template_name='index.html'), name='home'),
-    url(r'^admin/', include(admin.site.urls)),
     url(r'^api/', include('survey.urls.api')),
     url(r'^accounts/profile/',
         RedirectView.as_view(url=reverse_lazy('survey_list'))),

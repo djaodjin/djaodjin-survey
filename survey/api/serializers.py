@@ -106,7 +106,7 @@ class SampleAnswerSerializer(AnswerSerializer):
 
 class SampleSerializer(serializers.ModelSerializer):
 
-    campaign = serializers.SlugRelatedField(source='survey', slug_field='slug',
+    campaign = serializers.SlugRelatedField(slug_field='slug',
         queryset=Campaign.objects.all(), required=False,
         help_text=("Campaign this sample is part of."))
     account = serializers.SlugRelatedField(slug_field='slug',
@@ -138,8 +138,8 @@ class CampaignSerializer(serializers.ModelSerializer):
 
 class CampaignCreateSerializer(serializers.ModelSerializer):
 
-    # XXX The `slug` might be useful in order to create survey aliases
-    # (ref. feedback survey)
+    # XXX The `slug` might be useful in order to create campaign aliases
+    # (ref. feedback campaign)
     account = serializers.SlugRelatedField(
         slug_field=settings.BELONGS_LOOKUP_FIELD,
         queryset=get_belongs_model().objects.all())

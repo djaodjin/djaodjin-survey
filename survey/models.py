@@ -31,7 +31,17 @@ from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from . import settings
+from .compat import import_string
 from .utils import get_account_model, get_question_model
+
+
+def get_extra_field_class():
+    extra_class = settings._SETTINGS.get('EXTRA_FIELD')
+    if extra_class is None:
+        extra_class = models.TextField
+    elif isinstance(extra_class, str):
+        extra_class = import_string(extra_class)
+    return extra_class
 
 
 class SlugTitleMixin(object):
@@ -104,7 +114,7 @@ class Unit(models.Model):
         choices=SYSTEMS, default=SYSTEM_STANDARD)
 
     def __str__(self):
-        return self.slug
+        return str(self.slug)
 
 
 @python_2_unicode_compatible
@@ -122,7 +132,7 @@ class Choice(models.Model):
         unique_together = ('unit', 'rank')
 
     def __str__(self):
-        return self.text
+        return str(self.text)
 
 
 @python_2_unicode_compatible
@@ -135,7 +145,7 @@ class Metric(models.Model):
     unit = models.ForeignKey(Unit, on_delete=models.PROTECT)
 
     def __str__(self):
-        return self.slug
+        return str(self.slug)
 
 
 @python_2_unicode_compatible
@@ -170,16 +180,17 @@ class AbstractQuestion(SlugTitleMixin, models.Model):
     correct_answer = models.ForeignKey(Choice,
         null=True, on_delete=models.PROTECT, blank=True)
     default_metric = models.ForeignKey(Metric, on_delete=models.PROTECT)
-    extra = settings.get_extra_field_class()(null=True, blank=True)
+    extra = get_extra_field_class()(null=True, blank=True)
 
     def __str__(self):
-        return self.path
+        return str(self.path)
 
     @property
     def choices(self):
         if self.default_metric.unit.system == Unit.SYSTEM_ENUMERATED:
-            return [choice.text for choice
-                in Choice.objects.filter(unit=self.default_metric.unit)]
+            return [(choice.text, choice.descr if choice.descr else choice.text)
+                for choice in Choice.objects.filter(
+                    unit=self.default_metric.unit).order_by('rank')]
         return None
 
     def save(self, force_insert=False, force_update=False,
@@ -210,7 +221,7 @@ class Question(AbstractQuestion):
         swappable = 'QUESTION_MODEL'
 
     def __str__(self):
-        return self.path
+        return str(self.path)
 
 
 @python_2_unicode_compatible
@@ -219,7 +230,7 @@ class Campaign(SlugTitleMixin, models.Model):
     slug = models.SlugField(unique=True)
     created_at = models.DateTimeField(null=True)
     title = models.CharField(max_length=150,
-        help_text=_("Enter a survey title."))
+        help_text=_("Enter a campaign title."))
     description = models.TextField(null=True, blank=True,
         help_text=_("This description will be displayed to interviewees."))
     account = models.ForeignKey(settings.BELONGS_MODEL,
@@ -231,13 +242,13 @@ class Campaign(SlugTitleMixin, models.Model):
         help_text=_("If checked, will display all questions on a single page,"\
 " else there will be one question per page."))
     one_response_only = models.BooleanField(default=False,
-        help_text=_("Only allows to answer survey once."))
+        help_text=_("Only allows to answer campaign once."))
     questions = models.ManyToManyField(settings.QUESTION_MODEL,
         through='survey.EnumeratedQuestions', related_name='campaigns')
-    extra = settings.get_extra_field_class()(null=True)
+    extra = get_extra_field_class()(null=True)
 
     def __str__(self):
-        return self.slug
+        return str(self.slug)
 
     def has_questions(self):
         return self.questions.exists()
@@ -258,7 +269,7 @@ class EnumeratedQuestions(models.Model):
         unique_together = ('campaign', 'rank')
 
     def __str__(self):
-        return self.question.path
+        return str(self.question.path)
 
 
 class SampleManager(models.Manager):
@@ -304,17 +315,17 @@ class Sample(models.Model):
         help_text="Unique identifier for the sample. It can be used in a URL.")
     created_at = models.DateTimeField(auto_now_add=True,
         help_text="Date/time of creation (in ISO format)")
-    survey = models.ForeignKey(Campaign, null=True, on_delete=models.PROTECT)
+    campaign = models.ForeignKey(Campaign, null=True, on_delete=models.PROTECT)
     account = models.ForeignKey(settings.ACCOUNT_MODEL,
         null=True, on_delete=models.PROTECT, related_name='samples')
     time_spent = models.DurationField(default=datetime.timedelta,
-        help_text="Total recorded time to complete the survey")
+        help_text="Total recorded time to complete the campaign")
     is_frozen = models.BooleanField(default=False,
         help_text="When True, answers to that sample cannot be updated.")
-    extra = settings.get_extra_field_class()(null=True)
+    extra = get_extra_field_class()(null=True)
 
     def __str__(self):
-        return self.slug
+        return str(self.slug)
 
     def save(self, force_insert=False, force_update=False,
              using=None, update_fields=None):
@@ -325,21 +336,37 @@ class Sample(models.Model):
             using=using, update_fields=update_fields)
 
     def get_answers_by_rank(self):
-        return self.answers.all().order_by('rank') #pylint:disable=no-member
+        # We attempt to get Django ORM to generate SQL equivalent to:
+        # ```
+        # SELECT survey_answer.* FROM survey_answer
+        # INNER JOIN survey_sample
+        # ON survey_answer.sample_id = survey_sample.id
+        # INNER JOIN survey_enumeratedquestions
+        # ON survey_answer.question_id = survey_enumeratedquestions.question_id
+        # ON survey_sample.campaign_id = survey_enumeratedquestions.campaign_id
+        # WHERE survey_answer.sample_id = %(sample_id)d
+        # ORDER BY survey_enumeratedquestions.rank
+        # ```
+        queryset = Answer.objects.filter(
+            sample=self,
+            question__campaigns__in=[self.campaign.pk]).order_by(
+            'question__enumeratedquestions__rank').annotate(
+                rank=models.F('question__enumeratedquestions__rank'))
+        return queryset
 
 
 class AnswerManager(models.Manager):
 
     def populate(self, sample):
         """
-        Return a list of ``Answer`` for all questions in the survey
+        Return a list of ``Answer`` for all questions in the campaign
         associated to a *sample* even when there are no such record
         in the db.
         """
         answers = self.filter(sample=sample)
-        if sample.survey:
+        if sample.campaign:
             questions = get_question_model().objects.filter(
-                campaigns__pk=sample.survey.pk).exclude(
+                campaigns__pk=sample.campaign.pk).exclude(
                 pk__in=answers.values('question'))
             answers = list(answers)
             for question in questions:
@@ -363,24 +390,24 @@ class Answer(models.Model):
     denominator = models.IntegerField(null=True, default=1)
     collected_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.PROTECT)
-    # Optional fields when the answer is part of a survey campaign.
+    # XXX Optional fields when the answer is part of a campaign.
     sample = models.ForeignKey(Sample, on_delete=models.CASCADE,
         related_name='answers')
-    rank = models.IntegerField(default=0,
-        help_text=_("used to order answers when presenting a sample."))
 
     class Meta:
         unique_together = ('sample', 'question', 'metric')
 
     def __str__(self):
-        return '%s-%d' % (self.sample.slug, self.rank)
+        return '%s-%d' % (self.sample.slug, self.question.slug)
 
     @property
     def as_text_value(self):
+        if self.unit.system in Unit.NUMERICAL_SYSTEMS:
+            return self.measured
         return Choice.objects.get(pk=self.measured).text
 
     def get_multiple_choices(self):
-        text = str(self.text)
+        text = Choice.objects.get(pk=self.measured).text
         return text.replace('[', '').replace(']', '').replace(
             'u\'', '').replace('\'', '').split(', ')
 
@@ -400,7 +427,7 @@ class EditableFilter(SlugTitleMixin, models.Model):
         help_text="Helpful tags")
 
     def __str__(self):
-        return self.slug
+        return str(self.slug)
 
     def as_kwargs(self):
         includes = {}
@@ -428,7 +455,7 @@ class EditablePredicate(models.Model):
     selector = models.CharField(max_length=255)
 
     def __str__(self):
-        return '%s-%d' % (self.portfolio.slug, self.rank)
+        return '%s-%d' % (self.portfolio.slug, int(self.rank))
 
     def as_kwargs(self):
         kwargs = {}
@@ -460,7 +487,7 @@ class Matrix(SlugTitleMixin, models.Model):
     cohorts = models.ManyToManyField(EditableFilter, related_name='matrices')
     cut = models.ForeignKey(EditableFilter,
         null=True, on_delete=models.SET_NULL, related_name='cuts')
-    extra = settings.get_extra_field_class()(null=True)
+    extra = get_extra_field_class()(null=True)
 
     def __str__(self):
-        return self.slug
+        return str(self.slug)

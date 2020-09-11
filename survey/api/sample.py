@@ -33,9 +33,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
-from ..compat import six
-from ..mixins import SampleMixin, IntervieweeMixin
-from ..models import Answer, Choice, EnumeratedQuestions, Sample, Unit
+from ..compat import six, is_authenticated
+from ..mixins import AccountMixin, SampleMixin
+from ..models import Answer, Choice, Sample, Unit
 from .serializers import (AnswerSerializer, SampleAnswerSerializer,
     SampleSerializer)
 from ..utils import datetime_or_now, get_question_model
@@ -44,12 +44,84 @@ from ..utils import datetime_or_now, get_question_model
 LOGGER = logging.getLogger(__name__)
 
 
+def update_or_create_answer(datapoint, question, sample, created_at,
+                            collected_by=None):
+    answer = None
+    created = False
+    measured = datapoint.get('measured', None)
+    metric = datapoint.get('metric', question.default_metric)
+    unit = datapoint.get('unit', metric.unit)
+    try:
+        with transaction.atomic():
+            if unit.system in Unit.NUMERICAL_SYSTEMS:
+                try:
+                    try:
+                        measured = str(int(measured))
+                    except ValueError:
+                        measured = '{:.0f}'.format(decimal.Decimal(measured))
+                    answer, created = Answer.objects.update_or_create(
+                        sample=sample, question=question,
+                        metric=metric, defaults={
+                            'measured': int(measured),
+                            'unit': unit,
+                            'created_at': created_at,
+                            'collected_by': collected_by})
+                except (ValueError, decimal.InvalidOperation, DataError) as err:
+                    # We cannot convert to integer (ex: "12.8kW/h")
+                    # or the value exceeds 32-bit representation.
+                    # XXX We store as a text value so it is not lost.
+                    LOGGER.warning(
+                        "\"%(measured)s\": %(err)s for '%(metric)s'",
+                        measured=measured.replace('"', '\\"'),
+                        err=str(err).strip(),
+                        metric=metric.title)
+                    unit = Unit.objects.get(slug='freetext')
+
+            if unit.system not in Unit.NUMERICAL_SYSTEMS:
+                if unit.system == Unit.SYSTEM_ENUMERATED:
+                    try:
+                        measured = Choice.objects.get(
+                            unit=unit, text=measured).pk
+                    except Choice.DoesNotExist:
+                        choices = Choice.objects.filter(unit=unit)
+                        raise ValidationError("'%s' is not a valid choice."\
+                            " Expected one of %s." % (measured,
+                            [choice.get('text', "")
+                             for choice in six.itervalues(choices)]))
+                else:
+                    choice_rank = Choice.objects.filter(
+                        unit=unit).aggregate(Max('rank')).get(
+                            'rank__max', 0)
+                    choice_rank = choice_rank + 1 if choice_rank else 1
+                    choice = Choice.objects.create(
+                        text=measured,
+                        unit=unit,
+                        rank=choice_rank)
+                    measured = choice.pk
+                answer, created = Answer.objects.update_or_create(
+                    sample=sample, question=question,
+                    metric=metric, defaults={
+                        'measured': measured,
+                        'unit': unit,
+                        'created_at': created_at,
+                        'collected_by': collected_by})
+    except DataError as err:
+        LOGGER.exception(err)
+        raise ValidationError(
+            "\"%(measured)s\": %(err)s for '%(metric)s'" % {
+                'measured': measured.replace('"', '\\"'),
+                'err': str(err).strip(),
+                'metric': metric.title})
+
+    return answer, created
+
+
 class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                     generics.RetrieveUpdateDestroyAPIView):
     """
-    Retrieve a survey datapoint
+    Retrieve a sample datapoint
 
-    Providing {sample} is a set of datapoints for {interviewee}, returns
+    Providing {sample} is a set of datapoints for {account}, returns
     the datapoint in {sample} for question ranked {rank} in the campaign
     {sample} is part of.
 
@@ -73,7 +145,6 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
     """
     serializer_class = AnswerSerializer
     lookup_rank_kwarg = 'rank'
-    lookup_field = 'rank'
 
     @property
     def metric(self):
@@ -87,9 +158,8 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
             if self.sample:
                 self._question = get_object_or_404(
                     get_question_model().objects.all(),
-                    enumeratedquestions__campaign=self.sample.survey,
-                    enumeratedquestions__rank=self.kwargs.get(
-                        self.lookup_rank_kwarg))
+                    enumeratedquestions__campaign=self.sample.campaign,
+                    enumeratedquestions__rank=self.rank)
             else:
                 self._question = None  # API docs get here.
         return self._question
@@ -100,9 +170,9 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
 
     def put(self, request, *args, **kwargs):
         """
-        Update a survey datapoint
+        Update a sample datapoint
 
-        Providing {sample} is a set of datapoints for {interviewee}, updates
+        Providing {sample} is a set of datapoints for {account}, updates
         the datapoint in {sample} for question ranked {rank} in the campaign
         {sample} is part of.
 
@@ -129,13 +199,14 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
                 "measured": 12
             }
         """
+        #pylint:disable=useless-super-delegation
         return super(AnswerAPIView, self).put(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
         """
-        Delete  a survey datapoint
+        Delete a sample datapoint
 
-        Providing {sample} is a set of datapoints for {interviewee}, deletes
+        Providing {sample} is a set of datapoints for {account}, deletes
         the datapoint in {sample} for question ranked {rank} in the campaign
         {sample} is part of.
 
@@ -147,6 +218,7 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
 
              DELETE /api/xia/sample/0123456789abcdef/1/ HTTP/1.1
         """
+        #pylint:disable=useless-super-delegation
         return super(AnswerAPIView, self).delete(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -183,85 +255,20 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
             status=status, headers=headers, first_answer=first_answer)
 
     def perform_update(self, serializer):
+        created_at = datetime_or_now()
         datapoint = serializer.validated_data
+
         measured = datapoint.get('measured', None)
         if not measured:
             return
-        created_at = datetime_or_now()
-        rank = EnumeratedQuestions.objects.get(
-            campaign=self.sample.survey,
-            question=self.question).rank
-        errors = []
-        try:
-            with transaction.atomic():
-                metric = datapoint.get('metric', self.question.default_metric)
-                unit = datapoint.get('unit', metric.unit)
-                if unit.system in Unit.NUMERICAL_SYSTEMS:
-                    try:
-                        try:
-                            measured = str(int(measured))
-                        except ValueError:
-                            measured = '{:.0f}'.format(
-                                decimal.Decimal(measured))
-                        Answer.objects.update_or_create(
-                            sample=self.sample, question=self.question,
-                            metric=metric, defaults={
-                                'measured': int(measured),
-                                'unit': unit,
-                                'created_at': created_at,
-                                'collected_by': self.request.user,
-                                'rank': rank})
-                    except (ValueError, decimal.InvalidOperation,
-                            DataError) as err:
-                        # We cannot convert to integer (ex: "12.8kW/h")
-                        # or the value exceeds 32-bit representation.
-                        # XXX We store as a text value so it is not lost.
-                        LOGGER.warning(
-                            "\"%(measured)s\": %(err)s for '%(metric)s'",
-                            measured=measured.replace('"', '\\"'),
-                            err=str(err).strip(),
-                            metric=metric.title)
-                        unit = Unit.objects.get(slug='freetext')
 
-                if unit.system not in Unit.NUMERICAL_SYSTEMS:
-                    if unit.system == Unit.SYSTEM_ENUMERATED:
-                        try:
-                            measured = Choice.objects.get(
-                                unit=unit, text=measured).pk
-                        except Choice.DoesNotExist:
-                            choices = Choice.objects.filter(unit=unit)
-                            raise ValidationError("'%s' is not a valid choice."\
-                                " Expected one of %s." % (measured, [
-                                    choice.get('text', "")
-                                       for choice in six.itervalues(choices)]))
-                    else:
-                        choice_rank = Choice.objects.filter(
-                            unit=unit).aggregate(Max('rank')).get(
-                                'rank__max', 0)
-                        choice_rank = choice_rank + 1 if choice_rank else 1
-                        choice = Choice.objects.create(
-                            text=measured,
-                            unit=unit,
-                            rank=choice_rank)
-                        measured = choice.pk
-                    Answer.objects.update_or_create(
-                        sample=self.sample, question=self.question,
-                        metric=metric, defaults={
-                            'measured': measured,
-                            'unit': unit,
-                            'created_at': created_at,
-                            'collected_by': self.request.user,
-                            'rank': rank})
-        except DataError as err:
-            LOGGER.exception(err)
-            errors += [
-                "\"%(measured)s\": %(err)s for '%(metric)s'" % {
-                    'measured': measured.replace('"', '\\"'),
-                    'err': str(err).strip(),
-                    'metric': metric.title}
-            ]
-        if errors:
-            raise ValidationError(errors)
+        user = self.request.user if is_authenticated(self.request) else None
+        update_or_create_answer(
+            datapoint,
+            question=self.question,
+            sample=self.sample,
+            created_at=created_at,
+            collected_by=user)
 
     def perform_create(self, serializer):
         return self.perform_update(serializer)
@@ -332,6 +339,7 @@ class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
             "time_spent": "00:00:00",
             "is_frozen": false,
          """
+        #pylint:disable=useless-super-delegation
         return super(SampleAPIView, self).put(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
@@ -349,6 +357,7 @@ class SampleAPIView(SampleMixin, generics.RetrieveUpdateDestroyAPIView):
 
             DELETE /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/ HTTP/1.1
         """
+        #pylint:disable=useless-super-delegation
         return super(SampleAPIView, self).delete(request, *args, **kwargs)
 
 
@@ -415,7 +424,6 @@ class SampleAnswersAPIView(SampleMixin, generics.ListCreateAPIView):
         ]
     }
     """
-    lookup_path_kwarg = 'path'
     serializer_class = SampleAnswerSerializer
 
     # Used to POST and create an answer.
@@ -423,18 +431,13 @@ class SampleAnswersAPIView(SampleMixin, generics.ListCreateAPIView):
     def question(self):
         if not hasattr(self, '_question'):
             self._question = get_object_or_404(
-                get_question_model().objects.all(),
-                path=self.kwargs.get(self.lookup_path_kwarg))
+                get_question_model().objects.all(), path=self.path)
         return self._question
 
     def get_queryset(self):
-        kwargs = {}
-        prefix = self.kwargs.get(self.lookup_path_kwarg)
-        if not prefix:
-            prefix = ""
         if self.sample.is_frozen:
             return Answer.objects.filter(sample=self.sample,
-                question__path__startswith=prefix).select_related(
+                question__path__startswith=self.path).select_related(
                     'question', 'metric', 'unit', 'collected_by')
 
         queryset = Answer.objects.raw("""SELECT
@@ -447,7 +450,7 @@ class SampleAnswersAPIView(SampleMixin, generics.ListCreateAPIView):
     answers.denominator AS denominator,
     answers.collected_by_id AS collected_by_id,
     answers.sample_id AS sample_id,
-    answers.rank AS rank,
+    survey_enumeratedquestions.rank AS rank,
     survey_enumeratedquestions.required AS required
 FROM survey_question
 INNER JOIN survey_enumeratedquestions
@@ -457,8 +460,8 @@ LEFT OUTER JOIN (SELECT * FROM survey_answer WHERE sample_id=%(sample)d)
 WHERE survey_enumeratedquestions.campaign_id = %(campaign)d
   AND survey_question.path LIKE '%(prefix)s%%%%';""" % {
       'sample': self.sample.pk,
-      'campaign': self.sample.survey.pk,
-      'prefix': prefix
+      'campaign': self.sample.campaign.pk,
+      'prefix': self.path
   }).prefetch_related(
       'question', 'question__default_metric', 'metric', 'unit', 'collected_by')
         return queryset
@@ -507,100 +510,34 @@ WHERE survey_enumeratedquestions.campaign_id = %(campaign)d
                 "unit": "kilograms"
             },
         """
+        #pylint:disable=useless-super-delegation
         return super(SampleAnswersAPIView, self).post(request, *args, **kwargs)
 
     def create(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument,too-many-locals,too-many-statements
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        created_at = datetime_or_now()
-        results = []
-        at_least_one_created = False
-        rank = EnumeratedQuestions.objects.get(
-            campaign=self.sample.survey,
-            question=self.question).rank
-        errors = []
         validated_data = serializer.validated_data
         if not isinstance(serializer.validated_data, list):
             validated_data = [serializer.validated_data]
-        for datapoint in validated_data:
-            measured = datapoint.get('measured', None)
-            try:
-                with transaction.atomic():
-                    metric = datapoint.get(
-                        'metric', self.question.default_metric)
-                    unit = datapoint.get('unit', metric.unit)
-                    if unit.system in Unit.NUMERICAL_SYSTEMS:
-                        try:
-                            try:
-                                measured = str(int(measured))
-                            except ValueError:
-                                measured = '{:.0f}'.format(
-                                    decimal.Decimal(measured))
-                            answer, created = Answer.objects.update_or_create(
-                                sample=self.sample, question=self.question,
-                                metric=metric, defaults={
-                                    'measured': int(measured),
-                                    'unit': unit,
-                                    'created_at': created_at,
-                                    'collected_by': self.request.user,
-                                    'rank': rank})
-                            results += [answer]
-                            if created:
-                                at_least_one_created = True
-                        except (ValueError,
-                            decimal.InvalidOperation, DataError) as err:
-                            # We cannot convert to integer (ex: "12.8kW/h")
-                            # or the value exceeds 32-bit representation.
-                            # XXX We store as a text value so it is not lost.
-                            LOGGER.warning(
-                                "\"%(measured)s\": %(err)s for '%(metric)s'" % {
-                                'measured': measured.replace('"', '\\"'),
-                                'err': str(err).strip(),
-                                'metric': metric.title})
-                            unit = Unit.objects.get(slug='freetext')
 
-                    if unit.system not in Unit.NUMERICAL_SYSTEMS:
-                        if unit.system == Unit.SYSTEM_ENUMERATED:
-                            try:
-                                measured = Choice.objects.get(
-                                    unit=unit, text=measured).pk
-                            except Choice.DoesNotExist:
-                                choices = Choice.objects.filter(unit=unit)
-                                raise ValidationError(
-                                    "'%s' is not a valid choice."\
-                                    " Expected one of %s." % (
-                                    measured, [choice.get('text', "")
-                                    for choice in six.itervalues(choices)]))
-                        else:
-                            choice_rank = Choice.objects.filter(
-                                unit=unit).aggregate(Max('rank')).get(
-                                    'rank__max', 0)
-                            choice_rank = choice_rank + 1 if choice_rank else 1
-                            choice = Choice.objects.create(
-                                text=measured,
-                                unit=unit,
-                                rank=choice_rank)
-                            measured = choice.pk
-                        answer, created = Answer.objects.update_or_create(
-                            sample=self.sample, question=self.question,
-                            metric=metric, defaults={
-                                'measured': measured,
-                                'unit': unit,
-                                'created_at': created_at,
-                                'collected_by': self.request.user,
-                                'rank': rank})
-                        results += [answer]
-                        if created:
-                            at_least_one_created = True
-            except DataError as err:
-                LOGGER.exception(err)
-                errors += [
-                    "\"%(measured)s\": %(err)s for '%(metric)s'" % {
-                        'measured': measured.replace('"', '\\"'),
-                        'err': str(err).strip(),
-                        'metric': metric.title}
-                ]
+        user = self.request.user if is_authenticated(self.request) else None
+        created_at = datetime_or_now()
+        at_least_one_created = False
+        results = []
+        errors = []
+
+        for datapoint in validated_data:
+            try:
+                answer, created = update_or_create_answer(
+                    datapoint, question=self.question,
+                    sample=self.sample, created_at=created_at,
+                    collected_by=user)
+                results += [answer]
+                if created:
+                    at_least_one_created = True
+            except ValidationError as err:
+                errors += [err]
         if errors:
             raise ValidationError(errors)
 
@@ -610,7 +547,8 @@ WHERE survey_enumeratedquestions.campaign_id = %(campaign)d
             status=HTTP_201_CREATED if at_least_one_created else HTTP_200_OK,
             headers=headers, first_answer=first_answer)
 
-    def _expand_choices(self, results):
+    @staticmethod
+    def _expand_choices(results):
         choices = []
         for answer in results:
             metric = (answer.metric if answer.metric
@@ -629,6 +567,38 @@ WHERE survey_enumeratedquestions.campaign_id = %(campaign)d
                           first_answer=False):#pylint:disable=unused-argument
         self._expand_choices(results)
         return http.Response(results, status=status, headers=headers)
+
+
+class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
+    """
+    Freezes all answers in the ``Sample``.
+
+    **Tags**: survey
+
+    **Examples**
+
+    .. code-block:: http
+
+        POST /api/sample/46f66f70f5ad41b29c4df08f683a9a7a/freeze/ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
+            "created_at": "2018-01-24T17:03:34.926193Z",
+            "campaign": "best-practices",
+            "is_frozen": true
+        }
+    """
+    serializer_class = SampleSerializer
+
+    def create(self, request, *args, **kwargs):
+        self.sample.is_frozen = True
+        self.sample.save()
+        serializer = self.get_serializer(self.sample)
+        return http.Response(serializer.data)
 
 
 class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
@@ -663,7 +633,7 @@ class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
             headers=headers)
 
 
-class SampleRecentCreateAPIView(IntervieweeMixin, mixins.RetrieveModelMixin,
+class SampleRecentCreateAPIView(AccountMixin, mixins.RetrieveModelMixin,
                                 generics.CreateAPIView):
     """
     Retrieves latest ``Sample`` for a profile.
@@ -693,6 +663,7 @@ class SampleRecentCreateAPIView(IntervieweeMixin, mixins.RetrieveModelMixin,
             account=self.account).order_by('-created_at').first()
 
     def get(self, request, *args, **kwargs):
+        #pylint:disable=useless-super-delegation
         return self.retrieve(request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
@@ -723,8 +694,9 @@ class SampleRecentCreateAPIView(IntervieweeMixin, mixins.RetrieveModelMixin,
                 "campaign": "best-practices"
             }
         """
+        #pylint:disable=useless-super-delegation
         return super(SampleRecentCreateAPIView, self).post(
             request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        serializer.save(account=self.interviewee)
+        serializer.save(account=self.account)

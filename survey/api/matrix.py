@@ -382,6 +382,7 @@ class EditableFilterListAPIView(SearchableListMixin,
                 ]
             }
         """
+        #pylint:disable=useless-super-delegation
         return super(EditableFilterListAPIView, self).post(
             request, *args, **kwargs)
 
@@ -469,6 +470,7 @@ class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
                 "likely_metric": ""
             }
         """
+        #pylint:disable=useless-super-delegation
         return super(EditableFilterDetailAPIView, self).put(
             request, *args, **kwargs)
 
@@ -484,6 +486,7 @@ class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
              DELETE /api/xia/matrix/filters/all/ HTTP/1.1
         """
+        #pylint:disable=useless-super-delegation
         return super(EditableFilterDetailAPIView, self).delete(
             request, *args, **kwargs)
 

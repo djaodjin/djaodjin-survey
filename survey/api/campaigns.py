@@ -91,4 +91,5 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
             DELETE /api/cowork/campaign/best-practices/ HTTP/1.1
         """
+        #pylint:disable=useless-super-delegation
         return super(CampaignAPIView, self).delete(request, *args, **kwargs)

@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -80,7 +80,7 @@ class QuestionFormMixin(CampaignQuestionMixin):
 
 class QuestionCreateView(QuestionFormMixin, CreateView):
     """
-    Create a new question within a survey.
+    Create a new question within a campaign.
     """
     template_name = 'survey/question_form.html'
 
@@ -97,7 +97,7 @@ class QuestionDeleteView(CampaignQuestionMixin, DeleteView):
 
 class QuestionListView(CampaignQuestionMixin, ListView):
     """
-    List of questions for a survey
+    List of questions for a campaign
     """
     template_name = 'survey/question_list.html'
 
@@ -110,7 +110,7 @@ class QuestionListView(CampaignQuestionMixin, ListView):
 
 class QuestionRankView(CampaignQuestionMixin, RedirectView):
     """
-    Update the rank of a question in a survey
+    Update the rank of a question in a campaign
     """
 
     pattern_name = 'survey_question_list'

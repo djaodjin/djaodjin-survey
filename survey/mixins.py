@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,15 +24,17 @@
 
 from __future__ import unicode_literals
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django.http import Http404
 from django.utils.translation import ugettext as _
 from rest_framework.generics import get_object_or_404
 
 from . import settings
+from .compat import is_authenticated
 from .models import (Campaign, EnumeratedQuestions, EditableFilter, Matrix,
     Sample)
-from .utils import get_account_model
+from .utils import get_account_model, get_belongs_model
 
 
 class AccountMixin(object):
@@ -40,8 +42,9 @@ class AccountMixin(object):
     Mixin to use in views that will retrieve an account object (out of
     ``account_queryset``) associated to a slug parameter (``account_url_kwarg``)
     in the URL.
-    The ``account`` property will be ``None`` if either ``account_url_kwarg``
-    is ``None`` or absent from the URL pattern.
+    If either ``account_url_kwarg`` is ``None`` or absent from the URL pattern,
+    ``account`` will default to the ``request.user`` when the account model is
+    compatible with the `User` model, else ``account`` will be ``None``.
     """
     account_queryset = get_account_model().objects.all()
     account_lookup_field = settings.ACCOUNT_LOOKUP_FIELD
@@ -77,82 +80,61 @@ class AccountMixin(object):
                         "the query") % {'verbose_name':
                         self.account_queryset.model._meta.verbose_name})
             else:
+                if (isinstance(get_account_model(), get_user_model()) and
+                    is_authenticated(self.request)):
+                    self._account = self.request.user
                 self._account = None
         return self._account
 
-    def get_context_data(self, *args, **kwargs):
-        context = super(AccountMixin, self).get_context_data(*args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(AccountMixin, self).get_context_data(**kwargs)
         context.update({'account': self.account})
         return context
-
-    def get_url_kwargs(self):
-        kwargs = {}
-        for url_kwarg in [self.account_url_kwarg]:
-            url_kwarg_val = self.kwargs.get(url_kwarg, None)
-            if url_kwarg_val:
-                kwargs.update({url_kwarg: url_kwarg_val})
-        return kwargs
-
-
-class IntervieweeMixin(object):
-    """
-    Returns an Account, either based on the interviewee or else, if none exists,
-    the request.user.
-    """
-
-    interviewee_slug = 'interviewee'
-
-    @property
-    def interviewee(self):
-        if not hasattr(self, '_interviewee'):
-            self._interviewee = self.get_interviewee()
-        return self._interviewee
-
-    def get_interviewee(self):
-        if (self.request and hasattr(self.request, 'user') and
-            self.request.user.is_authenticated()):
-            account_model = get_account_model()
-            try:
-                kwargs = {'%s__exact' % settings.ACCOUNT_LOOKUP_FIELD:
-                    self.kwargs.get(self.interviewee_slug)}
-                interviewee = get_object_or_404(
-                    account_model.objects.all(), **kwargs)
-            except account_model.DoesNotExist:
-                interviewee = self.request.user
-        else:
-            interviewee = None
-        return interviewee
 
     def get_reverse_kwargs(self):
         """
         List of kwargs taken from the url that needs to be passed through
         to ``get_success_url``.
         """
-        return [self.interviewee_slug, 'survey']
+        return [self.account_url_kwarg]
 
-    def get_url_context(self):
-        """
-        Returns ``kwargs`` value to use when calling ``reverse``
-        in ``get_success_url``.
-        """
+    def get_url_kwargs(self):
         kwargs = {}
-        for key in self.get_reverse_kwargs():
-            if key in self.kwargs and self.kwargs.get(key) is not None:
-                kwargs[key] = self.kwargs.get(key)
+        for url_kwarg in self.get_reverse_kwargs():
+            url_kwarg_val = self.kwargs.get(url_kwarg, None)
+            if url_kwarg_val:
+                kwargs.update({url_kwarg: url_kwarg_val})
         return kwargs
 
 
-class CampaignMixin(object):
+class BelongsMixin(AccountMixin):
+    """
+    Mixin to use in views that will retrieve an account object which
+    is associated to a campaign or matrix.
+    """
+    account_queryset = get_belongs_model().objects.all()
+    account_lookup_field = settings.BELONGS_LOOKUP_FIELD
+
+
+class CampaignQuerysetMixin(BelongsMixin):
+
+    def get_queryset(self):
+        if self.account:
+            return Campaign.objects.filter(account=self.account)
+        return Campaign.objects.all()
+
+
+class CampaignMixin(CampaignQuerysetMixin):
     """
     Returns a ``Campaign`` object associated with the request URL.
     """
-    survey_url_kwarg = 'survey'
+    campaign_url_kwarg = 'campaign'
 
     @property
     def campaign(self):
         if not hasattr(self, '_campaign'):
             self._campaign = get_object_or_404(Campaign.objects.all(),
-                slug=self.kwargs.get(self.survey_url_kwarg))
+                slug=self.kwargs.get(self.campaign_url_kwarg))
         return self._campaign
 
 
@@ -175,7 +157,7 @@ class CampaignQuestionMixin(CampaignMixin):
             rank=self.kwargs.get(self.num_url_kwarg, 1))
 
 
-class SampleMixin(IntervieweeMixin, CampaignMixin):
+class SampleMixin(AccountMixin):
     """
     Returns a ``Sample`` to a ``Campaign``.
     """
@@ -183,6 +165,24 @@ class SampleMixin(IntervieweeMixin, CampaignMixin):
     # We have to use a special url_kwarg here because 'sample'
     # interfers with the way rest_framework handles **kwargs.
     sample_url_kwarg = 'sample'
+    campaign_url_kwarg = 'campaign'
+    path_url_kwarg = 'path'
+
+    def get_reverse_kwargs(self):
+        """
+        List of kwargs taken from the url that needs to be passed through
+        to ``get_success_url``.
+        """
+        return super(SampleMixin, self).get_reverse_kwargs() + [
+            self.sample_url_kwarg, self.campaign_url_kwarg, self.path_url_kwarg]
+
+    @property
+    def path(self):
+        if not hasattr(self, '_path'):
+            self._path = self.kwargs.get(self.path_url_kwarg, '')
+            if self._path and not self._path.startswith('/'):
+                self._path = '/%s' % self._path
+        return self._path
 
     @property
     def sample(self):
@@ -203,36 +203,31 @@ class SampleMixin(IntervieweeMixin, CampaignMixin):
             # the user has rights to it.
             try:
                 sample = Sample.objects.filter(slug=sample_slug).select_related(
-                    'survey').get()
+                    'campaign').get()
             except Sample.DoesNotExist:
                 raise Http404("Cannot find Sample(slug='%s')" % sample_slug)
         else:
             # Well no id, let's see if we can find a sample from
-            # a survey slug and a account
-            campaign_slug = self.kwargs.get(self.survey_url_kwarg)
+            # a campaign slug and a account
+            campaign_slug = self.kwargs.get(self.campaign_url_kwarg)
             if campaign_slug:
-                interviewee = self.get_interviewee()
                 try:
-                    sample = Sample.objects.filter(account=interviewee,
-                        survey__slug=campaign_slug).select_related(
-                        'survey').get()
+                    sample = Sample.objects.filter(account=self.account,
+                        campaign__slug=campaign_slug).select_related(
+                        'campaign').get()
                 except Sample.DoesNotExist:
                     raise Http404("Cannot find Sample(account__slug='%s',"\
-                        " survey__slug='%s')" % (interviewee, campaign_slug))
+                        " campaign__slug='%s')" % (self.account, campaign_slug))
         return sample
 
-    def get_reverse_kwargs(self):
-        """
-        List of kwargs taken from the url that needs to be passed through
-        to ``get_success_url``.
-        """
-        return [self.interviewee_slug, 'survey', self.sample_url_kwarg]
 
+class MatrixQuerysetMixin(BelongsMixin):
 
-class MatrixQuerysetMixin(object):
-
-    @staticmethod
-    def get_queryset():
+    def get_queryset(self):
+        #pylint:disable=no-self-use
+        # We want to show all matrices but only populate with account data.
+        #if self.account:
+        #    return Matrix.objects.filter(account=self.account)
         return Matrix.objects.all()
 
 

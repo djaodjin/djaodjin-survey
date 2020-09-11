@@ -40,8 +40,8 @@ class MatrixListView(MatrixQuerysetMixin, ListView):
         context = super(MatrixListView, self).get_context_data(**kwargs)
         url_kwargs = self.get_url_kwargs()
         context.update({
-            'editable_filter_api': reverse(
-                'editable_filter_api_base', kwargs=url_kwargs),
+            'editable_filter_api': reverse('editable_filter_api',
+                kwargs=url_kwargs),
             'matrix_api_base': reverse(
                 'matrix_api_base', kwargs=url_kwargs),
         })
@@ -70,14 +70,16 @@ class MatrixDetailView(MatrixMixin, DetailView):
         for metric in metrics:
             if metric == self.object.metric:
                 metric.is_selected = True
-        url_kwargs = self.get_url_kwargs()
+        url_kwargs = {'editable_filter': ''}
+        url_kwargs.update(self.get_url_kwargs())
         context.update({
             'cohorts': self.get_cohorts(),
             'metrics': metrics,
-            'editable_filter_api_base': reverse(
-                'editable_filter_api_base', kwargs=url_kwargs),
+            'editable_filter_api_base': reverse('editable_filter_api',
+                kwargs=url_kwargs),
         })
-        url_kwargs.update({self.matrix_url_kwarg: "/%s" % self.object})
+        url_kwargs = {self.matrix_url_kwarg: str(self.object)}
+        url_kwargs.update(self.get_url_kwargs())
         context.update({
             'matrix_api': reverse('matrix_api', kwargs=url_kwargs),
         })
@@ -102,11 +104,11 @@ class RespondentListView(CampaignMixin, ListView):
 
     def get_queryset(self):
         return super(RespondentListView, self).get_queryset().filter(
-            survey=self.campaign, is_frozen=True)
+            campaign=self.campaign, is_frozen=True)
 
     def get_context_data(self, **kwargs):
         context = super(RespondentListView, self).get_context_data(**kwargs)
-        context.update({'survey': self.campaign})
+        context.update({'campaign': self.campaign})
         return context
 
 
@@ -118,11 +120,11 @@ class EditableFilterView(EditableFilterMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super(EditableFilterView, self).get_context_data(**kwargs)
         context.update(csrf(self.request))
-        url_kwargs = self.get_url_kwargs()
-        url_kwargs.update({'editable_filter': self.editable_filter})
+        url_kwargs = {'editable_filter': self.editable_filter}
+        url_kwargs.update(self.get_url_kwargs())
         context.update({
-            'editable_filter_api': reverse(
-                'editable_filter_api', kwargs=url_kwargs),
+            'editable_filter_api': reverse('editable_filter_api',
+                kwargs=url_kwargs),
             'objects_api': reverse(self.api_url, kwargs=url_kwargs)
         })
         return context
@@ -130,9 +132,9 @@ class EditableFilterView(EditableFilterMixin, TemplateView):
 
 class AccountListView(EditableFilterView):
 
-    api_url = 'accounts_api'
+    api_url = 'survey_api_accounts_filter'
 
 
 class QuestionListView(EditableFilterView):
 
-    api_url = 'questions_api'
+    api_url = 'survey_api_questions_filter'

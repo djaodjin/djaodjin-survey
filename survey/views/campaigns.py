@@ -25,15 +25,13 @@
 import datetime, json, logging
 
 from django.core.mail import send_mail
-from django.shortcuts import get_object_or_404
 from django.views.generic import (CreateView, DeleteView, DetailView,
     FormView, ListView, RedirectView, UpdateView)
-from django.views.generic.detail import SingleObjectMixin
 from django.template.defaultfilters import slugify
 
 from .. import settings
 from ..compat import six, reverse, reverse_lazy
-from ..mixins import AccountMixin
+from ..mixins import BelongsMixin, CampaignMixin
 from ..models import Answer, Campaign, Sample
 from ..forms import CampaignForm, SendCampaignForm
 from ..utils import get_question_model
@@ -42,14 +40,13 @@ from ..utils import get_question_model
 LOGGER = logging.getLogger(__name__)
 
 
-class CampaignCreateView(AccountMixin, CreateView):
+class CampaignCreateView(BelongsMixin, CreateView):
     """
-    Create a new survey
+    Create a new campaign
     """
 
     model = Campaign
     form_class = CampaignForm
-    slug_url_kwarg = 'survey'
     pattern_name = 'survey_edit'
 
     def get_initial(self):
@@ -64,21 +61,20 @@ class CampaignCreateView(AccountMixin, CreateView):
         return reverse_lazy(self.pattern_name, args=(self.object,))
 
 
-class CampaignDeleteView(DeleteView):
+class CampaignDeleteView(CampaignMixin, DeleteView):
     """
-    Delete a survey
+    Delete a campaign
     """
     model = Campaign
-    slug_url_kwarg = 'survey'
     success_url = reverse_lazy('survey_list')
 
 
-class CampaignListView(AccountMixin, ListView):
+class CampaignListView(BelongsMixin, ListView):
     """
-    List of surveys for an account.
+    List of campaigns for an account.
     """
     model = Campaign
-    slug_url_kwarg = 'survey'
+    slug_url_kwarg = 'campaign'
 
     def get_queryset(self):
         if self.account:
@@ -87,40 +83,36 @@ class CampaignListView(AccountMixin, ListView):
             queryset = Campaign.objects.all()
         return queryset
 
-    def get_context_data(self, *args, **kwargs):
-        context = super(CampaignListView, self).get_context_data(
-            *args, **kwargs)
+    def get_context_data(self, **kwargs):
+        context = super(CampaignListView, self).get_context_data(**kwargs)
         return context
 
 
-class CampaignPublishView(RedirectView):
+class CampaignPublishView(CampaignMixin, RedirectView):
     """
-    Toggle Publish/Publish for a survey.
+    Toggle Publish/Publish for a campaign.
     """
 
     url = 'survey_list'
-    slug_url_kwarg = 'survey'
+    slug_url_kwarg = 'campaign'
 
     def post(self, request, *args, **kwargs):
-        survey = get_object_or_404(Campaign,
-            slug__exact=kwargs.get('survey'))
-        if survey.active:
-            survey.active = False
+        campaign = self.campaign
+        if campaign.active:
+            campaign.active = False
         else:
-            survey.active = True
-            if not survey.created_at:
-                survey.created_at = datetime.datetime.now()
-        survey.save()
+            campaign.active = True
+            if not campaign.created_at:
+                campaign.created_at = datetime.datetime.now()
+        campaign.save()
         return super(CampaignPublishView, self).post(request, *args, **kwargs)
 
 
-class CampaignResultView(DetailView):
+class CampaignResultView(CampaignMixin, DetailView):
     """
-    Show the results of a survey.
+    Show the results of a campaign.
     """
-
     model = Campaign
-    slug_url_kwarg = 'survey'
     template_name = 'survey/result.html'
 
     def get_context_data(self, **kwargs):
@@ -128,9 +120,9 @@ class CampaignResultView(DetailView):
         context = super(CampaignResultView, self).get_context_data(**kwargs)
         question_model = get_question_model()
         number_interviewees = Sample.objects.filter(
-            survey=self.object).count()
+            campaign=self.object).count()
         questions = question_model.objects.filter(
-            survey=self.object).order_by('rank')
+            campaign=self.object).order_by('rank') #XXX rank
         # Answers that cannot be aggregated.
         #
         # The structure of the aggregated dataset returned to the client will
@@ -140,12 +132,12 @@ class CampaignResultView(DetailView):
         #   ... ]
         individuals = []
         for question in question_model.objects.filter(
-            survey=self.object, question_type=question_model.TEXT):
+            campaign=self.object, question_type=question_model.TEXT):
             individuals += [{
-                 'key': slugify("%d" % question.rank),
+                 'key': slugify("%d" % question.rank), # XXX rank
 # XXX Might be better
 #                'key': slugify("%s-%d"
-#                    % (question.survey.slug, question.rank)),
+#                    % (question.campaign.slug, question.rank)),
                 'values': Answer.objects.filter(
                     question=question).values('text')}]
 
@@ -162,36 +154,19 @@ class CampaignResultView(DetailView):
         aggregates = []
         with_errors = {}
         for question in question_model.objects.filter(
-            survey=self.object).exclude(question_type=question_model.TEXT):
+            campaign=self.object).exclude(question_type=question_model.TEXT):
             aggregate = {}
             for choice, _ in question.choices:
                 aggregate[choice] = 0
 
             # Populate the aggregate
             for answer in Answer.objects.filter(question=question):
-                if question.question_type == question_model.INTEGER:
-                    choice = answer.measured
-                    if choice in aggregate:
-                        aggregate[choice] = aggregate[choice] + 1
-                    else:
-                        with_errors[question] = with_errors.get(
-                            question, []) + [answer]
-
-                elif question.question_type == question_model.RADIO:
-                    choice = answer.measured
-                    if choice in aggregate:
-                        aggregate[choice] = aggregate[choice] + 1
-                    else:
-                        with_errors[question] = with_errors.get(
-                            question, []) + [answer]
-
-                elif question.question_type == question_model.SELECT_MULTIPLE:
-                    for choice in answer.get_multiple_choices():
-                        if choice in aggregate:
-                            aggregate[choice] = aggregate[choice] + 1
-                        else:
-                            with_errors[question] = with_errors.get(
-                                question, []) + [answer]
+                choice = answer.measured
+                if choice in aggregate:
+                    aggregate[choice] = aggregate[choice] + 1
+                else:
+                    with_errors[question] = with_errors.get(
+                        question, []) + [answer]
 
             # Convert to json-ifiable format
             values = []
@@ -204,15 +179,15 @@ class CampaignResultView(DetailView):
                     values += [{"label": label, "value": value}]
             aggregates += [{
                 # XXX Might be better to use 'key': slugify("%s-%d"
-                #     % (question.survey.slug, question.rank))
-                'key': slugify("%d" % question.rank),
+                #     % (question.campaign.slug, question.rank))
+                'key': slugify("%d" % question.rank),  # XXX rank
                 'values': values}]
         if with_errors:
             LOGGER.error("Answers with an invalid choice\n%s",
                 with_errors, extra={'request': self.request})
 
         context.update({
-                'survey': self.object,
+                'campaign': self.object,
                 'questions': questions,
                 'number_interviewees': number_interviewees,
                 'individuals': individuals,
@@ -223,14 +198,12 @@ class CampaignResultView(DetailView):
         return context
 
 
-class CampaignSendView(SingleObjectMixin, FormView):
+class CampaignSendView(CampaignMixin, FormView):
     """
-    Send an email to a set of users to take a survey.
+    Send an email to a set of users to take a campaign.
     """
-
     model = Campaign
     form_class = SendCampaignForm
-    slug_url_kwarg = 'survey'
     template_name = 'survey/send.html'
     success_url = reverse_lazy('survey_list')
 
@@ -239,10 +212,10 @@ class CampaignSendView(SingleObjectMixin, FormView):
         self.object = None
 
     def get_initial(self):
-        self.object = self.get_object()
+        self.object = self.campaign
         kwargs = super(CampaignSendView, self).get_initial()
         kwargs.update({'from_address': settings.DEFAULT_FROM_EMAIL,
-            'message': "Please complete our quick survey at %s"
+            'message': "Please complete our quick campaign at %s"
             % self.request.build_absolute_uri(
                     reverse('survey_sample_new', args=(self.object,)))})
         return kwargs
@@ -256,12 +229,10 @@ class CampaignSendView(SingleObjectMixin, FormView):
         return super(CampaignSendView, self).form_valid(form)
 
 
-class CampaignUpdateView(UpdateView):
+class CampaignUpdateView(CampaignMixin, UpdateView):
     """
-    Update an existing survey.
+    Update an existing campaign.
     """
-
     model = Campaign
     form_class = CampaignForm
-    slug_url_kwarg = 'survey'
     success_url = reverse_lazy('survey_list')

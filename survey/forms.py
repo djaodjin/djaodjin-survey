@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,13 +30,12 @@ from django import forms
 from django.template.defaultfilters import slugify
 
 from .compat import six
-from .models import Answer, Campaign, Choice, EnumeratedQuestions, Sample, Unit
+from .models import Answer, Campaign, EnumeratedQuestions, Sample
 from .utils import get_question_model
 
 
 def _create_field(question_type, text,
                   has_other=False, required=False, choices=None):
-    choices = [(choice, choice) for choice in choices]
     fields = (None, None)
     question_model = get_question_model()
     if question_type == question_model.TEXT:
@@ -89,9 +88,9 @@ class AnswerForm(forms.ModelForm):
         elif 'question' in kwargs.get('initial', {}):
             question = kwargs['initial']['question']
         required = True
-        if self.instance.sample and self.instance.sample.survey:
+        if self.instance.sample and self.instance.sample.campaign:
             campaign_attrs = EnumeratedQuestions.objects.filter(
-                campaign=self.instance.sample.survey,
+                campaign=self.instance.sample.campaign,
                 question=question).first()
             if campaign_attrs:
                 required = campaign_attrs.required
@@ -100,16 +99,8 @@ class AnswerForm(forms.ModelForm):
         self.fields['text'] = fields[0]
 
     def save(self, commit=True):
-        if not self.instance.metric:
-            self.instance.metric = self.instance.question.default_metric
-        if self.instance.metric.unit in Unit.NUMERICAL_SYSTEMS:
-            self.instance.measured = int(self.cleaned_data['text'])
-        else:
-            choice, _ = Choice.objects.get_or_create(
-                unit=self.instance.metric.unit,
-                text=self.cleaned_data['text'])
-            self.instance.measured = choice.pk
-        return super(AnswerForm, self).save(commit)
+        # We same in the view.
+        pass
 
 
 class QuestionForm(forms.ModelForm):
@@ -135,7 +126,7 @@ class SampleCreateForm(forms.ModelForm):
             key = 'question-%d' % (idx + 1)
             required = True
             campaign_attrs = EnumeratedQuestions.objects.filter(
-                campaign=self.instance.survey,
+                campaign=self.instance.campaign,
                 question=question).first()
             if campaign_attrs:
                 required = campaign_attrs.required
@@ -159,8 +150,8 @@ class SampleCreateForm(forms.ModelForm):
     def save(self, commit=True):
         if 'account' in self.initial:
             self.instance.account = self.initial['account']
-        if 'survey' in self.initial:
-            self.instance.survey = self.initial['survey']
+        if 'campaign' in self.initial:
+            self.instance.campaign = self.initial['campaign']
         self.instance.slug = slugify(uuid.uuid4().hex)
         return super(SampleCreateForm, self).save(commit)
 
@@ -176,20 +167,22 @@ class SampleUpdateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(SampleUpdateForm, self).__init__(*args, **kwargs)
-        for answer in self.instance.answers.order_by('rank'):
+        for idx, answer in enumerate(self.instance.get_answers_by_rank()):
             question = answer.question
             required = True
+            rank = idx
             campaign_attrs = EnumeratedQuestions.objects.filter(
-                campaign=self.instance.survey,
+                campaign=self.instance.campaign,
                 question=question).first()
             if campaign_attrs:
                 required = campaign_attrs.required
+                rank = campaign_attrs.rank
             fields = _create_field(question.question_type, question.text,
                 required=required, choices=question.choices)
             # XXX set value.
-            self.fields['question-%d' % answer.rank] = fields[0]
+            self.fields['question-%d' % rank] = fields[0]
             if fields[1]:
-                self.fields['other-%d' % answer.rank] = fields[1]
+                self.fields['other-%d' % rank] = fields[1]
 
 
 class CampaignForm(forms.ModelForm):
@@ -200,12 +193,13 @@ class CampaignForm(forms.ModelForm):
 
     def clean_title(self):
         """
-        Creates a slug from the survey title and checks it does not yet exists.
+        Creates a slug from the campaign title and
+        checks it does not yet exists.
         """
         slug = slugify(self.cleaned_data.get('title'))
         if Campaign.objects.filter(slug__exact=slug).exists():
             raise forms.ValidationError(
-                "Title conflicts with an existing survey.")
+                "Title conflicts with an existing campaign.")
         return self.cleaned_data['title']
 
     def save(self, commit=True):
@@ -223,4 +217,4 @@ class SendCampaignForm(forms.Form):
         widget=forms.Textarea,
         help_text="add email addresses separated by new line")
     message = forms.CharField(widget=forms.Textarea,
-       help_text="You can explain the aim of this survey")
+       help_text="You can explain the aim of this campaign")

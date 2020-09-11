@@ -44,6 +44,7 @@ try:
 except ImportError: # django < 1.8
     from django.db.models.loading import get_model
 
+#pylint:disable=bad-except-order
 try:
     from django.urls import NoReverseMatch, reverse, reverse_lazy
 except ImportError: # <= Django 1.10, Python<3.6
@@ -56,3 +57,9 @@ try:
     from django.template.context_processors import csrf
 except ImportError: # django < 1.8
     from django.core.context_processors import csrf
+
+
+def is_authenticated(request):
+    if callable(request.user.is_authenticated):
+        return request.user.is_authenticated()
+    return request.user.is_authenticated
