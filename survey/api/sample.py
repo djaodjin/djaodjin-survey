@@ -450,7 +450,7 @@ class SampleAnswersAPIView(SampleMixin, generics.ListCreateAPIView):
     answers.denominator AS denominator,
     answers.collected_by_id AS collected_by_id,
     answers.sample_id AS sample_id,
-    survey_enumeratedquestions.rank AS rank,
+    survey_enumeratedquestions.rank AS _rank,
     survey_enumeratedquestions.required AS required
 FROM survey_question
 INNER JOIN survey_enumeratedquestions
