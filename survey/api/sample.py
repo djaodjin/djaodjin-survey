@@ -71,10 +71,10 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                     # or the value exceeds 32-bit representation.
                     # XXX We store as a text value so it is not lost.
                     LOGGER.warning(
-                        "\"%(measured)s\": %(err)s for '%(metric)s'",
-                        measured=measured.replace('"', '\\"'),
-                        err=str(err).strip(),
-                        metric=metric.title)
+                        "\"%(measured)s\": %(err)s for '%(metric)s'" % {
+                        'measured': measured.replace('"', '\\"'),
+                        'err': str(err).strip(),
+                        'metric': metric.title})
                     unit = Unit.objects.get(slug='freetext')
 
             if unit.system not in Unit.NUMERICAL_SYSTEMS:
@@ -528,6 +528,9 @@ WHERE survey_enumeratedquestions.campaign_id = %(campaign)d
         errors = []
 
         for datapoint in validated_data:
+            measured = datapoint.get('measured', None)
+            if not measured:
+                continue
             try:
                 answer, created = update_or_create_answer(
                     datapoint, question=self.question,

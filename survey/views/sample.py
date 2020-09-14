@@ -118,6 +118,9 @@ class AnswerUpdateView(SampleMixin, UpdateView):
         else:
             datapoints = [{'measured': form.cleaned_data['text']}]
         for datapoint in datapoints:
+            measured = datapoint.get('measured', None)
+            if not measured:
+                continue
             try:
                 with transaction.atomic():
                     created_at = datetime_or_now()

@@ -398,13 +398,20 @@ class Answer(models.Model):
         unique_together = ('sample', 'question', 'metric')
 
     def __str__(self):
-        return '%s-%d' % (self.sample.slug, self.question.slug)
+        return '%s-%d' % (self.sample.slug, self.rank)
 
     @property
     def as_text_value(self):
         if self.unit.system in Unit.NUMERICAL_SYSTEMS:
             return self.measured
         return Choice.objects.get(pk=self.measured).text
+
+    @property
+    def rank(self):
+        if not hasattr(self, '_rank'):
+            self._rank = EnumeratedQuestions.objects.get(
+                campaign=self.sample.campaign, question=self.question).rank
+        return self._rank
 
     def get_multiple_choices(self):
         text = Choice.objects.get(pk=self.measured).text
