@@ -22,31 +22,25 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from distutils.core import setup
-import survey
+import json
 
-setup(
-    name='djaodjin-survey',
-    version=survey.__version__,
-    author='The DjaoDjin Team',
-    author_email='support@djaodjin.com',
-    packages=['survey',
-              'survey.api',
-              'survey.templatetags',
-              'survey.urls',
-              'survey.urls.api',
-              'survey.urls.api.sample',
-              'survey.views'],
-    package_data={'survey': [
-        'static/css/*',
-        'static/js/*',
-        'templates/survey/*',
-        'templates/survey/campaigns/*',
-        'templates/survey/matrix/*']},
-    url='https://github.com/djaodjin/djaodjin-survey/',
-    download_url='https://github.com/djaodjin/djaodjin-survey/tarball/%s' \
-        % survey.__version__,
-    license='BSD',
-    description='Survey Django app',
-    long_description=open('README.md').read(),
-)
+from django import template
+from django.contrib.messages.api import get_messages
+from django.forms import BaseForm
+from django.utils.safestring import mark_safe
+from survey.compat import is_authenticated as is_authenticated_base, six
+
+
+register = template.Library()
+
+
+@register.filter()
+def is_authenticated(request):
+    return is_authenticated_base(request)
+
+
+@register.filter
+def to_json(value):
+    if isinstance(value, six.string_types):
+        return value
+    return mark_safe(json.dumps(value))

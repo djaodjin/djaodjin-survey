@@ -1,6 +1,6 @@
-Django==2.2.13
+Django==2.2.27
 django-extra-views==0.13.0
-djangorestframework==3.10
+djangorestframework==3.12.4
 
 # testsite-only
 django-debug-toolbar==2.1

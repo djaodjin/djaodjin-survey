@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,10 +24,12 @@
 
 from django.conf.urls import url
 
-from ...api.campaigns import CampaignAPIView
+from ...api.campaigns import CampaignAPIView, CampaignListAPIView
 from ...settings import SLUG_RE
 
 urlpatterns = [
-   url(r'^(?P<campaign>%s)/?' % SLUG_RE,
+   url(r'^campaigns/(?P<campaign>%s)$' % SLUG_RE,
        CampaignAPIView.as_view(), name='survey_api_campaign'),
+  url(r'^campaigns$',
+       CampaignListAPIView.as_view(), name='survey_api_campaign_list'),
 ]

@@ -22,31 +22,40 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from distutils.core import setup
-import survey
+import logging
 
-setup(
-    name='djaodjin-survey',
-    version=survey.__version__,
-    author='The DjaoDjin Team',
-    author_email='support@djaodjin.com',
-    packages=['survey',
-              'survey.api',
-              'survey.templatetags',
-              'survey.urls',
-              'survey.urls.api',
-              'survey.urls.api.sample',
-              'survey.views'],
-    package_data={'survey': [
-        'static/css/*',
-        'static/js/*',
-        'templates/survey/*',
-        'templates/survey/campaigns/*',
-        'templates/survey/matrix/*']},
-    url='https://github.com/djaodjin/djaodjin-survey/',
-    download_url='https://github.com/djaodjin/djaodjin-survey/tarball/%s' \
-        % survey.__version__,
-    license='BSD',
-    description='Survey Django app',
-    long_description=open('README.md').read(),
-)
+from django.views.generic.base import TemplateView
+
+from ..compat import reverse
+from ..mixins import AccountMixin
+from ..utils import update_context_urls
+
+LOGGER = logging.getLogger(__name__)
+
+
+class PortfoliosView(AccountMixin, TemplateView):
+
+    template_name = 'survey/portfolios.html'
+
+    def get_context_data(self, **kwargs):
+        context = super(PortfoliosView, self).get_context_data(**kwargs)
+        urls = {
+            'survey_api_portfolios_grants':
+                reverse('survey_api_portfolios_grants'),
+            'survey_api_portfolios_requests':
+                reverse('survey_api_portfolios_requests'),
+            'survey_api_portfolios_received':
+                reverse('survey_api_portfolios_received'),
+        }
+        try:
+            urls.update({
+                'api_account_candidates': reverse('api_account_candidates'),
+                'api_grant_allowed_candidates':
+                    reverse('api_grant_allowed_candidates'),
+            })
+        except NoReverseMatch:
+            # We just don't have a way to find candidates to grant and request
+            # portfolios from.
+            pass
+        update_context_urls(context, urls)
+        return context

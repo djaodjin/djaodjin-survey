@@ -46,54 +46,17 @@ LOGGER = logging.getLogger(__name__)
 
 class MatrixCreateAPIView(generics.ListCreateAPIView):
     """
-    Filtered list of ``Question``.
+    Lists matrices
 
     **Examples**:
 
     .. code-block:: http
 
-        GET /api/matrix/
+        GET /api/matrix/ HTTP/1.1
 
-        Response:
+    responds
 
-        {
-           "slug": "all",
-           "title": "All accounts against all questions",
-           "metric": {
-               "slug": "all-questions",
-               "title": "All questions",
-               "predicates": []
-           },
-           "cohorts": [{
-               "slug": "all-accounts",
-               "title": "All accounts",
-               "predicates": []
-           }]
-        }
-
-
-    .. code-block:: http
-
-        POST /api/matrix/
-
-        {
-           "slug": "all",
-           "title": "All accounts against all questions",
-           "metric": {
-               "slug": "all-questions",
-               "title": "All questions",
-               "predicates": []
-           },
-           "cohorts": [{
-               "slug": "all-accounts",
-               "title": "All accounts",
-               "predicates": []
-           }]
-        }
-
-        Response:
-
-        201 CREATED
+    .. code-block:: json
 
         {
            "slug": "all",
@@ -115,25 +78,76 @@ class MatrixCreateAPIView(generics.ListCreateAPIView):
     def get_queryset(self):
         return Matrix.objects.all()
 
+    def post(self, request, *args, **kwargs):
+        """
+        Creates a new matrix
+
+        .. code-block:: http
+
+            POST /api/matrix/ HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "slug": "all",
+              "title": "All accounts against all questions",
+              "metric": {
+                "slug": "all-questions",
+                "title": "All questions",
+                "predicates": []
+              },
+              "cohorts": [{
+                "slug": "all-accounts",
+                "title": "All accounts",
+                "predicates": []
+              }]
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+              "slug": "all",
+              "title": "All accounts against all questions",
+              "metric": {
+                "slug": "all-questions",
+                "title": "All questions",
+                "predicates": []
+              },
+              "cohorts": [{
+                "slug": "all-accounts",
+                "title": "All accounts",
+                "predicates": []
+              }]
+            }
+        """
+        #pylint:disable=useless-super-delegation
+        return super(MatrixCreateAPIView, self).post(request, *args, **kwargs)
+
 
 class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
     """
-    A table of scores for cohorts aganist a metric.
+    Retrieves a matrix of scores for cohorts aganist a metric.
 
-    **Examples**:
+    **Tags**: reporting
+
+    **Examples**
 
     .. code-block:: http
 
-        GET /api/matrix/languages
+        GET /api/matrix/languages HTTP/1.1
 
-        Response:
+   responds
+
+    .. code-block:: json
 
         [{
            "slug": "languages",
            "title": "All cohorts for all questions"
-           "scores":{
-               "portfolio-a": "0.1",
-               "portfolio-b": "0.5",
+           "values": {
+               "portfolio-a": 0.1,
+               "portfolio-b": 0.5
            }
         }]
     """
@@ -142,6 +156,58 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'slug'
     lookup_url_kwarg = 'path'
     question_model = get_question_serializer().Meta.model
+
+    def put(self, request, *args, **kwargs):
+        """
+        Updates a matrix of scores for cohorts against a metric
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+            PUT /api/matrix/languages HTTP/1.1
+
+        .. code-block:: json
+
+            {
+              "title": "Average scores by supplier industry sub-sector",
+              "cohorts": []
+            }
+
+        responds
+
+        .. code-block:: json
+
+            [{
+              "slug": "languages",
+              "title": "All cohorts for all questions"
+              "values":{
+                "portfolio-a": "0.1",
+                 "portfolio-b": "0.5",
+             }
+            }]
+        """
+        #pylint:disable=useless-super-delegation
+        return super(MatrixDetailAPIView, self).put(
+            request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Deletes a matrix of scores for cohorts against a metric
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+            DELETE /api/matrix/languages HTTP/1.1
+        """
+        #pylint:disable=useless-super-delegation
+        return super(MatrixDetailAPIView, self).put(
+            request, *args, **kwargs)
 
     def aggregate_scores(self, metric, cohorts, cut=None, accounts=None):
         #pylint:disable=unused-argument,too-many-locals
@@ -281,15 +347,15 @@ class EditableFilterQuerysetMixin(object):
 class EditableFilterListAPIView(SearchableListMixin,
                 EditableFilterQuerysetMixin, generics.ListCreateAPIView):
     """
-    List fitlers
+    Lists fitlers
 
-    **Tags**: survey
+    **Tags**: reporting
 
     **Examples**
 
     .. code-block:: http
 
-         GET /api/xia/matrix/filters/ HTTP/1.1
+         GET /api/xia/matrix/filters HTTP/1.1
 
     responds
 
@@ -297,34 +363,38 @@ class EditableFilterListAPIView(SearchableListMixin,
 
         {
             "count": 2,
-            previous: null,
-            next: null,
-            results: [
+            "previous": null,
+            "next": null,
+            "results": [
                 {
-                    "slug": "all",
-                    "title": "All",
-                    "tags": "",
+                    "slug": "construction",
+                    "title": "Construction",
+                    "tags": "cohort",
                     "predicates": [
-                        "rank": 1,
-                        "operator": "",
-                        "operand": "",
-                        "field": "",
-                        "selector": ""
+                    {
+                        "rank": 0,
+                        "operator": "contains",
+                        "operand": "construction",
+                        "field": "extra",
+                        "selector": "keepmatching"
+                    }
                     ],
-                    "likely_metric": ""
+                    "likely_metric": null
                 },
                 {
-                    "slug": "none",
-                    "title": "None",
-                    "tags": "",
+                    "slug": "boxes-and-enclosures",
+                    "title": "Boxes and enclosures",
+                    "tags": "metric",
                     "predicates": [
-                        "rank": 1,
-                        "operator": "",
-                        "operand": "",
-                        "field": "",
-                        "selector": ""
-                    ],
-                    "likely_metric": ""
+                    {
+                        "rank": 0,
+                        "operator": "startsWith",
+                        "operand": "/metal/boxes-and-enclosures/",
+                        "field": "path",
+                        "selector": "keepmatching"
+                     }
+                     ],
+                     "likely_metric": null
                 }
             ]
         }
@@ -334,52 +404,52 @@ class EditableFilterListAPIView(SearchableListMixin,
 
     def post(self, request, *args, **kwargs):
         """
-        Create a fitler
+        Creates a fitler
 
-        **Tags**: survey
+        **Tags**: reporting
 
         **Examples**
 
         .. code-block:: http
 
-             POST /api/xia/matrix/filters/ HTTP/1.1
+             POST /api/xia/matrix/filters HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "slug": "construction",
+                "title": "Construction",
+                "tags": "cohort",
+                "predicates": [
+                {
+                    "rank": 0,
+                    "operator": "contains",
+                    "operand": "construction",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }
+                ],
+                "likely_metric": null
+            }
 
         responds
 
         .. code-block:: json
 
             {
-                "count": 2,
-                previous: null,
-                next: null,
-                results: [
-                    {
-                        "slug": "all",
-                        "title": "All",
-                        "tags": "",
-                        "predicates": [
-                            "rank": 1,
-                            "operator": "",
-                            "operand": "",
-                            "field": "",
-                            "selector": ""
-                        ],
-                        "likely_metric": ""
-                    },
-                    {
-                        "slug": "none",
-                        "title": "None",
-                        "tags": "",
-                        "predicates": [
-                            "rank": 1,
-                            "operator": "",
-                            "operand": "",
-                            "field": "",
-                            "selector": ""
-                        ],
-                        "likely_metric": ""
-                    }
-                ]
+                "slug": "construction",
+                "title": "Construction",
+                "tags": "cohort",
+                "predicates": [
+                {
+                    "rank": 0,
+                    "operator": "contains",
+                    "operand": "construction",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }
+                ],
+                "likely_metric": null
             }
         """
         #pylint:disable=useless-super-delegation
@@ -389,32 +459,32 @@ class EditableFilterListAPIView(SearchableListMixin,
 
 class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
-    Retrieve a fitler
+    Retrieves a fitler
 
-    **Tags**: survey
+    **Tags**: reporting
 
     **Examples**
 
     .. code-block:: http
 
-         GET /api/xia/matrix/filters/all/ HTTP/1.1
+         GET /api/energy-utility/matrix/filters/suppliers HTTP/1.1
 
     responds
 
     .. code-block:: json
 
         {
-            "slug": "all",
-            "title": "All",
-            "tags": "",
-            "predicates": [
+            "slug": "suppliers",
+            "title": "Energy utility suppliers",
+            "tags": "cohort, aggregate",
+            "predicates": [{
                 "rank": 1,
-                "operator": "",
-                "operand": "",
-                "field": "",
-                "selector": ""
-            ],
-            "likely_metric": ""
+                "operator": "contains",
+                "operand": "Energy",
+                "field": "extra",
+                "selector": "keepmatching"
+            }],
+            "likely_metric": null
         }
     """
     serializer_class = EditableFilterSerializer
@@ -428,28 +498,28 @@ class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         """
         Updates a fitler
 
-        **Tags**: survey
+        **Tags**: reporting
 
         **Examples**
 
         .. code-block:: http
 
-             PUT /api/xia/matrix/filters/all/ HTTP/1.1
+             PUT /api/energy-utility/matrix/filters/suppliers HTTP/1.1
 
         .. code-block:: json
 
             {
-                "slug": "all",
-                "title": "All",
-                "tags": "",
-                "predicates": [
+                "slug": "suppliers",
+                "title": "Energy utility suppliers",
+                "tags": "cohort, aggregate",
+                "predicates": [{
                     "rank": 1,
-                    "operator": "",
-                    "operand": "",
-                    "field": "",
-                    "selector": ""
-                ],
-                "likely_metric": ""
+                    "operator": "contains",
+                    "operand": "Energy",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }],
+                "likely_metric": null
             }
 
         responds
@@ -457,17 +527,17 @@ class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         .. code-block:: json
 
             {
-                "slug": "all",
-                "title": "All",
-                "tags": "",
-                "predicates": [
+                "slug": "suppliers",
+                "title": "Energy utility suppliers",
+                "tags": "cohort, aggregate",
+                "predicates": [{
                     "rank": 1,
-                    "operator": "",
-                    "operand": "",
-                    "field": "",
-                    "selector": ""
-                ],
-                "likely_metric": ""
+                    "operator": "contains",
+                    "operand": "Energy",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }],
+                "likely_metric": null
             }
         """
         #pylint:disable=useless-super-delegation
@@ -478,13 +548,13 @@ class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         """
         Deletes a fitler
 
-        **Tags**: survey
+        **Tags**: reporting
 
         **Examples**
 
         .. code-block:: http
 
-             DELETE /api/xia/matrix/filters/all/ HTTP/1.1
+             DELETE /api/energy-utility/matrix/filters/suppliers HTTP/1.1
         """
         #pylint:disable=useless-super-delegation
         return super(EditableFilterDetailAPIView, self).delete(
@@ -513,13 +583,13 @@ class EditableFilterObjectsAPIView(generics.ListAPIView):
     """
     List filter objects
 
-    **Tags**: survey
+    **Tags**: reporting
 
     **Examples**
 
     .. code-block:: http
 
-         GET /api/xia/matrix/filters/ HTTP/1.1
+         GET /api/xia/matrix/filters HTTP/1.1
 
     responds
 
@@ -550,22 +620,27 @@ class AccountListAPIView(EditableFilterObjectsAPIView):
     """
     Filtered list of ``EditableFilter``.
 
+    **Tags**: reporting
+
     **Examples**:
 
     .. code-block:: http
 
-        GET /api/questions/languages
+        GET /api/supplier-1/matrix/accounts/languages HTTP/1.1
 
-        Response:
+    responds
+
+    .. code-block:: json
 
         {
-           "slug": "languages",
-           "title": "All questions related to languages"
-           "predicates":[{
-               "operator": "contains",
-               "operand": "language",
-               "field": "text",
-               "selector":"keepmatching"
+            "count": 1,
+            "previous": null,
+            "next": null,
+            "results": [
+            {
+               "slug": "supplier-1",
+               "full_name": "Supplier 1",
+               "email": "supplier-1@localhost.localdomain"
            }]
         }
     """
@@ -576,23 +651,29 @@ class QuestionListAPIView(EditableFilterObjectsAPIView):
     """
     Filtered list of ``Question``.
 
+    **Tags**: reporting
+
     **Examples**:
 
     .. code-block:: http
 
-        GET /api/questions/languages
+        GET /api/supplier-1/matrix/questions/languages HTTP/1.1
 
-        Response:
+    responds
+
+    .. code-block:: json
 
         {
-           "slug": "languages",
-           "title": "All questions related to languages"
-           "predicates":[{
+            "count": 1,
+            "previous": null,
+            "next": null,
+            "results": [
+            {
                "operator": "contains",
                "operand": "language",
                "field": "text",
                "selector":"keepmatching"
-           }]
+            }]
         }
     """
     serializer_class = get_question_serializer()

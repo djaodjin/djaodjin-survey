@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,9 @@ import logging
 
 from rest_framework import generics
 
-from ..mixins import CampaignMixin
-from .serializers import CampaignSerializer
+from ..mixins import CampaignMixin, CampaignQuerysetMixin, DateRangeContextMixin
+from .serializers import CampaignSerializer, CampaignCreateSerializer
+from ..filters import DateRangeFilter, OrderingFilter, SearchFilter
 
 
 LOGGER = logging.getLogger(__name__)
@@ -39,34 +40,88 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
     Retrieves the details of a ``Campaign``.
 
-    **Tags**: survey
+    **Tags**: assessments
 
     **Examples**
 
     .. code-block:: http
 
-        GET /api/cowork/campaign/best-practices/ HTTP/1.1
+        GET /api/envconnect/campaign/construction HTTP/1.1
 
     responds
 
     .. code-block:: json
 
         {
-            "slug": "best-practices",
+            "slug": "construction",
             "account": "envconnect",
-            "title": "Assessment on Best Practices",
+            "title": "Assessment on sustainable construction practices",
             "active": true,
             "quizz_mode": false,
             "questions": [
                 {
-                    "path": "/product-design",
+                    "path": "/construction/product-design",
                     "title": "Product Design",
-                    "unit": "assessment-choices",
+                    "default_unit": {
+                        "slug": "assessments",
+                        "title": "assessments",
+                        "system": "enum",
+                        "choices": [
+                        {
+                            "rank": 1,
+                            "text": "mostly-yes",
+                            "descr": "Mostly yes"
+                        },
+                        {
+                            "rank": 2,
+                            "text": "yes",
+                            "descr": "Yes"
+                        },
+                        {
+                            "rank": 3,
+                            "text": "no",
+                            "descr": "No"
+                        },
+                        {
+                            "rank": 4,
+                            "text": "mostly-no",
+                            "descr": "Mostly no"
+                        }
+                        ]
+                    },
+                    "ui_hint": "radio"
                 },
                 {
-                    "path": "/packaging-design",
+                    "path": "/construction/packaging-design",
                     "title": "Packaging Design",
-                    "unit": "assessment-choices",
+                    "default_unit": {
+                        "slug": "assessments",
+                        "title": "assessments",
+                        "system": "enum",
+                        "choices": [
+                        {
+                            "rank": 1,
+                            "text": "mostly-yes",
+                            "descr": "Mostly yes"
+                        },
+                        {
+                            "rank": 2,
+                            "text": "yes",
+                            "descr": "Yes"
+                        },
+                        {
+                            "rank": 3,
+                            "text": "no",
+                            "descr": "No"
+                        },
+                        {
+                            "rank": 4,
+                            "text": "mostly-no",
+                            "descr": "Mostly no"
+                        }
+                        ]
+                    },
+                    "ui_hint": "radio"
                 }
             ]
         }
@@ -80,16 +135,46 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
         """
         Deletes a campaign
 
-        Removes a ``Campaign`` and all associated ``Sample``
-        from the database.
+        Removes a ``Campaign`` and all associated ``Sample``.
+        The underlying ``Answer`` that were grouped in a ``Sample`` remain
+        present in the database. These ``Answer`` are just no longer grouped
+        logically in a ``Sample``.
 
-        **Tags**: survey
+        **Tags**: editors
 
         **Examples**
 
         .. code-block:: http
 
-            DELETE /api/cowork/campaign/best-practices/ HTTP/1.1
+            DELETE /api/envconnect/campaign/boxes-enclosures HTTP/1.1
         """
         #pylint:disable=useless-super-delegation
         return super(CampaignAPIView, self).delete(request, *args, **kwargs)
+
+
+class SmartCampaignListMixin(DateRangeContextMixin):
+    """
+    ``Campaign`` list which is also searchable and sortable.
+    """
+    search_fields = ('title',)
+
+    ordering_fields = [
+        ('created_at', 'created_at'),
+        ('title', 'title'),
+    ]
+
+    filter_backends = (DateRangeFilter, SearchFilter, OrderingFilter,)
+
+
+class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
+                          generics.ListCreateAPIView):
+
+    serializer_class = CampaignSerializer
+
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return CampaignCreateSerializer
+        return super(CampaignListAPIView, self).get_serializer_class()
+
+    def perform_create(self, serializer):
+        serializer.save(account=self.account)

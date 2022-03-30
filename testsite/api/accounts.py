@@ -22,31 +22,23 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from distutils.core import setup
-import survey
+from rest_framework import generics
+from survey.api.serializers import AccountSerializer
+from survey.filters import OrderingFilter, SearchFilter
+from survey.utils import get_account_model
 
-setup(
-    name='djaodjin-survey',
-    version=survey.__version__,
-    author='The DjaoDjin Team',
-    author_email='support@djaodjin.com',
-    packages=['survey',
-              'survey.api',
-              'survey.templatetags',
-              'survey.urls',
-              'survey.urls.api',
-              'survey.urls.api.sample',
-              'survey.views'],
-    package_data={'survey': [
-        'static/css/*',
-        'static/js/*',
-        'templates/survey/*',
-        'templates/survey/campaigns/*',
-        'templates/survey/matrix/*']},
-    url='https://github.com/djaodjin/djaodjin-survey/',
-    download_url='https://github.com/djaodjin/djaodjin-survey/tarball/%s' \
-        % survey.__version__,
-    license='BSD',
-    description='Survey Django app',
-    long_description=open('README.md').read(),
-)
+
+class AccountsAPIView(generics.ListAPIView):
+
+    serializer_class = AccountSerializer
+    queryset = get_account_model().objects.all()
+
+    search_fields = (
+        'email',
+    )
+
+    ordering_fields = [
+        ('email', 'email'),
+    ]
+
+    filter_backends = (SearchFilter, OrderingFilter)

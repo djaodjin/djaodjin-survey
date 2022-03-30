@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,18 +29,25 @@ URLs for the djaodjin-survey django app testsite.
 from django.views.generic import RedirectView, TemplateView
 from survey.compat import reverse_lazy
 from rules.urldecorators import include, url
-
 import debug_toolbar
+
+from .api.accounts import AccountsAPIView
+
 
 urlpatterns = [
     url(r'^__debug__/', include(debug_toolbar.urls)),
     url(r'^$', TemplateView.as_view(template_name='index.html'), name='home'),
     url(r'^api/', include('survey.urls.api')),
+    url(r'^api/accounts/grant-allowed', AccountsAPIView.as_view(),
+        name='api_grant_allowed_candidates'),
+    url(r'^api/accounts', AccountsAPIView.as_view(),
+        name='api_account_candidates'),
     url(r'^accounts/profile/',
-        RedirectView.as_view(url=reverse_lazy('survey_list'))),
-    url(r'^accounts/', include('django.contrib.auth.urls')),
+        RedirectView.as_view(url=reverse_lazy('survey_campaign_list'))),
+    url(r'^', include('django.contrib.auth.urls')),
     url(r'^manager/', include('survey.urls.manager'),
         decorators=['django.contrib.auth.decorators.login_required']),
     url(r'^matrix/', include('survey.urls.matrix')),
+    url(r'^portfolios/', include('survey.urls.portfolios')),
     url(r'^', include('survey.urls.sample')),
 ]

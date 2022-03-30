@@ -129,8 +129,6 @@ class AnswerUpdateView(SampleMixin, UpdateView):
                         datapoint, question=self.object.question,
                         sample=self.object.sample, created_at=created_at,
                         collected_by=user)
-                    sample.time_spent = created_at - sample.created_at
-                    sample.save()
             except ValidationError as err:
                 errors += [err]
         if errors:
@@ -189,7 +187,8 @@ class SampleResultView(SampleMixin, TemplateView):
 
     def post(self, request, *args, **kwargs):
         # The csrftoken in valid when we get here. That's all that matters.
-        self.sample.time_spent = datetime_or_now() - self.sample.created_at
+        at_time = datetime_or_now()
+        self.sample.updated_at = at_time
         self.sample.is_frozen = True
         self.sample.save()
         return self.get(request, *args, **kwargs)
@@ -226,7 +225,7 @@ class SampleCreateView(AccountMixin, CreateView):
             if answer_text:
                 kwargs.update({'text': answer_text})
             Answer.objects.create(
-                metric=enum_q.question.default_metric, **kwargs)
+                metric=enum_q.question.default_unit, **kwargs)
         return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):

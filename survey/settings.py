@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,27 +30,31 @@ the appropriate settings.
 from django.conf import settings
 
 _SETTINGS = {
-    'AUTH_USER_MODEL': getattr(
-        settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
     'ACCOUNT_LOOKUP_FIELD': 'username',
     'ACCOUNT_MODEL': getattr(
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
     'ACCOUNT_SERIALIZER': 'survey.api.serializers.AccountSerializer',
+    'ACCOUNT_URL_KWARG': 'organization',
+    'AUTH_USER_MODEL': getattr(
+        settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
     'BELONGS_LOOKUP_FIELD': None,
     'BELONGS_MODEL': None,
     'BELONGS_SERIALIZER': None,
+    'CONTENT_MODEL': 'survey.Content',
     'CORRECT_MARKER': '(correct)',
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None),
     'EXTRA_FIELD': None,
     'QUESTION_MODEL': 'survey.Question',
     'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionDetailSerializer',
+    'SEARCH_FIELDS_PARAM': 'q_f',
 }
 _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 
-AUTH_USER_MODEL = _SETTINGS.get('AUTH_USER_MODEL')
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
 ACCOUNT_LOOKUP_FIELD = _SETTINGS.get('ACCOUNT_LOOKUP_FIELD')
 ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')
+ACCOUNT_URL_KWARG = _SETTINGS.get('ACCOUNT_URL_KWARG')
+AUTH_USER_MODEL = _SETTINGS.get('AUTH_USER_MODEL')
 BELONGS_LOOKUP_FIELD = (_SETTINGS.get('BELONGS_LOOKUP_FIELD')
     if _SETTINGS.get('BELONGS_LOOKUP_FIELD')
     else _SETTINGS.get('ACCOUNT_LOOKUP_FIELD'))
@@ -59,10 +63,13 @@ BELONGS_MODEL = (_SETTINGS.get('BELONGS_MODEL')
 BELONGS_SERIALIZER = (_SETTINGS.get('BELONGS_SERIALIZER')
     if _SETTINGS.get('BELONGS_SERIALIZER')
     else _SETTINGS.get('ACCOUNT_SERIALIZER'))
+CONTENT_MODEL = _SETTINGS.get('CONTENT_MODEL')
 CORRECT_MARKER = _SETTINGS.get('CORRECT_MARKER')
 DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
 QUESTION_MODEL = _SETTINGS.get('QUESTION_MODEL')
 QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
+SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')
 
-SLUG_RE = r'[a-zA-Z0-9-]+'
-PATH_RE = r'([a-zA-Z0-9-]+(/[a-zA-Z0-9\-]+)*)?'
+SLUG_RE = r'[a-zA-Z0-9_\-\+\.]+'
+PATH_RE = r'([a-zA-Z0-9\-]+/)*[a-zA-Z0-9\-]*'
+NON_EMPTY_PATH_RE = r'([a-zA-Z0-9\-]+/)*[a-zA-Z0-9\-]+'

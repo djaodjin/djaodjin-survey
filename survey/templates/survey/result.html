@@ -1,10 +1,9 @@
 {% extends "base.html" %}
-{% load staticfiles %}
+{% load static %}
 {% load survey_tags %}
 
 {% block localheader %}
 <link rel="stylesheet" media="screen" href="{% static 'vendor/css/nv.d3.css'%}" />
-<script type="text/javascript" src="{% static 'vendor/js/jquery.js'%}"></script>
 {% endblock %}
 
 {% block content %}
@@ -48,7 +47,7 @@
 		{% for question in questions %}
 		<div id="{{question.rank}}">
 			<h3>#{{question.rank}} : {{ question.text }}</h3>
-		{% if question.question_type == Question.TEXT %}
+		{% if question.ui_hint == Question.TEXT %}
 			<table>
 				{% for answer_body in individuals|by_key:question.rank %}
 				<tr>
@@ -67,7 +66,7 @@
 </section>
 {% endblock %}
 
-{% block bodyscripts %}
+{% block survey_bodyscripts %}
 <script type="text/javascript" charset="utf-8"
         src="{% static 'vendor/js/d3.js' %}"></script>
 <script type="text/javascript" src="{% static 'vendor/js/nv.d3.js' %}"></script>

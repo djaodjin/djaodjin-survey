@@ -34,14 +34,14 @@ from .models import Answer, Campaign, EnumeratedQuestions, Sample
 from .utils import get_question_model
 
 
-def _create_field(question_type, text,
+def _create_field(ui_hint, text,
                   has_other=False, required=False, choices=None):
     fields = (None, None)
     question_model = get_question_model()
-    if question_type == question_model.TEXT:
+    if ui_hint == question_model.TEXT:
         fields = (forms.CharField(label=text, required=required,
             widget=forms.Textarea), None)
-    elif question_type == question_model.RADIO:
+    elif ui_hint == question_model.RADIO:
         radio = forms.ChoiceField(label=text, required=required,
             widget=forms.RadioSelect(), choices=choices)
         if has_other:
@@ -50,7 +50,7 @@ def _create_field(question_type, text,
                 widget=forms.TextInput(attrs={'class':'other-input'})))
         else:
             fields = (radio, None)
-    elif question_type == question_model.DROPDOWN:
+    elif ui_hint == question_model.DROPDOWN:
         radio = forms.ChoiceField(label=text, required=required,
             widget=forms.Select(), choices=choices)
         if has_other:
@@ -59,7 +59,7 @@ def _create_field(question_type, text,
                 widget=forms.TextInput(attrs={'class':'other-input'})))
         else:
             fields = (radio, None)
-    elif question_type == question_model.SELECT_MULTIPLE:
+    elif ui_hint == question_model.SELECT_MULTIPLE:
         multiple = forms.MultipleChoiceField(label=text, required=required,
             widget=forms.CheckboxSelectMultiple, choices=choices)
         if has_other:
@@ -68,7 +68,7 @@ def _create_field(question_type, text,
                 widget=forms.TextInput(attrs={'class':'other-input'})))
         else:
             fields = (multiple, None)
-    elif question_type == question_model.INTEGER:
+    elif ui_hint == question_model.NUMBER:
         fields = (forms.IntegerField(label=text, required=required), None)
     return fields
 
@@ -94,7 +94,7 @@ class AnswerForm(forms.ModelForm):
                 question=question).first()
             if campaign_attrs:
                 required = campaign_attrs.required
-        fields = _create_field(question.question_type, question.text,
+        fields = _create_field(question.ui_hint, question.text,
             required=required, choices=question.choices)
         self.fields['text'] = fields[0]
 
@@ -105,9 +105,12 @@ class AnswerForm(forms.ModelForm):
 
 class QuestionForm(forms.ModelForm):
 
+    title = forms.CharField(label="Title", required=False)
+    text = forms.CharField(label="Text", required=False)
+
     class Meta:
         model = get_question_model()
-        fields = ('path', 'title', 'text', 'default_metric', 'extra')
+        fields = ('path', 'default_unit', 'extra')
 
     def clean_choices(self):
         self.cleaned_data['choices'] = self.cleaned_data['choices'].strip()
@@ -130,7 +133,7 @@ class SampleCreateForm(forms.ModelForm):
                 question=question).first()
             if campaign_attrs:
                 required = campaign_attrs.required
-            fields = _create_field(question.question_type, question.text,
+            fields = _create_field(question.ui_hint, question.text,
                 required=required, choices=question.choices)
             self.fields[key] = fields[0]
             if fields[1]:
@@ -177,7 +180,7 @@ class SampleUpdateForm(forms.ModelForm):
             if campaign_attrs:
                 required = campaign_attrs.required
                 rank = campaign_attrs.rank
-            fields = _create_field(question.question_type, question.text,
+            fields = _create_field(question.ui_hint, question.text,
                 required=required, choices=question.choices)
             # XXX set value.
             self.fields['question-%d' % rank] = fields[0]

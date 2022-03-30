@@ -22,31 +22,28 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from distutils.core import setup
-import survey
+from django.conf.urls import url
 
-setup(
-    name='djaodjin-survey',
-    version=survey.__version__,
-    author='The DjaoDjin Team',
-    author_email='support@djaodjin.com',
-    packages=['survey',
-              'survey.api',
-              'survey.templatetags',
-              'survey.urls',
-              'survey.urls.api',
-              'survey.urls.api.sample',
-              'survey.views'],
-    package_data={'survey': [
-        'static/css/*',
-        'static/js/*',
-        'templates/survey/*',
-        'templates/survey/campaigns/*',
-        'templates/survey/matrix/*']},
-    url='https://github.com/djaodjin/djaodjin-survey/',
-    download_url='https://github.com/djaodjin/djaodjin-survey/tarball/%s' \
-        % survey.__version__,
-    license='BSD',
-    description='Survey Django app',
-    long_description=open('README.md').read(),
-)
+from ... import settings
+from ...api.portfolios import (PortfoliosAPIView,
+    PortfoliosGrantsAPIView, PortfoliosGrantAcceptAPIView,
+    PortfoliosRequestsAPIView, PortfoliosRequestAcceptAPIView)
+
+
+urlpatterns = [
+    url(r'^portfolios/grants/(?P<request_key>%s)' % settings.SLUG_RE,
+        PortfoliosGrantAcceptAPIView.as_view(),
+        name='api_portfolios_grant_accept'),
+    url(r'^portfolios/requests/(?P<request_key>%s)/' % settings.SLUG_RE,
+        PortfoliosRequestAcceptAPIView.as_view(),
+        name='api_portfolios_request_accept'),
+    url(r'^portfolios/requests',
+        PortfoliosRequestsAPIView.as_view(),
+        name='survey_api_portfolios_requests'),
+    url(r'^portfolios/grants',
+        PortfoliosGrantsAPIView.as_view(),
+        name='survey_api_portfolios_grants'),
+    url(r'^portfolios',
+        PortfoliosAPIView.as_view(),
+        name='survey_api_portfolios_received'),
+]

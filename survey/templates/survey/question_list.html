@@ -22,7 +22,7 @@
 		{% for campaign_question in enumeratedquestions_list %}
 		<tr>
 			<td>{{campaign_question.question.text}}</td>
-			<td>{{campaign_question.question.question_type}}</td>
+			<td>{{campaign_question.question.ui_hint}}</td>
 			<td>{% if campaign_question.question.choices %}{{campaign_question.question.choices}}{% else %}N/A{% endif %}</td>
 			<td><a href="{% url 'survey_question_edit' campaign campaign_question.rank %}" >Edit</a></td>
 			<td>

@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,7 +25,7 @@
 import datetime, json, logging
 
 from django.core.mail import send_mail
-from django.views.generic import (CreateView, DeleteView, DetailView,
+from django.views.generic import (DetailView,
     FormView, ListView, RedirectView, UpdateView)
 from django.template.defaultfilters import slugify
 
@@ -34,39 +34,10 @@ from ..compat import six, reverse, reverse_lazy
 from ..mixins import BelongsMixin, CampaignMixin
 from ..models import Answer, Campaign, Sample
 from ..forms import CampaignForm, SendCampaignForm
-from ..utils import get_question_model
+from ..utils import get_question_model, update_context_urls
 
 
 LOGGER = logging.getLogger(__name__)
-
-
-class CampaignCreateView(BelongsMixin, CreateView):
-    """
-    Create a new campaign
-    """
-
-    model = Campaign
-    form_class = CampaignForm
-    pattern_name = 'survey_edit'
-
-    def get_initial(self):
-        """
-        Returns the initial data to use for forms on this view.
-        """
-        kwargs = super(CampaignCreateView, self).get_initial()
-        kwargs.update({'account': self.account})
-        return kwargs
-
-    def get_success_url(self):
-        return reverse_lazy(self.pattern_name, args=(self.object,))
-
-
-class CampaignDeleteView(CampaignMixin, DeleteView):
-    """
-    Delete a campaign
-    """
-    model = Campaign
-    success_url = reverse_lazy('survey_list')
 
 
 class CampaignListView(BelongsMixin, ListView):
@@ -75,6 +46,7 @@ class CampaignListView(BelongsMixin, ListView):
     """
     model = Campaign
     slug_url_kwarg = 'campaign'
+    template_name = 'survey/campaigns/index.html'
 
     def get_queryset(self):
         if self.account:
@@ -85,6 +57,9 @@ class CampaignListView(BelongsMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super(CampaignListView, self).get_context_data(**kwargs)
+        update_context_urls(context, {
+            'survey_api_campaign_list': reverse('survey_api_campaign_list',
+                kwargs=self.get_url_kwargs())})
         return context
 
 
@@ -93,7 +68,7 @@ class CampaignPublishView(CampaignMixin, RedirectView):
     Toggle Publish/Publish for a campaign.
     """
 
-    url = 'survey_list'
+    url = 'survey_campaign_list'
     slug_url_kwarg = 'campaign'
 
     def post(self, request, *args, **kwargs):
@@ -132,7 +107,7 @@ class CampaignResultView(CampaignMixin, DetailView):
         #   ... ]
         individuals = []
         for question in question_model.objects.filter(
-            campaign=self.object, question_type=question_model.TEXT):
+            campaign=self.object, ui_hint=question_model.TEXT):
             individuals += [{
                  'key': slugify("%d" % question.rank), # XXX rank
 # XXX Might be better
@@ -154,7 +129,7 @@ class CampaignResultView(CampaignMixin, DetailView):
         aggregates = []
         with_errors = {}
         for question in question_model.objects.filter(
-            campaign=self.object).exclude(question_type=question_model.TEXT):
+            campaign=self.object).exclude(ui_hint=question_model.TEXT):
             aggregate = {}
             for choice, _ in question.choices:
                 aggregate[choice] = 0
@@ -205,7 +180,7 @@ class CampaignSendView(CampaignMixin, FormView):
     model = Campaign
     form_class = SendCampaignForm
     template_name = 'survey/send.html'
-    success_url = reverse_lazy('survey_list')
+    success_url = reverse_lazy('survey_campaign_list')
 
     def __init__(self, *args, **kwargs):
         super(CampaignSendView, self).__init__(*args, **kwargs)
@@ -235,4 +210,4 @@ class CampaignUpdateView(CampaignMixin, UpdateView):
     """
     model = Campaign
     form_class = CampaignForm
-    success_url = reverse_lazy('survey_list')
+    success_url = reverse_lazy('survey_campaign_list')

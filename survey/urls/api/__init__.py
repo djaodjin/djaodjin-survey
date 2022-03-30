@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,8 +25,12 @@
 from django.conf.urls import url, include
 
 urlpatterns = [
-    url(r'^campaign/', include('survey.urls.api.campaigns')),
+    url(r'^', include('survey.urls.api.noauth')),
+    url(r'^', include('survey.urls.api.campaigns')),
+    url(r'^', include('survey.urls.api.filters')), # No trailing '/'
+                                                  # because of PATH_RE.
     url(r'^', include('survey.urls.api.matrix')), # No trailing '/'
                                                   # because of PATH_RE.
-    url(r'^sample/', include('survey.urls.api.sample')),
+    url(r'^', include('survey.urls.api.sample')),
+    url(r'^', include('survey.urls.api.portfolios')),
 ]

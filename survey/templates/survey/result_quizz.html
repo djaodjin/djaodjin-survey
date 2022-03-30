@@ -19,7 +19,7 @@
 		{% if answer.question.choices %}
 		{% for choice in answer.question.choices %}
 		<div>
-			<input type="{{ answer.question.question_type }}" disabled="true" {% if choice.0 == answer.as_text_value %}checked="true"{% endif %}>
+			<input type="{{ answer.question.ui_hint }}" disabled="true" {% if choice.0 == answer.as_text_value %}checked="true"{% endif %}>
 			<span>{{choice.0}}
 			{% if sample.campaign.quizz_mode %}
 				{% if choice.0 == answer.question.get_correct_answer %}

@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,19 +24,19 @@
 
 from django.conf.urls import url
 
-from ....api.sample import (AnswerAPIView, SampleAPIView,
-    SampleAnswersAPIView, SampleRecentCreateAPIView, SampleFreezeAPIView)
+from ....api.sample import (SampleAPIView, SampleAnswersAPIView,
+    SampleCandidatesAPIView, SampleRecentCreateAPIView, SampleFreezeAPIView)
 from ....settings import SLUG_RE, PATH_RE
 
 urlpatterns = [
-   url(r'^(?P<sample>%s)/freeze/(?P<path>%s)/?' % (SLUG_RE, PATH_RE),
+   url(r'^sample/(?P<sample>%s)/freeze/(?P<path>%s)$' % (SLUG_RE, PATH_RE),
        SampleFreezeAPIView.as_view(), name='survey_api_sample_freeze'),
-   url(r'^(?P<sample>%s)/(?P<rank>\d+)/?' % SLUG_RE,
-       AnswerAPIView.as_view(), name='survey_api_answer'),
-   url(r'^(?P<sample>%s)/answers/(?P<path>%s)/?' % (SLUG_RE, PATH_RE),
+   url(r'^sample/(?P<sample>%s)/candidates/(?P<path>%s)$' % (SLUG_RE, PATH_RE),
+       SampleCandidatesAPIView.as_view(), name='survey_api_sample_candidates'),
+   url(r'^sample/(?P<sample>%s)/answers/(?P<path>%s)$' % (SLUG_RE, PATH_RE),
        SampleAnswersAPIView.as_view(), name='survey_api_sample_answers'),
-   url(r'^(?P<sample>%s)/?' % SLUG_RE,
+   url(r'^sample/(?P<sample>%s)$' % SLUG_RE,
        SampleAPIView.as_view(), name='survey_api_sample'),
-   url(r'^$',
+   url(r'^sample$',
        SampleRecentCreateAPIView.as_view(), name='survey_api_sample_new'),
 ]

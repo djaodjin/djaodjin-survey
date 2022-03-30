@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,17 +25,14 @@
 from django.conf.urls import url
 
 from ..settings import SLUG_RE
-from ..views.campaigns import (CampaignCreateView, CampaignDeleteView,
-    CampaignListView, CampaignPublishView, CampaignResultView, CampaignSendView,
-    CampaignUpdateView)
+from ..views.campaigns import (CampaignListView, CampaignPublishView,
+    CampaignResultView, CampaignSendView, CampaignUpdateView)
 from ..views.createquestion import (QuestionCreateView, QuestionDeleteView,
     QuestionListView, QuestionRankView, QuestionUpdateView)
 from ..views.matrix import RespondentListView
 
 
 urlpatterns = [
-   url(r'^new/',
-       CampaignCreateView.as_view(), name='survey_create'),
    url(r'^(?P<campaign>%s)/send/' % SLUG_RE,
        CampaignSendView.as_view(), name='survey_send'),
    url(r'^(?P<campaign>%s)/result/' % SLUG_RE,
@@ -46,8 +43,6 @@ urlpatterns = [
        CampaignPublishView.as_view(), name='survey_publish'),
    url(r'^(?P<campaign>%s)/edit/' % SLUG_RE,
        CampaignUpdateView.as_view(), name='survey_edit'),
-   url(r'^(?P<campaign>%s)/delete/' % SLUG_RE,
-       CampaignDeleteView.as_view(), name='survey_delete'),
 
    url(r'^(?P<campaign>%s)/new/' % SLUG_RE,
        QuestionCreateView.as_view(), name='survey_question_new'),

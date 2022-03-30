@@ -28,6 +28,6 @@ from ....api.sample import SampleResetAPIView
 from ....settings import SLUG_RE, PATH_RE
 
 urlpatterns = [
-   url(r'^(?P<sample>%s)/reset/(?P<path>%s)/?' % (SLUG_RE, PATH_RE),
+   url(r'^sample/(?P<sample>%s)/reset/(?P<path>%s)$' % (SLUG_RE, PATH_RE),
        SampleResetAPIView.as_view(), name='survey_api_sample_reset'),
 ]

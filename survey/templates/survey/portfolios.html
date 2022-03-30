@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div>
+  <portfolios-grant-list id="grants" inline-template>
+    <div>
+      <h2>Grant portfolios</h2>
+      <div>
+        <div v-if="itemsLoaded && items.results.length == 0">
+          <i>No pending grants sent</i>
+        </div>
+        <div v-for="(request, index) in items.results"
+             v-if="itemsLoaded && items.results.length > 0">
+          <div>
+            You granted @[[request.account]] [[request.campaign]] portfolio to @[[request.grantee]].
+          </div>
+        </div>
+      </div>
+      <form @submit.prevent="submitGrants">
+        <fieldset>
+          <label>Send to</label>
+          <grantee-typeahead inline-template v-bind:dataset="grant.grantee" v-on:selectitem="addGrantee">
+            <div id="grantee-search">
+              <div>
+                <!-- optional indicators -->
+                <i v-if="loading">loading...</i>
+                <template v-else>
+                  <i v-show="isEmpty">empty</i>
+                  <i v-show="isDirty" @click="reset">reset</i>
+                </template>
+              </div>
+              <!-- the input field -->
+              <input type="text"
+                     placeholder="Enter username or email address"
+                     autocomplete="off"
+                     v-model="query"
+                     @keydown.down="down"
+                     @keydown.up="up"
+                     @keydown.enter.prevent="hit"
+                     @blur="clear"
+                     @input="update"/>
+              <button @click.prevent="search">Add</button>
+              <!-- the list -->
+              <ul v-show="hasItems">
+                <li v-for="(item, $item) in items" :class="activeClass($item)" @mousedown="hit" @mousemove="setActive($item)">
+                  <a v-text="item.email"></a>
+                </li>
+              </ul>
+              <!-- invite form:
+                   grant portfolio to a user that is not yet registered. -->
+              <div id="portfolio-grant-invite" v-show="unregistered">
+                <h4>Invite ...</h4>
+                <p>
+[[selectedItem.email]] is not yet registered. This is an opportunity
+to invite her/him.
+                </p>
+                <div>
+                  <label>To</label>
+                  <input v-model="selectedItem.email"
+                         name="email" type="text" max-length="150" />
+                </div>
+                <div>
+                  <label>Full name</label>
+                  <input v-model="selectedItem.full_name"
+                         name="full_name" type="text" max-length="150"
+                         autofocus />
+                </div>
+                <div>
+                  <label>The following invite message will be sent:</label>
+                  <textarea name="message"
+                            v-model="selectedItem.message"
+                            maxlength="255" type="text" rows="10">Hi,
+I would like to share an account portfolio with you.
+
+Thank you,
+- {{request.user.printable_name}}"</textarea>
+                </div>
+                <div>
+                  <button @click.prevent="submitInvite"
+                          type="submit">Invite</button>
+                </div>
+              </div>
+              <!-- end of invite form -->
+            </div>
+          </grantee-typeahead>
+        </fieldset>
+        <fieldset v-show="grant.grantee.slug || grant.grantee.email">
+          <label>Accounts</label>
+          <p>
+            You are about to send the following portfolio(s) to [[grant.grantee.email ? grant.grantee.email : grant.grantee.slug]].
+          </p>
+          <div v-for="(account, index) in grant.accounts">
+            <div>
+              <p>
+              [[account.full_name ? account.full_name : account.slug]]
+              </p>
+              <div>
+                <dl v-if="account.campaign">
+                  <dt>Campaign:</dt>
+                  <dd>[[account.campaign ? account.campaign.title : "-"]]</dd>
+                </dl>
+              </div>
+            </div>
+            <a @click.prevent="removeAccount(grant.accounts, index)">remove</a>
+          </div>
+          <grant-allowed-typeahead inline-template ref="account" v-bind:dataset="grant.accounts" v-on:selectitem="addAccount">
+            <div id="team-accounts-search">
+              <div>
+                <!-- optional indicators -->
+                <i v-if="loading">loading...</i>
+                <template v-else>
+                  <i v-show="isEmpty">empty</i>
+                  <i v-show="isDirty" @click="reset">reset</i>
+                </template>
+              </div>
+              <!-- the input field -->
+              <input type="text"
+                     placeholder="Enter name or id of account ..."
+                     autocomplete="off"
+                     v-model="query"
+                     @keydown.down="down"
+                     @keydown.up="up"
+                     @keydown.enter.prevent="hit"
+                     @keydown.esc="reset"
+                     @blur="clear"
+                     @input="update"/>
+              <button @click.prevent="search">Add</button>
+              <!-- the list -->
+              <ul v-show="hasItems">
+                <li v-for="(item, $item) in items" :class="activeClass($item)" @mousedown="hit" @mousemove="setActive($item)" @click="setActiveAndHit($item)">
+                  <a v-text="item.email"></a>
+                </li>
+              </ul>
+            </div>
+          </grant-allowed-typeahead>
+          <div v-show="grant.accounts.length > 0">
+            <button type="submit">Send portfolios</button>
+          </div>
+        </fieldset>
+      </form>
+    </div>
+  </portfolios-grant-list>
+
+  <hr />
+
+  <portfolios-request-list id="requests" inline-template>
+    <div>
+      <h2>Request portfolios</h2>
+      <div>
+        <div v-if="itemsLoaded && items.results.length == 0">
+          <i>No pending requests sent</i>
+        </div>
+        <div v-for="(request, index) in items.results"
+             v-if="itemsLoaded && items.results.length > 0">
+          <div>
+            You requested @[[request.account]] [[request.campaign]] portfolio.
+          </div>
+        </div>
+      </div>
+      <form @submit.prevent="submitRequests">
+        <account-typeahead inline-template ref="account" v-bind:dataset="request.accounts" v-on:selectitem="addAccount">
+          <div>
+            <div>
+              <!-- optional indicators -->
+              <i v-if="loading">loading...</i>
+              <template v-else>
+                <i v-show="isEmpty">empty</i>
+                <i v-show="isDirty" @click="reset">reset</i>
+              </template>
+            </div>
+            <!-- the input field -->
+            <input type="text"
+                   placeholder="Search for accounts ..."
+                   autocomplete="off"
+                   v-model="query"
+                   @keydown.down="down"
+                   @keydown.up="up"
+                   @keydown.enter.prevent="hit"
+                   @keydown.esc="reset"
+                   @blur="clear"
+                   @input="update"/>
+            <button @click.prevent="search">Add</button>
+            <!-- the list -->
+            <ul v-show="hasItems">
+              <li v-for="(item, $item) in items" :class="activeClass($item)"
+                  @mousedown="hit"
+                  @mousemove="setActive($item)"
+                  @click.prevent="setActiveAndHit($item)">
+                <a v-text="item.email"></a>
+              </li>
+            </ul>
+          </div>
+        </account-typeahead>
+        <div id="requests-list" v-show="request.accounts.length > 0">
+          <div v-for="(request, index) in request.accounts">
+            <div>
+              <p>
+                {{request.user}}
+                [[request.is_new ? "is requesting" : "requested" ]]
+                a [[request.campaign ? request.campaign.title : ""]] portfolio
+                at [[request.ends_at]] for
+                [[request.full_name]])
+              </p>
+              <div>
+                <a @click.prevent="removeAccount(request.accounts, index)">remove</a>
+              </div>
+            </div>
+          </div>
+          <div>
+            <button type="submit">Request portfolios</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </portfolios-request-list>
+
+  <portfolios-received-list id="received" inline-template>
+    <div>
+      <h2>Received requests and grants</h2>
+      <p>
+The following accounts have granted you access to their portfolio or requested
+access to your portfolio.
+No data will be shared with them until you accept the grant or request.
+      </p>
+      <div v-show="itemsLoaded && items.results.length == 0">
+        <i>No pending grants or requests</i>
+      </div>
+      <div v-for="(received, index) in items.results"
+           v-show="itemsLoaded && items.results.length > 0">
+        <div>
+          @[[received.grantee]]  your [[received.campaign]] portfolio.
+          <div>
+            <button @click.prevent="ignore(received, index)">Ignore</button>
+            <button @click.prevent="accept(received, index)">Accept</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </portfolios-received-list>
+</div>
+{% endblock %}

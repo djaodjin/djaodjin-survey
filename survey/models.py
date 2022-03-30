@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,16 +22,15 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime, random, uuid
+import datetime, hashlib, random, uuid
 
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
-from django.utils.encoding import python_2_unicode_compatible
 from django.utils.translation import ugettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from . import settings
-from .compat import import_string
+from .compat import import_string, python_2_unicode_compatible
 from .utils import get_account_model, get_question_model
 
 
@@ -108,13 +107,42 @@ class Unit(models.Model):
         SYSTEM_RANK
     ]
 
-    slug = models.SlugField(max_length=150, unique=True, db_index=True)
-    title = models.CharField(max_length=150)
+    slug = models.SlugField(max_length=150, unique=True, db_index=True,
+        help_text=_("Unique identifier that can be used in a URL"))
+    title = models.CharField(max_length=150,
+        help_text=_("Short description suitable for display"))
     system = models.PositiveSmallIntegerField(
-        choices=SYSTEMS, default=SYSTEM_STANDARD)
+        choices=SYSTEMS, default=SYSTEM_STANDARD,
+        help_text=_("One of standard (metric system), imperial,"\
+            " rank, enum, or freetext"))
+
+    @property
+    def choices(self):
+        if self.system == self.SYSTEM_ENUMERATED:
+            return Choice.objects.filter(
+                question__isnull=True, unit=self).order_by('rank')
+        return None
 
     def __str__(self):
         return str(self.slug)
+
+
+@python_2_unicode_compatible
+class UnitEquivalences(models.Model):
+    """
+    Pairs of units that can be translated one to the other.
+    """
+    source = models.ForeignKey(Unit, on_delete=models.CASCADE,
+        related_name='source_equivalences',
+        help_text=_("Source unit in the equivalence"))
+    target = models.ForeignKey(Unit, on_delete=models.CASCADE,
+        related_name='target_equivalences',
+        help_text=_("Target unit in the equivalence"))
+    content = models.TextField(null=True,
+        help_text=_("Description of the equivalence function"))
+
+    def __str__(self):
+        return "%s:%s" % (self.source, self.target)
 
 
 @python_2_unicode_compatible
@@ -122,30 +150,29 @@ class Choice(models.Model):
     """
     Choice for a multiple choice question.
     """
-    unit = models.ForeignKey(Unit, on_delete=models.PROTECT)
+    unit = models.ForeignKey(Unit, on_delete=models.PROTECT,
+            related_name='enums')
+    question = models.ForeignKey(settings.QUESTION_MODEL,
+        on_delete=models.PROTECT, null=True)
     rank = models.IntegerField(
         help_text=_("used to order choice when presenting a question"))
     text = models.TextField()
     descr = models.TextField()
 
     class Meta:
-        unique_together = ('unit', 'rank')
+        unique_together = ('unit', 'question', 'rank')
 
     def __str__(self):
         return str(self.text)
 
 
 @python_2_unicode_compatible
-class Metric(models.Model):
-    """
-    Metric on a ``Question``.
-    """
-    slug = models.SlugField(max_length=150, unique=True, db_index=True)
-    title = models.CharField(max_length=150)
-    unit = models.ForeignKey(Unit, on_delete=models.PROTECT)
+class Content(models.Model):
 
-    def __str__(self):
-        return str(self.slug)
+    title = models.CharField(max_length=50,
+        help_text=_("Short description"))
+    text = models.TextField(
+        help_text=_("Detailed description about the question"))
 
 
 @python_2_unicode_compatible
@@ -153,44 +180,65 @@ class AbstractQuestion(SlugTitleMixin, models.Model):
 
     slug_field = 'path'
 
-    INTEGER = 'integer'
+    TEXT = 'textarea'
     RADIO = 'radio'
-    DROPDOWN = 'select'
-    SELECT_MULTIPLE = 'checkbox'
-    TEXT = 'text'
+    NUMBER = 'number'
+    ENERGY = 'energy'
+    WATER = 'water'
+    WASTE = 'waste'
+    GHG_EMISSIONS = 'ghg-emissions'
+    GHG_EMISSIONS_SCOPE3 = 'ghg-emissions-scope3'
 
-    QUESTION_TYPES = (
-            (TEXT, 'text'),
+    UI_HINTS = (
+            (TEXT, 'textarea'),
             (RADIO, 'radio'),
-            (DROPDOWN, 'dropdown'),
-            (SELECT_MULTIPLE, 'Select Multiple'),
-            (INTEGER, 'integer'),
+            (NUMBER, 'number'),
+            (ENERGY, 'energy'),
+            (WATER, 'water'),
+            (WASTE, 'waste'),
+            (GHG_EMISSIONS, 'ghg-emissions'),
+            (GHG_EMISSIONS_SCOPE3, 'ghg-emissions-scope3'),
     )
 
     class Meta:
         abstract = True
 
-    path = models.CharField(max_length=1024, unique=True, db_index=True)
-    title = models.CharField(max_length=50)
-    text = models.TextField(
-        help_text=_("Detailed description about the question"))
-    question_type = models.CharField(
-        max_length=9, choices=QUESTION_TYPES, default=RADIO,
+    path = models.CharField(max_length=1024, unique=True, db_index=True,
+        help_text=_("Unique identifier that can be used in URL"))
+    content = models.ForeignKey(settings.CONTENT_MODEL,
+        on_delete=models.PROTECT)
+    ui_hint = models.CharField(
+        max_length=20, choices=UI_HINTS, default=RADIO,
         help_text=_("Choose the type of answser."))
-    correct_answer = models.ForeignKey(Choice,
+    correct_answer = models.ForeignKey(Choice, related_name='correct_for',
         null=True, on_delete=models.PROTECT, blank=True)
-    default_metric = models.ForeignKey(Metric, on_delete=models.PROTECT)
-    extra = get_extra_field_class()(null=True, blank=True)
+    default_unit = models.ForeignKey(Unit, on_delete=models.PROTECT,
+        help_text=_("Default unit for measured field when none is specified"))
+    extra = get_extra_field_class()(null=True, blank=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     def __str__(self):
         return str(self.path)
 
     @property
+    def title(self):
+        return self.content.title
+
+    @property
+    def text(self):
+        return self.content.text
+
+    @property
     def choices(self):
-        if self.default_metric.unit.system == Unit.SYSTEM_ENUMERATED:
-            return [(choice.text, choice.descr if choice.descr else choice.text)
-                for choice in Choice.objects.filter(
-                    unit=self.default_metric.unit).order_by('rank')]
+        if self.default_unit.system == Unit.SYSTEM_ENUMERATED:
+            if Choice.objects.filter(
+                    question=self, unit=self.default_unit).exists():
+                choices_qs = Choice.objects.filter(question=self,
+                    unit=self.default_unit)
+            else:
+                choices_qs = Choice.objects.filter(
+                    question__isnull=True, unit=self.default_unit)
+            return choices_qs.order_by('rank')
         return None
 
     def save(self, force_insert=False, force_update=False,
@@ -227,15 +275,17 @@ class Question(AbstractQuestion):
 @python_2_unicode_compatible
 class Campaign(SlugTitleMixin, models.Model):
 
-    slug = models.SlugField(unique=True)
-    created_at = models.DateTimeField(null=True)
+    slug = models.SlugField(unique=True,
+        help_text=_("Unique identifier that can be used in a URL"))
+    created_at = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=150,
         help_text=_("Enter a campaign title."))
     description = models.TextField(null=True, blank=True,
         help_text=_("This description will be displayed to interviewees."))
     account = models.ForeignKey(settings.BELONGS_MODEL,
         on_delete=models.PROTECT, null=True)
-    active = models.BooleanField(default=False)
+    active = models.BooleanField(default=False,
+        help_text=_("Whether the campaign is available or not"))
     quizz_mode = models.BooleanField(default=False,
         help_text=_("If checked, correct answser are required"))
     defaults_single_page = models.BooleanField(default=False,
@@ -244,7 +294,8 @@ class Campaign(SlugTitleMixin, models.Model):
     one_response_only = models.BooleanField(default=False,
         help_text=_("Only allows to answer campaign once."))
     questions = models.ManyToManyField(settings.QUESTION_MODEL,
-        through='survey.EnumeratedQuestions', related_name='campaigns')
+        through='survey.EnumeratedQuestions', related_name='campaigns',
+        help_text=_("Questions which are part of the campaign"))
     extra = get_extra_field_class()(null=True)
 
     def __str__(self):
@@ -252,6 +303,11 @@ class Campaign(SlugTitleMixin, models.Model):
 
     def has_questions(self):
         return self.questions.exists()
+
+    def get_questions(self, prefix=None):
+        if prefix:
+            return self.questions.filter(prefx=prefix)
+        return self.questions.all()
 
 
 @python_2_unicode_compatible
@@ -284,10 +340,10 @@ class SampleManager(models.Manager):
         nb_correct_answers = 0
         nb_questions = len(answers)
         for answer in answers:
-            if answer.question.question_type == Question.RADIO:
+            if answer.question.ui_hint == Question.RADIO:
                 if answer.measured in answer.question.get_correct_answer():
                     nb_correct_answers += 1
-            elif answer.question.question_type == Question.SELECT_MULTIPLE:
+            elif answer.question.ui_hint == Question.SELECT_MULTIPLE:
                 multiple_choices = answer.get_multiple_choices()
                 if not (set(multiple_choices)
                        ^ set(answer.question.get_correct_answer())):
@@ -315,17 +371,39 @@ class Sample(models.Model):
         help_text="Unique identifier for the sample. It can be used in a URL.")
     created_at = models.DateTimeField(auto_now_add=True,
         help_text="Date/time of creation (in ISO format)")
+    updated_at = models.DateTimeField(auto_now_add=True,
+        help_text="Date/time of last update (in ISO format)")
     campaign = models.ForeignKey(Campaign, null=True, on_delete=models.PROTECT)
     account = models.ForeignKey(settings.ACCOUNT_MODEL,
         null=True, on_delete=models.PROTECT, related_name='samples')
-    time_spent = models.DurationField(default=datetime.timedelta,
-        help_text="Total recorded time to complete the campaign")
     is_frozen = models.BooleanField(default=False,
         help_text="When True, answers to that sample cannot be updated.")
     extra = get_extra_field_class()(null=True)
 
     def __str__(self):
         return str(self.slug)
+
+    @property
+    def time_spent(self):
+        return self.updated_at - self.created_at
+
+    @property
+    def nb_answers(self):
+        if not hasattr(self, '_nb_answers'):
+            self._nb_answers = Answer.objects.filter(
+                sample=self,
+                question__default_unit=F('unit_id')).count()
+        return self._nb_answers
+
+    @property
+    def nb_required_answers(self):
+        if not hasattr(self, '_nb_required_answers'):
+            self._nb_required_answers = Answer.objects.filter(
+                sample=self,
+                question__default_unit=F('unit_id'),
+                question__enumeratedquestions__required=True,
+                question__enumeratedquestions__campaign=self.campaign).count()
+        return self._nb_required_answers
 
     def save(self, force_insert=False, force_update=False,
              using=None, update_fields=None):
@@ -384,8 +462,7 @@ class Answer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     question = models.ForeignKey(settings.QUESTION_MODEL,
         on_delete=models.PROTECT)
-    metric = models.ForeignKey(Metric, on_delete=models.PROTECT)
-    unit = models.ForeignKey(Unit, on_delete=models.PROTECT, null=True)
+    unit = models.ForeignKey(Unit, on_delete=models.PROTECT)
     measured = models.IntegerField(null=True)
     denominator = models.IntegerField(null=True, default=1)
     collected_by = models.ForeignKey(settings.AUTH_USER_MODEL,
@@ -395,10 +472,12 @@ class Answer(models.Model):
         related_name='answers')
 
     class Meta:
-        unique_together = ('sample', 'question', 'metric')
+        unique_together = ('sample', 'question', 'unit')
 
     def __str__(self):
-        return '%s-%d' % (self.sample.slug, self.rank)
+        if self.sample_id:
+            return '%s-%d' % (self.sample.slug, self.rank)
+        return self.question.content.slug
 
     @property
     def as_text_value(self):
@@ -430,7 +509,7 @@ class EditableFilter(SlugTitleMixin, models.Model):
         help_text="Unique identifier for the sample. It can be used in a URL.")
     title = models.CharField(max_length=255,
         help_text="Title for the filter")
-    tags = models.CharField(max_length=255,
+    tags = models.CharField(max_length=255, null=True,
         help_text="Helpful tags")
 
     def __str__(self):
@@ -498,3 +577,145 @@ class Matrix(SlugTitleMixin, models.Model):
 
     def __str__(self):
         return str(self.slug)
+
+
+@python_2_unicode_compatible
+class Portfolio(models.Model):
+    """
+    Share an account's answers with a grantee up to a specific date.
+    """
+    grantee = models.ForeignKey(settings.ACCOUNT_MODEL,
+        on_delete=models.PROTECT, db_index=True,
+        related_name='portfolios_granted')
+    account = models.ForeignKey(settings.ACCOUNT_MODEL,
+        on_delete=models.PROTECT, db_index=True,
+        related_name='portfolios')
+    ends_at = models.DateTimeField(null=True)
+    campaign = models.ForeignKey('Campaign', null=True,
+        on_delete=models.PROTECT, db_index=True,
+        related_name='portfolios')
+
+    class Meta:
+        unique_together = (('grantee', 'account', 'campaign'),)
+
+    def __str__(self):
+        return "portfolio-%s-%d" % (self.grantee, self.pk)
+
+
+class PortfolioDoubleOptInManager(models.Manager):
+
+    def by_invoice_keys(self, invoice_keys):
+        return self.filter(invoice_key__in=invoice_keys)
+
+    def get_requested_by(self, account, ends_at=None):
+        kwargs = {}
+        if ends_at:
+            kwargs.update({'ends_at__lt': ends_at})
+        return self.filter(grantee=account, grant_key__isnull=True, **kwargs)
+
+    def get_requested_on(self, account, ends_at=None):
+        kwargs = {}
+        if ends_at:
+            kwargs.update({'ends_at__lt': ends_at})
+        return self.filter(account=account, grant_key__isnull=True, **kwargs)
+
+    def unsolicited(self, account, ends_at=None):
+        kwargs = {}
+        if ends_at:
+            kwargs.update({'ends_at__lt': ends_at})
+        return self.filter(grantee=account, request_key__isnull=True, **kwargs)
+
+    def accepted(self, account, ends_at=None):
+        """
+        Returns a ``QuerySet`` of portfolios that were accepted by
+        their respective accounts but which haven't been invoiced yet.
+        """
+        kwargs = {}
+        if ends_at:
+            kwargs.update({'ends_at__lt': ends_at})
+        return self.filter(grantee=account, request_key__isnull=False,
+            grant_key=PortfolioDoubleOptIn.ACCEPTED, invoice_key__isnull=True,
+            **kwargs)
+
+
+@python_2_unicode_compatible
+class PortfolioDoubleOptIn(models.Model):
+    """
+    Intermidiary object to implement double opt-in through requests and grants.
+
+    When ``grantee`` is null, we must have a valid e-mail address to send
+    the grant to.
+
+    ``invoice_key`` is used as a identity token that will be passed back
+    by the payment processor when a charge was successfully created.
+    When we see ``invoice_key`` back, we create the ``Portfolio`` records.
+
+    State definition (bits)
+                         request/grant | accept/denied | completed
+    grant initiated                  1               0           0
+    grant accepted                   1               1           1
+    grant denied                     1               0           1
+    request initiated                0               0           0
+    request accepted                 0               1           1
+    request denied                   0               0           1
+    """
+    OPTIN_GRANT_INITIATED = 4
+    OPTIN_GRANT_ACCEPTED = 7
+    OPTIN_GRANT_DENIED = 5
+    OPTIN_REQUEST_INITIATED = 0
+    OPTIN_REQUEST_ACCEPTED = 1
+    OPTIN_REQUEST_DENIED = 3
+
+    STATES = [
+        (OPTIN_GRANT_INITIATED, 'grant-initiated'),
+        (OPTIN_GRANT_ACCEPTED, 'grant-accepted'),
+        (OPTIN_GRANT_DENIED, 'grant-denied'),
+        (OPTIN_REQUEST_INITIATED, 'request-initiated'),
+        (OPTIN_REQUEST_ACCEPTED, 'request-accepted'),
+        (OPTIN_REQUEST_DENIED, 'request-denied'),
+    ]
+
+    objects = PortfolioDoubleOptInManager()
+
+    # Either we have an AccountModel or we have an e-mail to invite
+    # someone to register an AccountModel.
+    grantee = models.ForeignKey(settings.ACCOUNT_MODEL, null=True,
+        on_delete=models.PROTECT, db_index=True,
+        related_name='portfolio_double_optin_grantees')
+    account = models.ForeignKey(settings.ACCOUNT_MODEL,
+        on_delete=models.PROTECT, db_index=True,
+        related_name='portfolio_double_optin_accounts')
+    campaign = models.ForeignKey('Campaign', null=True,
+        on_delete=models.PROTECT,
+        related_name='portfolio_double_optins')
+    ends_at = models.DateTimeField(null=True)
+    state = models.PositiveSmallIntegerField(
+        choices=STATES, default=OPTIN_REQUEST_INITIATED,
+        help_text=_("state of the opt-in"))
+    initiated_by = models.ForeignKey(settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE)
+    verification_key = models.CharField(max_length=40, null=True, unique=True)
+    email = models.EmailField(null=True)
+
+    # To connect with payment provider.
+    invoice_key = models.CharField(max_length=40, null=True)
+
+    def __str__(self):
+        return "<PortfolioDoubleOptIn(grantee='%s', account='%s', "\
+            "campaign='%s', ends_at='%s')>" % (self.grantee_id,
+            self.account_id, self.campaign_id, self.ends_at)
+
+    def create_portfolios(self):
+        with transaction.atomic():
+            Portfolio.objects.update_or_create(
+                grantee=self.grantee, account=self.account,
+                campaign=self.campaign,
+                defaults={'ends_at': self.ends_at})
+
+    @staticmethod
+    def generate_key(account):
+        random_key = str(random.random()).encode('utf-8')
+        salt = hashlib.sha1(random_key).hexdigest()[:5]
+        verification_key = hashlib.sha1(
+            (salt+str(account)).encode('utf-8')).hexdigest()
+        return verification_key

@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,22 +22,61 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime
+import datetime, logging
 from importlib import import_module
 
-from django.core.exceptions import ImproperlyConfigured
 from django.apps import apps as django_apps
+from django.core.exceptions import ImproperlyConfigured
+from django.db import connections
+from django.db.utils import DEFAULT_DB_ALIAS
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import utc
+from pytz import timezone, UnknownTimeZoneError
+from pytz.tzinfo import DstTzInfo
 
 from . import settings
 from .compat import six
 
+
+LOGGER = logging.getLogger(__name__)
+
+
+def is_sqlite3(db_key=None):
+    if db_key is None:
+        db_key = DEFAULT_DB_ALIAS
+    return connections.databases[db_key]['ENGINE'].endswith('sqlite3')
+
+
+def parse_tz(tzone):
+    if issubclass(type(tzone), DstTzInfo):
+        return tzone
+    if tzone:
+        try:
+            return timezone(tzone)
+        except UnknownTimeZoneError:
+            pass
+    return None
+
+
 def datetime_or_now(dtime_at=None):
+    if not isinstance(dtime_at, datetime.datetime):
+        # `datetime.datetime` is a subclass of `datetime.date`.
+        if isinstance(dtime_at, six.string_types):
+            try:
+                # XXX `parse_datetime`
+                dtime_at = datetime.datetime.strptime(
+                    dtime_at, "%Y-%m-%dT%H:%M:%S.%fZ")
+            except ValueError as err:
+                try:
+                    dtime_at = datetime.datetime.strptime(dtime_at, "%Y-%m-%d")
+                except ValueError as err:
+                    LOGGER.warning(err)
+                    dtime_at = None
+        elif isinstance(dtime_at, datetime.date):
+            dtime_at = datetime.datetime(
+                dtime_at.year, dtime_at.month, dtime_at.day)
     if not dtime_at:
-        return datetime.datetime.utcnow().replace(tzinfo=utc)
-    if isinstance(dtime_at, six.string_types):
-        dtime_at = parse_datetime(dtime_at)
+        dtime_at = datetime.datetime.utcnow().replace(tzinfo=utc)
     if dtime_at.tzinfo is None:
         dtime_at = dtime_at.replace(tzinfo=utc)
     return dtime_at
@@ -92,6 +131,20 @@ def get_belongs_model():
 " that has not been installed" % settings.BELONGS_MODEL)
 
 
+def get_content_model():
+    """
+    Returns the ``Content`` model that is active in this project.
+    """
+    try:
+        return django_apps.get_model(settings.CONTENT_MODEL)
+    except ValueError:
+        raise ImproperlyConfigured(
+            "CONTENT_MODEL must be of the form 'app_label.model_name'")
+    except LookupError:
+        raise ImproperlyConfigured("CONTENT_MODEL refers to model '%s'"\
+" that has not been installed" % settings.CONTENT_MODEL)
+
+
 def get_question_model():
     """
     Returns the ``Question`` model that is active in this project.
@@ -126,3 +179,20 @@ def get_question_serializer():
         raise ImproperlyConfigured('Module "%s" does not define a "%s"'\
 ' check the value of QUESTION_SERIALIZER' % (module, attr))
     return cls
+
+
+def update_context_urls(context, urls):
+    if 'urls' in context:
+        for key, val in six.iteritems(urls):
+            if key in context['urls']:
+                if isinstance(val, dict):
+                    context['urls'][key].update(val)
+                else:
+                    # Because organization_create url is added in this mixin
+                    # and in ``OrganizationRedirectView``.
+                    context['urls'][key] = val
+            else:
+                context['urls'].update({key: val})
+    else:
+        context.update({'urls': urls})
+    return context

@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,7 @@ from . import settings
 from .compat import is_authenticated
 from .models import (Campaign, EnumeratedQuestions, EditableFilter, Matrix,
     Sample)
-from .utils import get_account_model, get_belongs_model
+from .utils import datetime_or_now, get_account_model, get_belongs_model
 
 
 class AccountMixin(object):
@@ -48,7 +48,7 @@ class AccountMixin(object):
     """
     account_queryset = get_account_model().objects.all()
     account_lookup_field = settings.ACCOUNT_LOOKUP_FIELD
-    account_url_kwarg = 'organization'
+    account_url_kwarg = settings.ACCOUNT_URL_KWARG
 
     @property
     def account(self):
@@ -96,15 +96,19 @@ class AccountMixin(object):
         List of kwargs taken from the url that needs to be passed through
         to ``get_success_url``.
         """
-        return [self.account_url_kwarg]
+        if self.account_url_kwarg:
+            return [self.account_url_kwarg]
+        return []
 
-    def get_url_kwargs(self):
-        kwargs = {}
+    def get_url_kwargs(self, **kwargs):
+        url_kwargs = {}
+        if not kwargs:
+            kwargs = self.kwargs
         for url_kwarg in self.get_reverse_kwargs():
-            url_kwarg_val = self.kwargs.get(url_kwarg, None)
+            url_kwarg_val = kwargs.get(url_kwarg, None)
             if url_kwarg_val:
-                kwargs.update({url_kwarg: url_kwarg_val})
-        return kwargs
+                url_kwargs.update({url_kwarg: url_kwarg_val})
+        return url_kwargs
 
 
 class BelongsMixin(AccountMixin):
@@ -116,15 +120,47 @@ class BelongsMixin(AccountMixin):
     account_lookup_field = settings.BELONGS_LOOKUP_FIELD
 
 
-class CampaignQuerysetMixin(BelongsMixin):
+class DateRangeContextMixin(object):
 
-    def get_queryset(self):
-        if self.account:
-            return Campaign.objects.filter(account=self.account)
-        return Campaign.objects.all()
+    forced_date_range = True
+    default_ends_at = None
+
+    @property
+    def start_at(self):
+        if not hasattr(self, '_start_at'):
+            self._start_at = self.request.GET.get('start_at', None)
+            if self._start_at:
+                self._start_at = datetime_or_now(self._start_at.strip('"'))
+        return self._start_at
+
+    @property
+    def ends_at(self):
+        if not hasattr(self, '_ends_at'):
+            self._ends_at = self.request.GET.get('ends_at', None)
+            if self.forced_date_range or self._ends_at:
+                if self._ends_at is not None:
+                    self._ends_at = self._ends_at.strip('"')
+                else:
+                    self._ends_at = self.default_ends_at
+                self._ends_at = datetime_or_now(self._ends_at)
+        return self._ends_at
+
+    @property
+    def timezone(self):
+        if not hasattr(self, '_timezone'):
+            self._timezone = self.request.GET.get('timezone', None)
+        return self._timezone
+
+    def get_context_data(self, **kwargs):
+        context = super(DateRangeContextMixin, self).get_context_data(**kwargs)
+        if self.start_at:
+            context.update({'start_at': self.start_at})
+        if self.ends_at:
+            context.update({'ends_at': self.ends_at})
+        return context
 
 
-class CampaignMixin(CampaignQuerysetMixin):
+class CampaignMixin(object):
     """
     Returns a ``Campaign`` object associated with the request URL.
     """
@@ -136,6 +172,14 @@ class CampaignMixin(CampaignQuerysetMixin):
             self._campaign = get_object_or_404(Campaign.objects.all(),
                 slug=self.kwargs.get(self.campaign_url_kwarg))
         return self._campaign
+
+
+class CampaignQuerysetMixin(BelongsMixin):
+
+    def get_queryset(self):
+        if self.account:
+            return Campaign.objects.filter(account=self.account)
+        return Campaign.objects.all()
 
 
 class CampaignQuestionMixin(CampaignMixin):
@@ -174,7 +218,8 @@ class SampleMixin(AccountMixin):
         to ``get_success_url``.
         """
         return super(SampleMixin, self).get_reverse_kwargs() + [
-            self.sample_url_kwarg, self.campaign_url_kwarg, self.path_url_kwarg]
+            self.sample_url_kwarg, self.campaign_url_kwarg,
+            self.path_url_kwarg]
 
     @property
     def path(self):

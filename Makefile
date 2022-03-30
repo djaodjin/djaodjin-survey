@@ -51,3 +51,20 @@ initdb: install-conf
 	cd $(srcDir) && $(PYTHON) ./manage.py loaddata \
 		testsite/fixtures/initial_data.json
 
+
+vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-survey-packages
+
+$(installTop)/.npm/djaodjin-survey-packages: $(srcDir)/testsite/package.json
+	$(installFiles) $^ $(installTop)
+	$(NPM) install --loglevel verbose --cache $(installTop)/.npm --tmp $(installTop)/tmp --prefix $(installTop)
+	$(installDirs) -d $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/d3/d3.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/jquery/dist/jquery.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/moment/moment.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/moment-timezone/builds/moment-timezone-with-data.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/nvd3/build/nv.d3.css $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/nvd3/build/nv.d3.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/vue/dist/vue.js $(srcDir)/testsite/static/vendor
+	$(installFiles) $(installTop)/node_modules/vue-resource/dist/vue-resource.js $(srcDir)/testsite/static/vendor
+	touch $@
+

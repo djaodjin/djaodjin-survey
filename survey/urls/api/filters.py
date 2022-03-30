@@ -22,31 +22,20 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from distutils.core import setup
-import survey
+from django.conf.urls import url
 
-setup(
-    name='djaodjin-survey',
-    version=survey.__version__,
-    author='The DjaoDjin Team',
-    author_email='support@djaodjin.com',
-    packages=['survey',
-              'survey.api',
-              'survey.templatetags',
-              'survey.urls',
-              'survey.urls.api',
-              'survey.urls.api.sample',
-              'survey.views'],
-    package_data={'survey': [
-        'static/css/*',
-        'static/js/*',
-        'templates/survey/*',
-        'templates/survey/campaigns/*',
-        'templates/survey/matrix/*']},
-    url='https://github.com/djaodjin/djaodjin-survey/',
-    download_url='https://github.com/djaodjin/djaodjin-survey/tarball/%s' \
-        % survey.__version__,
-    license='BSD',
-    description='Survey Django app',
-    long_description=open('README.md').read(),
-)
+from ...api.matrix import (EditableFilterListAPIView,
+    EditableFilterDetailAPIView, AccountListAPIView, QuestionListAPIView)
+from ... import settings
+
+urlpatterns = [
+   url(r'^matrix/filters/(?P<editable_filter>%s)$' % settings.NON_EMPTY_PATH_RE,
+       EditableFilterDetailAPIView.as_view(), name='editable_filter_api'),
+   url(r'^matrix/filters$',
+       EditableFilterListAPIView.as_view(),
+       name='survey_api_editable_filter_list'),
+   url(r'^matrix/accounts/(?P<editable_filter>%s)$' % settings.SLUG_RE,
+       AccountListAPIView.as_view(), name='survey_api_accounts_filter'),
+   url(r'^matrix/questions/(?P<editable_filter>%s)$' % settings.SLUG_RE,
+       QuestionListAPIView.as_view(), name='survey_api_questions_filter'),
+]

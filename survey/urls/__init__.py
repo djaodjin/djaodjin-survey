@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,8 @@ from django.conf.urls import include, url
 
 urlpatterns = [
     url(r'^api/', include('survey.urls.api')),
-    url(r'^manage/', include('survey.urls.manager')),
+    url(r'^campaigns/', include('survey.urls.manager')),
     url(r'^matrix/', include('survey.urls.matrix')),
+    url(r'^portfolios/', include('survey.urls.portfolios')),
     url(r'^', include('survey.urls.sample')),
 ]

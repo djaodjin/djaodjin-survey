@@ -25,7 +25,7 @@
 from django.contrib import admin
 
 from survey.models import (Answer, Campaign, Choice, EditableFilter,
-    EditablePredicate, EnumeratedQuestions, Question, Matrix, Metric,
+    EditablePredicate, EnumeratedQuestions, Question, Matrix,
     Sample, Unit)
 
 admin.site.register(Answer)
@@ -36,6 +36,5 @@ admin.site.register(EditablePredicate)
 admin.site.register(EnumeratedQuestions)
 admin.site.register(Question)
 admin.site.register(Matrix)
-admin.site.register(Metric)
 admin.site.register(Sample)
 admin.site.register(Unit)

@@ -1,4 +1,4 @@
-# Copyright (c) 2019, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -70,13 +70,16 @@ class MatrixDetailView(MatrixMixin, DetailView):
         for metric in metrics:
             if metric == self.object.metric:
                 metric.is_selected = True
-        url_kwargs = {'editable_filter': ''}
-        url_kwargs.update(self.get_url_kwargs())
+        url_filters_kwargs = {}
+        if (self.account_url_kwarg and self.account_url_kwarg in self.kwargs):
+            url_filters_kwargs.update({
+                self.account_url_kwarg: self.kwargs.get(
+                    self.account_url_kwarg)})
         context.update({
             'cohorts': self.get_cohorts(),
             'metrics': metrics,
-            'editable_filter_api_base': reverse('editable_filter_api',
-                kwargs=url_kwargs),
+            'editable_filter_api_base': reverse(
+                'survey_api_editable_filter_list', kwargs=url_filters_kwargs),
         })
         url_kwargs = {self.matrix_url_kwarg: str(self.object)}
         url_kwargs.update(self.get_url_kwargs())

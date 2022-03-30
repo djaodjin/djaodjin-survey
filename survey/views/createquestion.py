@@ -30,7 +30,7 @@ from django.views.generic import (CreateView, DeleteView, ListView,
 
 from ..compat import csrf, reverse
 from ..forms import QuestionForm
-from ..models import Choice, EnumeratedQuestions, Metric, Unit
+from ..models import Choice, EnumeratedQuestions, Question, Unit
 from ..mixins import CampaignQuestionMixin
 
 
@@ -48,13 +48,11 @@ class QuestionFormMixin(CampaignQuestionMixin):
 
     def form_valid(self, form):
         with transaction.atomic():
-            if form.cleaned_data['question_type'] == 'radio':
+            if form.cleaned_data['ui_hint'] == Question.RADIO:
                 enum_slug = slugify(form.cleaned_data['text'])
-                unit = Unit.objects.create(
+                form.instance.default_unit = Unit.objects.create(
                     slug=enum_slug,
                     system=Unit.SYSTEM_ENUMERATED)
-                form.instance.default_metric = Metric.objects.create(
-                    slug=enum_slug, unit=unit)
                 correct_answer = form.cleaned_data['correct_answer']
                 for rank, choice in enumerate(
                         form.cleaned_data['choices'].split('\n')):

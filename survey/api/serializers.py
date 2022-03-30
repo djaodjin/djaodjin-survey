@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,54 +22,120 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.template.defaultfilters import slugify
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 
 from .. import settings
-from ..models import (Answer, Campaign, EditableFilter,
-    EditablePredicate, Matrix, Metric, Sample, Unit)
+from ..compat import reverse, six
+from ..models import (Answer, Campaign, Choice,
+    EditableFilter, EditablePredicate, Matrix, PortfolioDoubleOptIn,
+    Sample, Unit)
 from ..utils import get_account_model, get_belongs_model, get_question_model
+
+
+class EnumField(serializers.Field):
+    """
+    Treat a ``PositiveSmallIntegerField`` as an enum.
+    """
+    choices = {}
+    inverted_choices = {}
+
+    def __init__(self, choices, *args, **kwargs):
+        self.choices = dict(choices)
+        self.inverted_choices = {
+            slugify(val): key for key, val in six.iteritems(self.choices)}
+        super(EnumField, self).__init__(*args, **kwargs)
+
+    def to_representation(self, obj):
+        if isinstance(obj, list):
+            result = [slugify(self.choices.get(item, None)) for item in obj]
+        else:
+            result = slugify(self.choices.get(obj, None))
+        return result
+
+    def to_internal_value(self, data):
+        if isinstance(data, list):
+            result = [self.inverted_choices.get(item, None) for item in data]
+        else:
+            result = self.inverted_choices.get(data, None)
+        if result is None:
+            if not data:
+                raise ValidationError(_("This field cannot be blank."))
+            raise ValidationError(_("'%(data)s' is not a valid choice."\
+                " Expected one of %(choices)s.") % {
+                    'data': data, 'choices': [choice
+                    for choice in six.iterkeys(self.inverted_choices)]})
+        return result
+
+
+class NoModelSerializer(serializers.Serializer):
+
+    def create(self, validated_data):
+        raise RuntimeError('`create()` should not be called.')
+
+    def update(self, instance, validated_data):
+        raise RuntimeError('`update()` should not be called.')
 
 
 class AnswerSerializer(serializers.ModelSerializer):
     """
     Serializer of ``Answer`` when used individually.
     """
-    metric = serializers.SlugRelatedField(required=False,
-        queryset=Metric.objects.all(), slug_field='slug',
-        help_text=_("Metric the measured field represents"))
-    unit = serializers.SlugRelatedField(required=False,
+    unit = serializers.SlugRelatedField(required=False, allow_null=True,
         queryset=Unit.objects.all(), slug_field='slug',
         help_text=_("Unit the measured field is in"))
-    measured = serializers.CharField(required=True, allow_blank=True,
-        help_text=_("measurement in unit"))
+    measured = serializers.CharField(required=True, allow_null=True,
+        allow_blank=True, help_text=_("measurement in unit"))
 
     created_at = serializers.DateTimeField(read_only=True,
         help_text=_("Date/time of creation (in ISO format)"))
     # We are not using a `UserSerializer` here because retrieving profile
     # information must go through the profiles API.
-    collected_by = serializers.SlugRelatedField(required=False,
-        queryset=get_user_model().objects.all(), slug_field='username',
+    collected_by = serializers.SlugRelatedField(read_only=True,
+        required=False, slug_field='username',
         help_text=_("User that collected the answer"))
 
     class Meta(object):
         model = Answer
-        fields = ('metric', 'unit', 'measured', 'created_at', 'collected_by')
+        fields = ('unit', 'measured', 'created_at', 'collected_by')
         read_only_fields = ('created_at', 'collected_by')
+
+
+class ChoiceSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Choice
+        fields = ('text', 'descr')
+        read_only_fields = ('text', 'descr')
+
+
+class UnitSerializer(serializers.ModelSerializer):
+
+    system = EnumField(choices=Unit.SYSTEMS,
+        help_text=_("One of standard (metric system), imperial,"\
+            " rank, enum, or freetext"))
+    choices = ChoiceSerializer(many=True, required=False)
+
+    class Meta:
+        model = Unit
+        fields = ('slug', 'title', 'system', 'choices')
+        read_only_fields = ('choices',)
 
 
 class QuestionCreateSerializer(serializers.ModelSerializer):
 
     title = serializers.CharField(allow_blank=True)
-    default_metric = serializers.SlugRelatedField(slug_field='slug',
-        queryset=Metric.objects.all())
+    default_unit = serializers.SlugRelatedField(slug_field='slug',
+        queryset=Unit.objects.all(),
+        help_text=_("Default unit for measured field when none is specified"))
 
     class Meta:
         model = get_question_model()
-        fields = ('title', 'text', 'default_metric', 'correct_answer',
+        fields = ('title', 'text', 'default_unit', 'correct_answer',
             'extra')
 
 
@@ -81,44 +147,69 @@ class QuestionDetailSerializer(QuestionCreateSerializer):
 
 
 class CampaignQuestionSerializer(serializers.ModelSerializer):
-
-    title = serializers.CharField(allow_blank=True)
-    default_metric = serializers.SlugRelatedField(slug_field='slug',
-        queryset=Metric.objects.all())
+    """
+    Serializer of ``Question`` when used in a list of answers
+    """
+    title = serializers.CharField(allow_blank=True,
+        help_text=_("Short description"))
+    default_unit = UnitSerializer()
+    ui_hint = EnumField(choices=get_question_model().UI_HINTS,
+        help_text=_("Hint for the user interface on"\
+            " how to present the input field"))
 
     class Meta:
         model = get_question_model()
-        fields = ('path', 'default_metric', 'title')
+        fields = ('path', 'title', 'default_unit', 'ui_hint')
 
 
 class SampleAnswerSerializer(AnswerSerializer):
     """
     Serializer of ``Answer`` when used in list.
     """
-    question = CampaignQuestionSerializer()
-    required = serializers.BooleanField(required=False)
+    question = CampaignQuestionSerializer(
+        help_text=_("Question the answer refers to"))
+    required = serializers.BooleanField(required=False,
+        help_text=_("Whether an answer is required or not."))
 
     class Meta(object):
         model = AnswerSerializer.Meta.model
         fields = AnswerSerializer.Meta.fields + ('question', 'required')
-        read_only_fields = AnswerSerializer.Meta.read_only_fields
+        read_only_fields = AnswerSerializer.Meta.read_only_fields + (
+            'required',)
 
 
-class SampleSerializer(serializers.ModelSerializer):
+class SampleCreateSerializer(serializers.ModelSerializer):
 
     campaign = serializers.SlugRelatedField(slug_field='slug',
         queryset=Campaign.objects.all(), required=False,
         help_text=("Campaign this sample is part of."))
-    account = serializers.SlugRelatedField(slug_field='slug',
-        queryset=get_account_model().objects.all(), required=False,
-        help_text=("Account this sample belongs to."))
 
     class Meta(object):
         model = Sample
-        fields = ('slug', 'account', 'created_at',
-            'campaign', 'time_spent', 'is_frozen')
-        read_only_fields = ('slug', 'account', 'created_at',
-            'campaign', 'time_spent')
+        fields = ('campaign',)
+
+
+class SampleSerializer(SampleCreateSerializer):
+
+    campaign = serializers.SlugRelatedField(slug_field='slug',
+        read_only=True, allow_null=True,
+        help_text=("Campaign this sample is part of."))
+    account = serializers.SlugRelatedField(slug_field='slug',
+        read_only=True, required=False,
+        help_text=("Account this sample belongs to."))
+    location = serializers.URLField(read_only=True, allow_null=True,
+        help_text=("URL at which the response is visible."))
+
+    class Meta(object):
+        model = Sample
+        fields = ('campaign', 'slug', 'account', 'created_at',
+            'updated_at', 'is_frozen', 'location')
+        read_only_fields = ('campaign', 'slug', 'account', 'created_at',
+            'updated_at', 'is_frozen', 'location')
+
+    @staticmethod
+    def get_location(obj):
+        return getattr(obj, 'location', None)
 
 
 class CampaignSerializer(serializers.ModelSerializer):
@@ -138,17 +229,12 @@ class CampaignSerializer(serializers.ModelSerializer):
 
 class CampaignCreateSerializer(serializers.ModelSerializer):
 
-    # XXX The `slug` might be useful in order to create campaign aliases
-    # (ref. feedback campaign)
-    account = serializers.SlugRelatedField(
-        slug_field=settings.BELONGS_LOOKUP_FIELD,
-        queryset=get_belongs_model().objects.all())
-    questions = QuestionCreateSerializer(many=True)
+    questions = QuestionCreateSerializer(many=True, required=False)
 
     class Meta(object):
         model = Campaign
-        fields = ('account', 'title', 'description', 'active',
-            'quizz_mode', 'questions')
+        fields = ('slug', 'title', 'description', 'quizz_mode', 'questions')
+        read_only_fields = ('slug',)
 
 
 class EditablePredicateSerializer(serializers.ModelSerializer):
@@ -250,8 +336,108 @@ class MatrixSerializer(serializers.ModelSerializer):
         return instance
 
 
+class KeyValueTuple(serializers.ListField):
+
+    child = serializers.CharField() # XXX (String, Integer)
+    min_length = 3
+    max_length = 3
+
+
+class TableSerializer(NoModelSerializer):
+
+    key = serializers.CharField(
+        help_text=_("Unique key in the table for the data series"))
+    values = serializers.ListField(
+        child=KeyValueTuple(),
+        help_text="Datapoints in the serie")
+
+
+class MetricsSerializer(NoModelSerializer):
+
+    scale = serializers.FloatField(required=False,
+        help_text=_("The scale of the number reported in the tables (ex: 1000"\
+        " when numbers are reported in thousands of dollars)"))
+    unit = serializers.CharField(required=False,
+        help_text=_("Three-letter ISO 4217 code for currency unit (ex: usd)"))
+    title = serializers.CharField(
+        help_text=_("Title for the table"))
+    table = TableSerializer(many=True)
+
+
+class InviteeSerializer(NoModelSerializer):
+
+    slug = serializers.SlugField()
+    email = serializers.EmailField()
+    full_name = serializers.CharField()
+
+
+class PortfolioGrantCreateSerializer(serializers.ModelSerializer):
+
+    accounts = serializers.SlugRelatedField(required=False, many=True,
+        queryset=get_account_model().objects.all(),
+        slug_field=settings.ACCOUNT_LOOKUP_FIELD)
+    campaign = serializers.SlugRelatedField(required=False,
+        queryset=Campaign.objects.all(), slug_field='slug')
+    message = serializers.CharField(required=False, allow_null=True)
+    grantee = InviteeSerializer()
+
+    class Meta:
+        model = PortfolioDoubleOptIn
+        fields = ("accounts", "campaign", "message", "ends_at", "grantee",)
+        read_only_fields = ("ends_at",)
+
+
+class PortfolioRequestCreateSerializer(serializers.ModelSerializer):
+
+    accounts = InviteeSerializer(many=True)
+    campaign = serializers.SlugRelatedField(required=False,
+        queryset=Campaign.objects.all(), slug_field='slug')
+    message = serializers.CharField(required=False, allow_null=True)
+
+    class Meta:
+        model = PortfolioDoubleOptIn
+        fields = ("accounts", "campaign", "message", "ends_at",)
+        read_only_fields = ("ends_at",)
+
+
+class PortfolioOptInSerializer(serializers.ModelSerializer):
+
+    grantee = serializers.SlugRelatedField(
+        queryset=get_account_model().objects.all(),
+        slug_field=settings.ACCOUNT_LOOKUP_FIELD)
+    account = serializers.SlugRelatedField(
+        queryset=get_account_model().objects.all(),
+        slug_field=settings.ACCOUNT_LOOKUP_FIELD)
+    campaign = serializers.SlugRelatedField(
+        queryset=Campaign.objects.all(), slug_field='slug')
+    api_accept = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PortfolioDoubleOptIn
+        fields = ("grantee", "account", "campaign", "api_accept")
+        read_only_fields = ("ends_at", "api_accept")
+
+    @staticmethod
+    def get_api_accept(obj):
+        if obj.state == PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED:
+            return reverse('api_portfolios_grant_accept',
+                args=(obj.verification_key,))
+        if obj.state == PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED:
+            return reverse('api_portfolios_request_accept',
+                args=(obj.verification_key,))
+        return None
+
+
 class AccountSerializer(serializers.ModelSerializer):
+
+    slug = serializers.SerializerMethodField()
 
     class Meta:
         model = get_account_model()
         fields = ('slug', 'email')
+
+    @staticmethod
+    def get_slug(obj):
+        if hasattr(obj, 'slug'):
+            return obj.slug
+        return obj.username

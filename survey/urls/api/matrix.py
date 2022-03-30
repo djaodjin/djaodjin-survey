@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2021, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,23 +24,12 @@
 
 from django.conf.urls import url
 
-from ...api.matrix import (MatrixCreateAPIView, MatrixDetailAPIView,
-    EditableFilterListAPIView, EditableFilterDetailAPIView,
-    AccountListAPIView, QuestionListAPIView)
+from ...api.matrix import MatrixCreateAPIView, MatrixDetailAPIView
 from ... import settings
 
 urlpatterns = [
-   url(r'^matrix/filters/(?P<editable_filter>%s)/?' % settings.PATH_RE,
-       EditableFilterDetailAPIView.as_view(), name='editable_filter_api'),
-   url(r'^matrix/filters/?',
-       EditableFilterListAPIView.as_view(),
-       name='survey_api_editable_filter_list'),
-   url(r'^matrix/accounts/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
-       AccountListAPIView.as_view(), name='survey_api_accounts_filter'),
-   url(r'^matrix/questions/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
-       QuestionListAPIView.as_view(), name='survey_api_questions_filter'),
-   url(r'^matrix/?$',
-       MatrixCreateAPIView.as_view(), name='matrix_api_base'),
-   url(r'^matrix/(?P<path>%s)/?' % settings.PATH_RE,
+   url(r'^matrix/(?P<path>%s)$' % settings.NON_EMPTY_PATH_RE,
        MatrixDetailAPIView.as_view(), name='matrix_api'),
+   url(r'^matrix$',
+       MatrixCreateAPIView.as_view(), name='matrix_api_base'),
 ]

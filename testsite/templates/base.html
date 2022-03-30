@@ -8,12 +8,16 @@
 	{% block localheader %}
 	<!-- Headers specific for the page -->
 	{% endblock %}
+	{% if csrf_token %}
+	<meta name="csrf-token" content="{{csrf_token}}">
+	{% endif %}
 </head>
 <body>
 	<div id="wrap">
 		<header>
 			<ul>
-			<li><a href="{% url 'survey_campaign_list' %}">campaign list</a>
+			<li><a href="{% url 'survey_campaign_list' %}">campaigns</a>
+			<li><a href="{% url 'survey_portfolios' %}">portfolios</a>
 			{% if request.user.is_authenticated %}
 			<li><a href="{% url 'logout' %}">sign out</a>
 			{% else %}
@@ -25,13 +29,48 @@
 			{% for message in messages %}
 				<p>{{ message }}</p>
 			{% endfor %}
+			<script type="text/javascript">
+				var _showErrorMessagesProviderNotified = "We have been notified"
+				+ " and have started on fixing the error. We apologize for the"
+				+ " inconvinience.";
+			</script>
 		</div>
+		<div id="app">
 		{% block content %}
 			<!-- Page content goes here -->
 		{% endblock %}
+		</div>
 	</div>
 </body>
 {% block bodyscripts %}
 <!-- Javascript specific for the page -->
+<script type="text/javascript" charset="utf-8" src="/static/vendor/jquery.js"></script>
+<script type="text/javascript" charset="utf-8" src="/static/vendor/vue.js"></script>
+<script type="text/javascript" charset="utf-8" src="/static/vendor/vue-resource.js"></script>
+<script type="text/javascript" charset="utf-8" src="/static/vendor/vue-typeahead.common.js"></script>
+<script type="text/javascript">
+Vue.prototype.$itemsPerPage =
+    {% if items_per_page %}{{items_per_page}}{% else %}25{% endif %};
+Vue.prototype.$urls = {% if urls %}{{urls|to_json}}{% else %}{}{% endif %};
+
+Vue.http.interceptor.before = function(request, next) {
+  // override before interceptor
+  if( !(/^(GET|HEAD|OPTIONS|TRACE)$/.test(request.method)) ) {
+      request.headers.set("X-CSRFToken", "{{csrf_token}}");
+  }
+  next();
+};
+</script>
+<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-resources.js"></script>
+<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-resources-vue.js"></script>
+<script type="text/javascript" charset="utf-8" src="/static/js/djaodjin-survey-vue.js"></script>
+<script type="text/javascript">
+var app = new Vue({
+  el: '#app',
+  delimiters: ["[[","]]"],
+});
+</script>
+{% block survey_bodyscripts %}
+{% endblock %}
 {% endblock %}
 </html>
