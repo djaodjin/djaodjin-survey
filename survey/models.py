@@ -335,6 +335,49 @@ class SampleManager(models.Manager):
         return self.create(account=get_account_model().objects.get(
                 **account_lookup_kwargs), **kwargs)
 
+    def get_latest_completed_by_accounts(self, campaign,
+                                         before=None, excludes=None):
+        """
+        Returns the most recent frozen assessment before an optionally specified
+        date, indexed by account.
+
+        All accounts in ``excludes`` are not added to the index. This is
+        typically used to filter out 'testing' accounts
+        """
+        #pylint:disable=no-self-use
+        if excludes:
+            if isinstance(excludes, list):
+                excludes = ','.join([
+                    str(account_id) for account_id in excludes])
+            filter_out_testing = (
+                "AND survey_sample.account_id NOT IN (%s)" % str(excludes))
+        else:
+            filter_out_testing = ""
+        before_clause = ("AND created_at < '%s'" % before.isoformat()
+            if before else "")
+        sql_query = """SELECT
+    survey_sample.account_id AS account_id,
+    survey_sample.id AS id,
+    survey_sample.created_at AS created_at
+FROM survey_sample
+INNER JOIN (
+    SELECT
+        account_id,
+        MAX(created_at) AS last_updated_at
+    FROM survey_sample
+    WHERE survey_sample.campaign_id = %(campaign_id)d AND
+          survey_sample.is_frozen
+          %(before_clause)s
+          %(filter_out_testing)s
+    GROUP BY account_id) AS last_updates
+ON survey_sample.account_id = last_updates.account_id AND
+   survey_sample.created_at = last_updates.last_updated_at
+WHERE survey_sample.is_frozen
+""" % {'campaign_id': campaign.pk,
+       'before_clause': before_clause,
+       'filter_out_testing': filter_out_testing}
+        return self.raw(sql_query)
+
     def get_score(self, sample): #pylint: disable=no-self-use
         answers = Answer.objects.populate(sample)
         nb_correct_answers = 0

@@ -205,6 +205,8 @@ class SampleMixin(AccountMixin):
     """
     Returns a ``Sample`` to a ``Campaign``.
     """
+    URL_PATH_SEP = '/'
+    DB_PATH_SEP = '/'
 
     # We have to use a special url_kwarg here because 'sample'
     # interfers with the way rest_framework handles **kwargs.

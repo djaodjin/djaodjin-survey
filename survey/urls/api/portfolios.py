@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,7 +31,7 @@ from ...api.portfolios import (PortfoliosAPIView,
 
 
 urlpatterns = [
-    url(r'^portfolios/grants/(?P<request_key>%s)' % settings.SLUG_RE,
+    url(r'^portfolios/grants/(?P<request_key>%s)/' % settings.SLUG_RE,
         PortfoliosGrantAcceptAPIView.as_view(),
         name='api_portfolios_grant_accept'),
     url(r'^portfolios/requests/(?P<request_key>%s)/' % settings.SLUG_RE,
