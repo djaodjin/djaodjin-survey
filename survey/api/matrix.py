@@ -28,10 +28,9 @@ from collections import OrderedDict
 from django.db.models import F
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from extra_views.contrib.mixins import SearchableListMixin
-from rest_framework import generics
+from rest_framework import generics, response as http
+from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
-from rest_framework import response as http
 
 from ..compat import reverse
 from ..mixins import MatrixMixin
@@ -344,8 +343,8 @@ class EditableFilterQuerysetMixin(object):
         return EditableFilter.objects.all()
 
 
-class EditableFilterListAPIView(SearchableListMixin,
-                EditableFilterQuerysetMixin, generics.ListCreateAPIView):
+class EditableFilterListAPIView(EditableFilterQuerysetMixin,
+                                generics.ListCreateAPIView):
     """
     Lists fitlers
 
@@ -399,8 +398,11 @@ class EditableFilterListAPIView(SearchableListMixin,
             ]
         }
     """
-    search_fields = ['tags']
     serializer_class = EditableFilterSerializer
+    search_fields = (
+        'tags',
+    )
+    filter_backends = (SearchFilter,)
 
     def post(self, request, *args, **kwargs):
         """

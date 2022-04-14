@@ -124,7 +124,6 @@ class AnswerUpdateView(SampleMixin, UpdateView):
             try:
                 with transaction.atomic():
                     created_at = datetime_or_now()
-                    sample = self.object.sample
                     update_or_create_answer(
                         datapoint, question=self.object.question,
                         sample=self.object.sample, created_at=created_at,

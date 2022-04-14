@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import datetime, hashlib, random, uuid
+import hashlib, random, uuid
 
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
@@ -35,7 +35,7 @@ from .utils import get_account_model, get_question_model
 
 
 def get_extra_field_class():
-    extra_class = settings._SETTINGS.get('EXTRA_FIELD')
+    extra_class = settings.EXTRA_FIELD
     if extra_class is None:
         extra_class = models.TextField
     elif isinstance(extra_class, str):
@@ -335,8 +335,8 @@ class SampleManager(models.Manager):
         return self.create(account=get_account_model().objects.get(
                 **account_lookup_kwargs), **kwargs)
 
-    def get_latest_completed_by_accounts(self, campaign,
-                                         before=None, excludes=None):
+    def get_latest_frozen_by_accounts(self, campaign,
+                                      before=None, excludes=None):
         """
         Returns the most recent frozen assessment before an optionally specified
         date, indexed by account.
@@ -435,7 +435,7 @@ class Sample(models.Model):
         if not hasattr(self, '_nb_answers'):
             self._nb_answers = Answer.objects.filter(
                 sample=self,
-                question__default_unit=F('unit_id')).count()
+                question__default_unit=models.F('unit_id')).count()
         return self._nb_answers
 
     @property
@@ -443,7 +443,7 @@ class Sample(models.Model):
         if not hasattr(self, '_nb_required_answers'):
             self._nb_required_answers = Answer.objects.filter(
                 sample=self,
-                question__default_unit=F('unit_id'),
+                question__default_unit=models.F('unit_id'),
                 question__enumeratedquestions__required=True,
                 question__enumeratedquestions__campaign=self.campaign).count()
         return self._nb_required_answers

@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,8 +25,6 @@
 import json
 
 from django import template
-from django.contrib.messages.api import get_messages
-from django.forms import BaseForm
 from django.utils.safestring import mark_safe
 from survey.compat import is_authenticated as is_authenticated_base, six
 

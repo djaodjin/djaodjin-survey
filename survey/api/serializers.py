@@ -50,11 +50,11 @@ class EnumField(serializers.Field):
             slugify(val): key for key, val in six.iteritems(self.choices)}
         super(EnumField, self).__init__(*args, **kwargs)
 
-    def to_representation(self, obj):
-        if isinstance(obj, list):
-            result = [slugify(self.choices.get(item, None)) for item in obj]
+    def to_representation(self, value):
+        if isinstance(value, list):
+            result = [slugify(self.choices.get(item, None)) for item in value]
         else:
-            result = slugify(self.choices.get(obj, None))
+            result = slugify(self.choices.get(value, None))
         return result
 
     def to_internal_value(self, data):
@@ -66,9 +66,8 @@ class EnumField(serializers.Field):
             if not data:
                 raise ValidationError(_("This field cannot be blank."))
             raise ValidationError(_("'%(data)s' is not a valid choice."\
-                " Expected one of %(choices)s.") % {
-                    'data': data, 'choices': [choice
-                    for choice in six.iterkeys(self.inverted_choices)]})
+                " Expected one of %(choices)s.") % {'data': data,
+                    'choices': list(six.iterkeys(self.inverted_choices))})
         return result
 
 
@@ -410,21 +409,23 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
         slug_field=settings.ACCOUNT_LOOKUP_FIELD)
     campaign = serializers.SlugRelatedField(
         queryset=Campaign.objects.all(), slug_field='slug')
+    state = EnumField(choices=PortfolioDoubleOptIn.STATES)
     api_accept = serializers.SerializerMethodField()
 
     class Meta:
         model = PortfolioDoubleOptIn
-        fields = ("grantee", "account", "campaign", "api_accept")
-        read_only_fields = ("ends_at", "api_accept")
+        fields = ('grantee', 'account', 'campaign', 'ends_at',
+            'state', 'api_accept')
+        read_only_fields = ('ends_at', 'state', 'api_accept')
 
     @staticmethod
     def get_api_accept(obj):
         if obj.state == PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED:
             return reverse('api_portfolios_grant_accept',
-                args=(obj.verification_key,))
+                args=(obj.grantee, obj.verification_key,))
         if obj.state == PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED:
             return reverse('api_portfolios_request_accept',
-                args=(obj.verification_key,))
+                args=(obj.account, obj.verification_key,))
         return None
 
 

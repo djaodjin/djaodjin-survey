@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,24 +22,16 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
+"""
+URLs for the djaodjin-survey HTML pages Django app
+"""
 
-from ..settings import SLUG_RE
-from ..views.matrix import (MatrixListView, MatrixDetailView,
-    AccountListView, QuestionListView)
+from django.conf.urls import url, include
 
 
 urlpatterns = [
-   url(r'^accounts/(?P<editable_filter>%s)/?' % SLUG_RE,
-       AccountListView.as_view(), name='accounts_list'),
-   url(r'^accounts/',
-       AccountListView.as_view(), name='accounts_base'),
-   url(r'^questions/(?P<editable_filter>%s)/?' % SLUG_RE,
-       QuestionListView.as_view(), name='questions_list'),
-   url(r'^questions/',
-       QuestionListView.as_view(), name='questions_base'),
-   url(r'^(?P<path>%s)/' % SLUG_RE,
-       MatrixDetailView.as_view(), name='matrix_chart'),
-   url(r'^$',
-       MatrixListView.as_view(), name='matrix_base'),
+    url(r'^campaigns/', include('survey.urls.views.campaigns')),
+    url(r'^matrix/', include('survey.urls.views.matrices')),
+    url(r'^portfolios/', include('survey.urls.views.portfolios')),
+    url(r'^assess/', include('survey.urls.views.samples')),
 ]

@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -21,6 +21,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#pylint:disable=too-many-lines
 
 import decimal, json, logging
 from collections import OrderedDict
@@ -1032,6 +1033,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
     serializer_class = SampleAnswerSerializer
 
     def create(self, request, *args, **kwargs):
+        #pylint:disable=too-many-locals
         if self.sample.is_frozen:
             raise ValidationError("sample is frozen")
 
@@ -1291,7 +1293,9 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
              ]
         }
         """
-        return super(SampleCandidatesAPIView, self).post(request, *args, **kwargs)
+        #pylint:disable=useless-super-delegation
+        return super(
+            SampleCandidatesAPIView, self).post(request, *args, **kwargs)
 
 
 class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):

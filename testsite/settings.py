@@ -45,6 +45,9 @@ if not hasattr(sys.modules[__name__], "SECRET_KEY"):
     SECRET_KEY = "".join([choice(
         "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)])
 
+JWT_SECRET_KEY = SECRET_KEY
+JWT_ALGORITHM = 'HS256'
+
 # Application definition
 INSTALLED_APPS = (
     'debug_toolbar',

@@ -26,7 +26,7 @@ import logging
 
 from django.views.generic.base import TemplateView
 
-from ..compat import reverse
+from ..compat import reverse, NoReverseMatch
 from ..mixins import AccountMixin
 from ..utils import update_context_urls
 

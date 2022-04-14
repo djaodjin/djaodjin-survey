@@ -34,7 +34,8 @@ from ..mixins import AccountMixin
 from ..models import PortfolioDoubleOptIn
 from .serializers import (PortfolioOptInSerializer,
     PortfolioGrantCreateSerializer, PortfolioRequestCreateSerializer)
-from ..filters import DateRangeFilter, OrderingFilter, SearchFilter
+from ..filters import (DateRangeFilter, DoubleOptInStateFilter, OrderingFilter,
+     SearchFilter)
 from ..utils import datetime_or_now, get_account_model
 
 
@@ -54,9 +55,13 @@ class SmartPortfolioListMixin(AccountMixin):
         ('grantee__full_name', 'grantee'),
         ('account__full_name', 'account'),
         ('state', 'state'),
+        ('ends_at', 'ends_at'),
     ]
 
-    filter_backends = (DateRangeFilter, SearchFilter, OrderingFilter)
+    ordering = ('ends_at',)
+
+    filter_backends = (DoubleOptInStateFilter, DateRangeFilter, SearchFilter,
+        OrderingFilter)
 
 
 class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
@@ -197,7 +202,7 @@ portfolios/0123456789abcdef",
         if accounts:
             for account in accounts:
                 # XXX assert self.account has access to `account`
-                portfolio, created = \
+                portfolio, unused_created = \
                     PortfolioDoubleOptIn.objects.update_or_create(
                         account=account,
                         grantee=grantee,
@@ -362,12 +367,12 @@ portfolios/0123456789abcdef",
         }
         accounts = serializer.validated_data['accounts']
         for account in accounts:
-            account, created = get_account_model().objects.get_or_create(
+            account, unused_created = get_account_model().objects.get_or_create(
                 slug=account.get('slug'),
                 defaults={
                     'email': account.get('email')
                 })
-            portfolio, created = \
+            portfolio, unused_created = \
                 PortfolioDoubleOptIn.objects.update_or_create(
                     grantee=self.account,
                     account=account,

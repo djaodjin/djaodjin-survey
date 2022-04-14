@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,26 +28,36 @@ URLs for the djaodjin-survey django app testsite.
 
 from django.views.generic import RedirectView, TemplateView
 from survey.compat import reverse_lazy
+from survey.settings import SLUG_RE
 from rules.urldecorators import include, url
 import debug_toolbar
 
+from .api.auth import LoginAPIView
 from .api.accounts import AccountsAPIView
-
 
 urlpatterns = [
     url(r'^__debug__/', include(debug_toolbar.urls)),
     url(r'^$', TemplateView.as_view(template_name='index.html'), name='home'),
-    url(r'^api/', include('survey.urls.api')),
+    # survey.urls.api
+    url(r'^api/', include('survey.urls.api.noauth')),
+    url(r'^api/(?P<organization>%s)/' % SLUG_RE,
+        include('survey.urls.api.campaigns')),
+    url(r'^api/(?P<organization>%s)/' % SLUG_RE,
+        include('survey.urls.api.filters')),
+    url(r'^api/(?P<organization>%s)/' % SLUG_RE,
+        include('survey.urls.api.matrix')),
+    url(r'^api/(?P<organization>%s)/' % SLUG_RE,
+        include('survey.urls.api.sample')),
+    url(r'^api/(?P<organization>%s)/' % SLUG_RE,
+        include('survey.urls.api.portfolios')),
     url(r'^api/accounts/grant-allowed', AccountsAPIView.as_view(),
         name='api_grant_allowed_candidates'),
     url(r'^api/accounts', AccountsAPIView.as_view(),
         name='api_account_candidates'),
+    url(r'api/auth/', LoginAPIView.as_view(), name='api_login'),
+    url(r'^app/', include('survey.urls.views')),
+
     url(r'^accounts/profile/',
         RedirectView.as_view(url=reverse_lazy('survey_campaign_list'))),
     url(r'^', include('django.contrib.auth.urls')),
-    url(r'^manager/', include('survey.urls.manager'),
-        decorators=['django.contrib.auth.decorators.login_required']),
-    url(r'^matrix/', include('survey.urls.matrix')),
-    url(r'^portfolios/', include('survey.urls.portfolios')),
-    url(r'^', include('survey.urls.sample')),
 ]

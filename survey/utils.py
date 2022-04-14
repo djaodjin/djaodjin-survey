@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -41,6 +41,23 @@ from .compat import six
 LOGGER = logging.getLogger(__name__)
 
 
+def as_timestamp(dtime_at=None):
+    if not dtime_at:
+        dtime_at = datetime_or_now()
+    return int((
+        dtime_at - datetime.datetime(1970, 1, 1, tzinfo=utc)).total_seconds())
+
+
+def datetime_or_now(dtime_at=None):
+    if isinstance(dtime_at, six.string_types):
+        dtime_at = parse_datetime(dtime_at)
+    if not dtime_at:
+        dtime_at = datetime.datetime.utcnow().replace(tzinfo=utc)
+    if dtime_at.tzinfo is None:
+        dtime_at = dtime_at.replace(tzinfo=utc)
+    return dtime_at
+
+
 def is_sqlite3(db_key=None):
     if db_key is None:
         db_key = DEFAULT_DB_ALIAS
@@ -56,30 +73,6 @@ def parse_tz(tzone):
         except UnknownTimeZoneError:
             pass
     return None
-
-
-def datetime_or_now(dtime_at=None):
-    if not isinstance(dtime_at, datetime.datetime):
-        # `datetime.datetime` is a subclass of `datetime.date`.
-        if isinstance(dtime_at, six.string_types):
-            try:
-                # XXX `parse_datetime`
-                dtime_at = datetime.datetime.strptime(
-                    dtime_at, "%Y-%m-%dT%H:%M:%S.%fZ")
-            except ValueError as err:
-                try:
-                    dtime_at = datetime.datetime.strptime(dtime_at, "%Y-%m-%d")
-                except ValueError as err:
-                    LOGGER.warning(err)
-                    dtime_at = None
-        elif isinstance(dtime_at, datetime.date):
-            dtime_at = datetime.datetime(
-                dtime_at.year, dtime_at.month, dtime_at.day)
-    if not dtime_at:
-        dtime_at = datetime.datetime.utcnow().replace(tzinfo=utc)
-    if dtime_at.tzinfo is None:
-        dtime_at = dtime_at.replace(tzinfo=utc)
-    return dtime_at
 
 
 def get_account_model():

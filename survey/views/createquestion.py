@@ -58,7 +58,7 @@ class QuestionFormMixin(CampaignQuestionMixin):
                         form.cleaned_data['choices'].split('\n')):
                     choice = Choice.objects.create(
                         text=choice.strip(),
-                        unit=unit,
+                        unit=form.instance.default_unit,
                         rank=rank)
                     if correct_answer and choice.text in correct_answer:
                         form.instance.correct_answer = choice

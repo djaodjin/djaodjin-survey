@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@ setup(
               'survey.urls',
               'survey.urls.api',
               'survey.urls.api.sample',
+              'survey.urls.views',
               'survey.views'],
     package_data={'survey': [
         'static/css/*',

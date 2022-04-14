@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2020, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,13 +22,22 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-URLs for djaodjin-survey Django app
-"""
+from django.conf.urls import url
 
-from django.conf.urls import include, url
+from ...settings import SLUG_RE
+from ...views.sample import (AnswerUpdateView, SampleCreateView,
+    SampleResetView, SampleResultView, SampleUpdateView)
 
 urlpatterns = [
-    url(r'^api/', include('survey.urls.api')),
-    url(r'^', include('survey.urls.views')),
+   url(r'^(?P<campaign>%s)/(?P<sample>%s)/reset/' % (SLUG_RE, SLUG_RE),
+       SampleResetView.as_view(), name='survey_sample_reset'),
+   url(r'^(?P<campaign>%s)/(?P<sample>%s)/results/' % (SLUG_RE, SLUG_RE),
+       SampleResultView.as_view(), name='survey_sample_results'),
+   url(r'^(?P<campaign>%s)/(?P<sample>%s)/(?:(?P<rank>\d+)/)'
+       % (SLUG_RE, SLUG_RE),
+       AnswerUpdateView.as_view(), name='survey_answer_update'),
+   url(r'^(?P<campaign>%s)/(?P<sample>%s)/' % (SLUG_RE, SLUG_RE),
+       SampleUpdateView.as_view(), name='survey_sample_update'),
+   url(r'^(?P<campaign>%s)/' % SLUG_RE,
+       SampleCreateView.as_view(), name='survey_sample_new'),
 ]

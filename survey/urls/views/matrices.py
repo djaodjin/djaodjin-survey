@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,9 +24,22 @@
 
 from django.conf.urls import url
 
-from .. import settings
-from ..views.portfolios import PortfoliosView
+from ...settings import SLUG_RE
+from ...views.matrix import (MatrixListView, MatrixDetailView,
+    AccountListView, QuestionListView)
+
 
 urlpatterns = [
-    url(r'', PortfoliosView.as_view(), name='survey_portfolios'),
+   url(r'^accounts/(?P<editable_filter>%s)/?' % SLUG_RE,
+       AccountListView.as_view(), name='accounts_list'),
+   url(r'^accounts/',
+       AccountListView.as_view(), name='accounts_base'),
+   url(r'^questions/(?P<editable_filter>%s)/?' % SLUG_RE,
+       QuestionListView.as_view(), name='questions_list'),
+   url(r'^questions/',
+       QuestionListView.as_view(), name='questions_base'),
+   url(r'^(?P<path>%s)/' % SLUG_RE,
+       MatrixDetailView.as_view(), name='matrix_chart'),
+   url(r'^$',
+       MatrixListView.as_view(), name='matrix_base'),
 ]

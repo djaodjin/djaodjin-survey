@@ -34,7 +34,7 @@ from six import StringIO
 try:
     from django.utils.decorators import available_attrs
 except ImportError: # django < 3.0
-    def available_attrs(fn):
+    def available_attrs(fn):#pylint:disable=unused-argument
         return WRAPPER_ASSIGNMENTS
 
 try:

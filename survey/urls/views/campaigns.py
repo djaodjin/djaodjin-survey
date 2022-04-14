@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,12 +24,12 @@
 
 from django.conf.urls import url
 
-from ..settings import SLUG_RE
-from ..views.campaigns import (CampaignListView, CampaignPublishView,
+from ...settings import SLUG_RE
+from ...views.campaigns import (CampaignListView, CampaignPublishView,
     CampaignResultView, CampaignSendView, CampaignUpdateView)
-from ..views.createquestion import (QuestionCreateView, QuestionDeleteView,
+from ...views.createquestion import (QuestionCreateView, QuestionDeleteView,
     QuestionListView, QuestionRankView, QuestionUpdateView)
-from ..views.matrix import RespondentListView
+from ...views.matrix import RespondentListView
 
 
 urlpatterns = [

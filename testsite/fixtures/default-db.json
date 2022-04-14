@@ -9,10 +9,40 @@
       "is_superuser": true,
       "last_login": "2022-01-01T00:00:00+00:00",
       "last_name": "Doe",
-      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=", 
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
       "username": "donny"
     },
     "model": "auth.User", "pk": 2
+},
+{
+    "fields": {
+      "date_joined": "2022-01-01T00:00:00+00:00",
+      "email": "steve@localhost.localdomain",
+      "first_name": "Steve",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "last_login": "2022-01-01T00:00:00+00:00",
+      "last_name": "",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "steve"
+    },
+    "model": "auth.User", "pk": 3
+},
+{
+    "fields": {
+      "date_joined": "2022-01-01T00:00:00+00:00",
+      "email": "supplier-1@localhost.localdomain",
+      "first_name": "Steve",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "last_login": "2022-01-01T00:00:00+00:00",
+      "last_name": "",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "supplier-1"
+    },
+    "model": "auth.User", "pk": 4
 },
 {
   "fields" : {
@@ -197,5 +227,25 @@
     "rank": 4
   },
   "model": "survey.EnumeratedQuestions", "pk": 4
-}
-]
+},
+{
+  "fields": {
+    "grantee": 2,
+    "account": 4,
+    "state": 3,
+    "initiated_by": 2,
+    "ends_at": "2022-01-01T00:00:00+00:00"
+  },
+  "model": "survey.PortfolioDoubleOptIn", "pk": 1
+},
+{
+  "fields": {
+    "grantee": 2,
+    "account": 4,
+    "state": 0,
+    "initiated_by": 2,
+    "verification_key": "0000000000000000000000000000000000000001",
+    "ends_at": "2022-01-01T00:00:00+00:00"
+  },
+  "model": "survey.PortfolioDoubleOptIn", "pk": 2
+}]

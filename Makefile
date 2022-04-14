@@ -49,7 +49,7 @@ initdb: install-conf
 	-rm -f $(srcDir)/db.sqlite3
 	cd $(srcDir) && $(PYTHON) ./manage.py migrate $(RUNSYNCDB) --noinput
 	cd $(srcDir) && $(PYTHON) ./manage.py loaddata \
-		testsite/fixtures/initial_data.json
+		testsite/fixtures/default-db.json
 
 
 vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-survey-packages
