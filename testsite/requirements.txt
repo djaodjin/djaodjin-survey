@@ -3,7 +3,7 @@ djangorestframework==3.12.4
 PyJWT==2.0.1
 
 # testsite-only
-django-debug-toolbar==2.1
+django-debug-toolbar==2.2.1
 django-extensions==3.0.2
 djaodjin-rules==2.5
 
