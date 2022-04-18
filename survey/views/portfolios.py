@@ -39,13 +39,14 @@ class PortfoliosView(AccountMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super(PortfoliosView, self).get_context_data(**kwargs)
+        url_kwargs = self.get_url_kwargs()
         urls = {
             'survey_api_portfolios_grants':
-                reverse('survey_api_portfolios_grants'),
+                reverse('survey_api_portfolios_grants', kwargs=url_kwargs),
             'survey_api_portfolios_requests':
-                reverse('survey_api_portfolios_requests'),
+                reverse('survey_api_portfolios_requests', kwargs=url_kwargs),
             'survey_api_portfolios_received':
-                reverse('survey_api_portfolios_received'),
+                reverse('survey_api_portfolios_received', kwargs=url_kwargs),
         }
         try:
             urls.update({

@@ -366,8 +366,8 @@ class MetricsSerializer(NoModelSerializer):
 class InviteeSerializer(NoModelSerializer):
 
     slug = serializers.SlugField()
-    email = serializers.EmailField()
     full_name = serializers.CharField()
+    email = serializers.EmailField(required=False)
 
 
 class PortfolioGrantCreateSerializer(serializers.ModelSerializer):

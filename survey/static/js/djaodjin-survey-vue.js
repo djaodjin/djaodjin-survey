@@ -39,21 +39,28 @@ Vue.component('portfolios-received-list', {
     data: function() {
         return {
             url: this.$urls.survey_api_portfolios_received,
+            url_account_base: this.$urls.api_account_candidates,
             params: {
                 o: '-created_at'
             },
+            getCompleteCb: '_decorateProfiles',
         }
     },
     methods: {
-        ignore: function(portfolio, index) {
+        _decorateProfile: function(item) {
             var vm = this;
-            vm.reqDelete(portfolio.api_accept,
-            function(resp) { // success
-                vm.remove(vm.items, index);
-                showMessages(
-                    ["You have denied the request(s)."],
-                        "success");
+            vm.reqGet(vm._safeUrl(vm.url_account_base, item.grantee),
+            function(respProfile) {
+                item.grantee = respProfile;
+            }, function(respProfile) {
+                // ok if we cannot find profile information.
             });
+        },
+        _decorateProfiles: function() {
+            var vm = this;
+            for( var idx = 0; idx < vm.items.results.length; ++idx ) {
+                vm._decorateProfile(vm.items.results[idx]);
+            }
         },
         accept: function(portfolio, index) {
             var vm = this;
@@ -62,6 +69,16 @@ Vue.component('portfolios-received-list', {
                 vm.remove(vm.requested, index);
                 showMessages(
                     ["You have accepted the request(s)."],
+                        "success");
+            });
+        },
+        ignore: function(portfolio, index) {
+            var vm = this;
+            vm.reqDelete(portfolio.api_accept,
+            function(resp) { // success
+                vm.remove(vm.items, index);
+                showMessages(
+                    ["You have denied the request(s)."],
                         "success");
             });
         },
@@ -76,9 +93,18 @@ Vue.component('portfolios-grant-list', {
     mixins: [
         itemListMixin
     ],
+    props: {
+        defaultSelectedAccounts: {
+            type: Array,
+            default: function() {
+                return [];
+            }
+        }
+    },
     data: function() {
         return {
             url: this.$urls.survey_api_portfolios_grants,
+            url_account_base: this.$urls.api_account_candidates,
             params: {
                 o: '-created_at'
             },
@@ -107,9 +133,12 @@ Vue.component('portfolios-grant-list', {
         },
         addGrantee: function(grantees, newGrantee) {
             var vm = this;
-            if( (typeof newGrantee.slug === 'undefined') && !newGrantee.email ) {
-                showErrorMessages("Sorry, we cannot find an e-mail address for "
-                                  + newGrantee.full_name);
+            if( (typeof newGrantee.slug === 'undefined') &&
+                !newGrantee.email ) {
+// We don't want to scroll back to the top when an invite should be created.
+//                showErrorMessages(
+//                    "Sorry, we cannot find contact information for " + (
+//                    newGrantee.full_name || newGrantee.email);
             } else {
                 vm.grant.grantee = newGrantee;
             }
@@ -119,8 +148,12 @@ Vue.component('portfolios-grant-list', {
             var portfolios = {};
             portfolios.grantee = {
                 email: grant.grantee.email,
-                full_name: grant.grantee.full_name
+                full_name: (grant.grantee.full_name ||
+                    grant.grantee.printable_name)
             };
+            if( grant.grantee.slug ) {
+                portfolios.grantee.slug = grant.grantee.slug;
+            }
             if( grant.grantee.message ) {
                 portfolios.message = grant.grantee.message;
             }
@@ -132,9 +165,8 @@ Vue.component('portfolios-grant-list', {
             }
             return portfolios;
         },
-        submitGrants: function() {
+        _submitPortfolios: function(portfolios) {
             var vm = this;
-            var portfolios = vm._preparePortfolios(vm.grant);
             vm.reqPost(vm.url, portfolios,
             function(resp) { // success
                 showMessages(
@@ -142,9 +174,33 @@ Vue.component('portfolios-grant-list', {
                     "success");
             });
         },
+        submitGrants: function() {
+            var vm = this;
+            var portfolios = vm._preparePortfolios(vm.grant);
+            if( portfolios.grantee.slug ) {
+                vm._submitPortfolios(portfolios);
+            } else {
+                vm.reqPost(vm.url_account_base, portfolios.grantee,
+                function(resp) {
+                    var email = portfolios.grantee.email;
+                    portfolios.grantee = resp;
+                    portfolios.grantee.email = email;
+                    vm._submitPortfolios(portfolios);
+                });
+            }
+        },
+    },
+    computed: {
+        showAccounts: function() {
+            return this.grant.grantee.slug || this.grant.grantee.email;
+        }
     },
     mounted: function(){
-        this.get();
+        var vm = this;
+        vm.get();
+        if( vm.defaultSelectedAccounts ) {
+            vm.grant.accounts = vm.defaultSelectedAccounts;
+        }
     }
 });
 
@@ -220,7 +276,9 @@ var AccountTypeAhead = Vue.component('account-typeahead', TypeAhead.extend({
     search: function() {
       var vm = this;
       vm.loading = true;
-      vm.fetch().then(function (resp) {
+      vm.fetch().then(
+      function (resp) {
+        vm.loading = false;
         if (resp && vm.query) {
           var data = resp.data.results;
           data = vm.prepareResponseData ? vm.prepareResponseData(data) : data;
@@ -229,8 +287,10 @@ var AccountTypeAhead = Vue.component('account-typeahead', TypeAhead.extend({
           } else {
               vm.onHit({email: vm.query});
           }
-          vm.loading = false;
         }
+      }).catch(function(resp) {
+          vm.loading = false;
+          vm.onHit({email: vm.query});
       });
     },
 
@@ -267,7 +327,7 @@ var AccountTypeAhead = Vue.component('account-typeahead', TypeAhead.extend({
 
 
 Vue.component('grantee-typeahead', AccountTypeAhead.extend({
-  props: ['dataset'],
+  props: ['dataset', 'defaultMessage', 'showAccounts'],
   data: function data() {
     return {
       src: this.$urls.api_account_candidates,
@@ -293,7 +353,11 @@ Vue.component('grantee-typeahead', AccountTypeAhead.extend({
         vm.reset();
       } else {
         vm.selectedItem.email = vm.query;
+        vm.selectedItem.message = vm.defaultMessage;
         vm.unregistered = true;
+        vm.$nextTick(function() {
+            vm.$refs.fullName.focus();
+        });
       }
     },
     submitInvite: function() {

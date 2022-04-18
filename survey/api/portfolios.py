@@ -28,6 +28,7 @@ from django.db import transaction
 from django.db.models import Q
 from rest_framework import generics
 from rest_framework.mixins import DestroyModelMixin
+from rest_framework.response import Response as HttpResponse
 
 from .. import signals
 from ..mixins import AccountMixin
@@ -148,7 +149,9 @@ portfolios/0123456789abcdef",
     serializer_class = PortfolioOptInSerializer
 
     def get_queryset(self):
-        return PortfolioDoubleOptIn.objects.filter(account=self.account)
+        return PortfolioDoubleOptIn.objects.filter(
+            Q(account=self.account) &
+            Q(state=PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED))
 
     def post(self, request, *args, **kwargs):
         """
@@ -185,8 +188,11 @@ portfolios/0123456789abcdef",
 
     def perform_create(self, serializer):
         created_at = datetime_or_now()
-        grantee_data = serializer.validated_data['grantee']
-        invitee_email = grantee_data.get('email')
+        # If we don't make a copy, we will get an exception "Got KeyError
+        # when attempting to get a value for field `slug`" later on in
+        # `get_success_headers`.
+        grantee_data = {}
+        grantee_data.update(serializer.validated_data['grantee'])
         campaign = serializer.validated_data.get('campaign')
         accounts = serializer.validated_data.get('accounts', [])
         defaults = {
@@ -194,11 +200,9 @@ portfolios/0123456789abcdef",
             'state': PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED,
             'ends_at': created_at
         }
-        grantee = get_account_model().objects.get_or_create(
-            slug=grantee_data.get('slug'),
-            defaults={
-                'email': invitee_email
-            })
+        grantee_slug = grantee_data.pop('slug')
+        grantee, unused_created = get_account_model().objects.get_or_create(
+            slug=grantee_slug, defaults=grantee_data)
         if accounts:
             for account in accounts:
                 # XXX assert self.account has access to `account`
@@ -221,8 +225,7 @@ portfolios/0123456789abcdef",
                 portfolio=serializer.instance, request=self.request)
 
 
-class PortfoliosGrantAcceptAPIView(AccountMixin, DestroyModelMixin,
-                                     generics.CreateAPIView):
+class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
     """
     Accepts a portfolio grant
 
@@ -255,7 +258,9 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, DestroyModelMixin,
         return PortfolioDoubleOptIn.objects.filter(grantee=self.account)
 
     def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
+        instance = self.get_object()
+        self.perform_create(instance)
+        return HttpResponse(status=status.HTTP_201_CREATED)
 
     def delete(self, request, *args, **kwargs):
         """
@@ -271,14 +276,13 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, DestroyModelMixin,
         """
         return self.destroy(request, *args, **kwargs)
 
-    def perform_create(self, serializer):
+    def perform_create(self, instance):
         with transaction.atomic():
-            serializer.instance.create_portfolios()
-            serializer.instance.state = \
-                PortfolioDoubleOptIn.OPTIN_GRANT_ACCEPTED
-            serializer.instance.save()
+            instance.create_portfolios()
+            instance.state = PortfolioDoubleOptIn.OPTIN_GRANT_ACCEPTED
+            instance.save()
             signals.portfolio_grant_accepted.send(sender=__name__,
-                portfolio=serializer.instance, request=self.request)
+                portfolio=instance, request=self.request)
 
     def perform_destroy(self, instance):
         instance.state = PortfolioDoubleOptIn.OPTIN_GRANT_DENIED
@@ -382,8 +386,7 @@ portfolios/0123456789abcdef",
                 portfolio=portfolio, invitee=account, request=self.request)
 
 
-class PortfoliosRequestAcceptAPIView(AccountMixin, DestroyModelMixin,
-                                     generics.CreateAPIView):
+class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
     """
     Accepts a portfolio request
 
@@ -416,7 +419,9 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, DestroyModelMixin,
         return PortfolioDoubleOptIn.objects.filter(account=self.account)
 
     def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
+        instance = self.get_object()
+        self.perform_create(instance)
+        return HttpResponse(status=status.HTTP_201_CREATED)
 
     def delete(self, request, *args, **kwargs):
         """
@@ -432,14 +437,14 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, DestroyModelMixin,
         """
         return self.destroy(request, *args, **kwargs)
 
-    def perform_create(self, serializer):
+    def perform_create(self, instance):
         with transaction.atomic():
-            serializer.instance.create_portfolios()
-            serializer.instance.state = \
+            instance.create_portfolios()
+            instance.state = \
                 PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED
-            serializer.instance.save()
+            instance.save()
             signals.portfolio_request_accepted.send(sender=__name__,
-                portfolio=serializer.instance, request=self.request)
+                portfolio=instance, request=self.request)
 
     def perform_destroy(self, instance):
         instance.state = PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED

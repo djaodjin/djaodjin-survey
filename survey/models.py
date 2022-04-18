@@ -738,7 +738,6 @@ class PortfolioDoubleOptIn(models.Model):
     initiated_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE)
     verification_key = models.CharField(max_length=40, null=True, unique=True)
-    email = models.EmailField(null=True)
 
     # To connect with payment provider.
     invoice_key = models.CharField(max_length=40, null=True)
