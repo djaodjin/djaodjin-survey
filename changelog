@@ -1,3 +1,11 @@
+0.4.0
+
+  * Makes djaodjin-resources-vue a UMB module
+  * Filters portfolios
+  * Adds get_latest_completed_by_accounts
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu, 21 Apr 2022 21:51:00 -0700
+
 0.2.7
 
   * Adds API to retrieve an assessment answers

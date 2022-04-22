@@ -23,4 +23,13 @@ The source code is bundled with a sample django project.
 Releases
 ========
 
+0.4.0
+
+  * Makes djaodjin-resources-vue a UMB module
+  * Filters portfolios
+  * Adds get_latest_completed_by_accounts
+
+[previous release notes](changelog)
+
+
 Models have been completely re-designed between version 0.1.7 and 0.2.0
