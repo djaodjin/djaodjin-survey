@@ -1,14 +1,157 @@
 /* Generic mixins for Vue.js */
 
-var DESC_SORT_PRE = '-';
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define(['exports', 'jQuery'], factory);
+    } else if (typeof exports === 'object' && typeof exports.nodeName !== 'string') {
+        // CommonJS
+        factory(exports, require('jQuery'));
+    } else {
+        // Browser true globals added to `window`.
+        factory(root, root.jQuery);
+        // If we want to put the exports in a namespace, use the following line
+        // instead.
+        // factory((root.djResources = {}), root.jQuery);
+    }
+}(typeof self !== 'undefined' ? self : this, function (exports, jQuery) {
 
+
+/** Formats a date shown to the user.
+*/
+const DATE_FORMAT = 'MMM DD, YYYY';
+const DESC_SORT_PRE = '-';
+
+
+/** Displays notification messages to the user
+
+     requires `jQuery`, _showErrorMessagesProviderNotified
+     optional toastr
+ */
+var messagesMixin = {
+    data: function() {
+        return {
+            messagesElement: '#messages-content',
+        }
+    },
+    methods: {
+        /**
+           Decorates elements when details exist, otherwise return messages
+           to be shown globally.
+
+           This method takes a `resp` argument as passed by jQuery ajax calls.
+        */
+        _showErrorMessages: function (resp) {
+            var vm = this;
+            var messages = [];
+            if( typeof resp === "string" ) {
+                messages = [resp];
+            } else {
+                var data = resp.data || resp.responseJSON;
+                if( data && typeof data === "object" ) {
+                    if( data.detail ) {
+                        messages = [data.detail];
+                    } else if( jQuery.isArray(data) ) {
+                        for( var idx = 0; idx < data.length; ++idx ) {
+                            messages = messages.concat(vm._showErrorMessages(data[idx]));
+                        }
+                    } else {
+                        for( var key in data ) {
+                            if (data.hasOwnProperty(key)) {
+                                var message = data[key];
+                                if( jQuery.isArray(data[key]) ) {
+                                    message = "";
+                                    var sep = "";
+                                    for( var i = 0; i < data[key].length; ++i ) {
+                                        var messagePart = data[key][i];
+                                        if( typeof data[key][i] !== 'string' ) {
+                                            messagePart = JSON.stringify(data[key][i]);
+                                        }
+                                        message += sep + messagePart;
+                                        sep = ", ";
+                                    }
+                                } else if( data[key].hasOwnProperty('detail') ) {
+                                    message = data[key].detail;
+                                }
+                                messages.push(key + ": " + message);
+                                var inputField = jQuery("[name=\"" + key + "\"]");
+                                var parent = inputField.parents('.form-group');
+                                inputField.addClass("is-invalid");
+                                parent.addClass("has-error");
+                                var help = parent.find('.invalid-feedback');
+                                if( help.length > 0 ) { help.text(message); }
+                            }
+                        }
+                    }
+                } else if( resp.detail ) {
+                    messages = [resp.detail];
+                }
+            }
+            return messages;
+        },
+        clearMessages: function() {
+            jQuery(messagesElement).empty();
+        },
+        showMessages: function (messages, style) {
+            if( typeof toastr !== 'undefined'
+                && $(toastr.options.containerId).length > 0 ) {
+                for( var i = 0; i < messages.length; ++i ) {
+                    toastr[style](messages[i]);
+                }
+            } else {
+                var messageBlock = "<div class=\"alert alert-block";
+                if( style ) {
+                    if( style === "error" ) {
+                        style = "danger";
+                    }
+                    messageBlock += " alert-" + style;
+                }
+                messageBlock += "\"><button type=\"button\" class=\"close\" data-dismiss=\"alert\">&times;</button>";
+
+                if( typeof messages === "string" ) {
+                    messages = [messages];
+                }
+                for( var i = 0; i < messages.length; ++i ) {
+                    messageBlock += "<div>" + messages[i] + "</div>";
+                }
+                messageBlock += "</div>";
+                jQuery(messagesElement).append(messageBlock);
+            }
+            jQuery("#messages").removeClass("hidden");
+            jQuery("html, body").animate({
+                // scrollTop: $("#messages").offset().top - 50
+                // avoid weird animation when messages at the top:
+                scrollTop: jQuery("body").offset().top
+            }, 500);
+        },
+        showErrorMessages: function (resp) {
+            var vm = this;
+            if( resp.status >= 500 && resp.status < 600 ) {
+                msg = "Err " + resp.status + ": " + resp.statusText;
+                if( _showErrorMessagesProviderNotified ) {
+                    msg += "<br />" + _showErrorMessagesProviderNotified;
+                }
+                messages = [msg];
+            } else {
+                var messages = vm._showErrorMessages(resp);
+                if( messages.length === 0 ) {
+                    messages = ["Err " + resp.status + ": " + resp.statusText];
+                }
+            }
+            vm.showMessages(messages, "error");
+        },
+    }
+};
 
 /** A wrapper around jQuery ajax functions that adds authentication
     parameters as necessary.
 
-    requires `jQuery`, `showErrorMessages`
+    requires `jQuery`
 */
 var httpRequestMixin = {
+    mixins: [
+        messagesMixin
+    ],
     // basically a wrapper around jQuery ajax functions
     methods: {
 
@@ -90,7 +233,7 @@ var httpRequestMixin = {
         reqGet: function(url, arg, arg2, arg3){
             var vm = this;
             var queryParams, successCallback;
-            var failureCallback = showErrorMessages;
+            var failureCallback = vm.showErrorMessages;
             if(typeof url != 'string') throw 'url should be a string';
             if(vm._isFunction(arg)){
                 // We are parsing reqGet(url, successCallback)
@@ -166,7 +309,7 @@ var httpRequestMixin = {
         reqPost: function(url, arg, arg2, arg3){
             var vm = this;
             var data, successCallback;
-            var failureCallback = showErrorMessages;
+            var failureCallback = vm.showErrorMessages;
             if(typeof url != 'string') throw 'url should be a string';
             if(vm._isFunction(arg)){
                 // We are parsing reqPost(url, successCallback)
@@ -238,7 +381,7 @@ var httpRequestMixin = {
         reqPostBlob: function(url, form, arg2, arg3) {
             var vm = this;
             var successCallback;
-            var failureCallback = showErrorMessages;
+            var failureCallback = vm.showErrorMessages;
             if(typeof url != 'string') throw 'url should be a string';
             if(vm._isFunction(arg2)){
                 // We are parsing reqPostBlob(url, successCallback)
@@ -297,7 +440,7 @@ var httpRequestMixin = {
         reqPut: function(url, arg, arg2, arg3){
             var vm = this;
             var data, successCallback;
-            var failureCallback = showErrorMessages;
+            var failureCallback = vm.showErrorMessages;
             if(typeof url != 'string') throw 'url should be a string';
             if(vm._isFunction(arg)){
                 // We are parsing reqPut(url, successCallback)
@@ -372,7 +515,7 @@ var httpRequestMixin = {
         reqPatch: function(url, arg, arg2, arg3){
             var vm = this;
             var data, successCallback;
-            var failureCallback = showErrorMessages;
+            var failureCallback = vm.showErrorMessages;
             if(typeof url != 'string') throw 'url should be a string';
             if(vm._isFunction(arg)){
                 // We are parsing reqPatch(url, successCallback)
@@ -442,7 +585,7 @@ var httpRequestMixin = {
         reqDelete: function(url, arg, arg2){
             var vm = this;
             var successCallback;
-            var failureCallback = showErrorMessages;
+            var failureCallback = vm.showErrorMessages;
             if(typeof url != 'string') throw 'url should be a string';
             if(vm._isFunction(arg)){
                 // We are parsing reqDelete(url, successCallback)
@@ -496,7 +639,7 @@ var httpRequestMixin = {
                 successCallback = function() {};
             }
             if( !failureCallback ) {
-                failureCallback = showErrorMessages;
+                failureCallback = vm.showErrorMessages;
             }
             for(var idx = 0; idx < queryArray.length; ++idx ) {
                 ajaxCalls.push(function () {
@@ -888,7 +1031,7 @@ var itemListMixin = {
                     vm.itemsLoaded = true;
 
                     if( res.detail ) {
-                        showMessages([res.detail], "warning");
+                        vm.showMessages([res.detail], "warning");
                     }
 
                     if(vm[vm.getCompleteCb]){
@@ -934,3 +1077,121 @@ var itemListMixin = {
         },
     },
 };
+
+
+var TypeAhead = Vue.extend({
+    mixins: [
+        httpRequestMixin
+    ],
+    data: function data() {
+        return {
+            url: null,
+            items: [],
+            current: -1,
+            loading: false,
+            minChars: 4,
+            query: '',
+            queryParamName: 'q',
+            selectFirst: false,
+        };
+    },
+    methods: {
+        activeClass: function activeClass(index) {
+            return {active: this.current === index};
+        },
+
+        cancel: function() {},
+
+        down: function() {
+            var vm = this;
+            if( vm.current < vm.items.length - 1 ) {
+                vm.current++;
+            } else {
+                vm.current = -1;
+            }
+        },
+
+        hit: function() {
+            var vm = this;
+            if (vm.current !== -1) {
+                vm.onHit(vm.items[vm.current]);
+            }
+        },
+
+        onHit: function onHit() {
+            Vue.util.warn('You need to implement the `onHit` method', this);
+        },
+
+        reset: function() {
+            var vm = this;
+            vm.items = [];
+            vm.query = '';
+            vm.loading = false;
+        },
+
+        setActive: function setActive(index) {
+            var vm = this;
+            vm.current = index;
+        },
+
+        up: function() {
+            var vm = this;
+            if (vm.current > 0) {
+                vm.current--;
+            } else if (vm.current === -1) {
+                vm.current = vm.items.length - 1;
+            } else {
+                vm.current = -1;
+            }
+        },
+
+        update: function update() {
+            var vm = this;
+            vm.cancel();
+            if (!vm.query) {
+                return vm.reset();
+            }
+            if( vm.minChars && vm.query.length < vm.minChars ) {
+                return;
+            }
+            vm.loading = true;
+            var params = {};
+            params[vm.queryParamName] = vm.query;
+            vm.reqGet(vm.url, params,
+            function (resp) {
+                if (resp && vm.query) {
+                    var data = resp.data.results;
+                    data = vm.prepareResponseData ? vm.prepareResponseData(data) : data;
+                    vm.items = vm.limit ? data.slice(0, vm.limit) : data;
+                    vm.current = -1;
+                    vm.loading = false;
+                    if (vm.selectFirst) {
+                        vm.down();
+                    }
+                }
+            }, function() {
+                // on failure we just do nothing.
+            });
+        },
+    },
+    computed: {
+        hasItems: function hasItems() {
+            return this.items.length > 0;
+        },
+        isEmpty: function isEmpty() {
+            return !this.query;
+        },
+        isDirty: function isDirty() {
+            return !!this.query;
+        }
+    },
+});
+
+    // attach properties to the exports object to define
+    // the exported module properties.
+    exports.messagesMixin = messagesMixin;
+    exports.httpRequestMixin = httpRequestMixin;
+    exports.itemMixin = itemMixin;
+    exports.itemListMixin = itemListMixin;
+    exports.TypeAhead = TypeAhead;
+}));

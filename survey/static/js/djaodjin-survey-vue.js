@@ -257,7 +257,7 @@ var AccountTypeAhead = Vue.component('account-typeahead', TypeAhead.extend({
   props: ['dataset'],
   data: function data() {
     return {
-      src: this.$urls.api_account_candidates,
+      url: this.$urls.api_account_candidates,
       items: [],
       query: '',
       current: -1,
@@ -330,7 +330,7 @@ Vue.component('grantee-typeahead', AccountTypeAhead.extend({
   props: ['dataset', 'defaultMessage', 'showAccounts'],
   data: function data() {
     return {
-      src: this.$urls.api_account_candidates,
+      url: this.$urls.api_account_candidates,
       items: [],
       query: '',
       current: -1,
@@ -371,7 +371,7 @@ Vue.component('grantee-typeahead', AccountTypeAhead.extend({
 Vue.component('grant-allowed-typeahead', AccountTypeAhead.extend({
   data: function data() {
     return {
-      src: this.$urls.api_grant_allowed_candidates,
+      url: this.$urls.api_grant_allowed_candidates,
       items: [],
       query: '',
       current: -1,
