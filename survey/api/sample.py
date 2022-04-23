@@ -775,7 +775,8 @@ answers/construction/packaging-design HTTP/1.1
     def get_http_response(self, results, status=HTTP_200_OK, headers=None,
                           first_answer=False):#pylint:disable=unused-argument
         self._expand_choices(results)
-        return http.Response(results, status=status, headers=headers)
+        serializer = self.get_serializer(results, many=True)
+        return http.Response(serializer.data, status=status, headers=headers)
 
 
 class SampleCandidatesMixin(SampleMixin):

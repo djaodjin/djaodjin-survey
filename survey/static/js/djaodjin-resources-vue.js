@@ -90,9 +90,11 @@ var messagesMixin = {
             return messages;
         },
         clearMessages: function() {
-            jQuery(messagesElement).empty();
+            var vm = this;
+            jQuery(vm.messagesElement).empty();
         },
         showMessages: function (messages, style) {
+            var vm = this;
             if( typeof toastr !== 'undefined'
                 && $(toastr.options.containerId).length > 0 ) {
                 for( var i = 0; i < messages.length; ++i ) {
@@ -115,7 +117,7 @@ var messagesMixin = {
                     messageBlock += "<div>" + messages[i] + "</div>";
                 }
                 messageBlock += "</div>";
-                jQuery(messagesElement).append(messageBlock);
+                jQuery(vm.messagesElement).append(messageBlock);
             }
             jQuery("#messages").removeClass("hidden");
             jQuery("html, body").animate({

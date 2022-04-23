@@ -164,6 +164,8 @@ class CampaignMixin(object):
     """
     Returns a ``Campaign`` object associated with the request URL.
     """
+    URL_PATH_SEP = '/'
+    DB_PATH_SEP = '/'
     campaign_url_kwarg = 'campaign'
 
     @property
@@ -172,6 +174,15 @@ class CampaignMixin(object):
             self._campaign = get_object_or_404(Campaign.objects.all(),
                 slug=self.kwargs.get(self.campaign_url_kwarg))
         return self._campaign
+
+    @property
+    def db_path(self):
+        if not hasattr(self, '_db_path'):
+            self._db_path = self.kwargs.get(self.path_url_kwarg, '').replace(
+                self.URL_PATH_SEP, self.DB_PATH_SEP)
+            if not self._db_path.startswith(self.DB_PATH_SEP):
+                self._db_path = self.DB_PATH_SEP + self._db_path
+        return self._db_path
 
 
 class CampaignQuerysetMixin(BelongsMixin):
@@ -230,6 +241,15 @@ class SampleMixin(AccountMixin):
             if self._path and not self._path.startswith('/'):
                 self._path = '/%s' % self._path
         return self._path
+
+    @property
+    def db_path(self):
+        if not hasattr(self, '_db_path'):
+            self._db_path = self.kwargs.get(self.path_url_kwarg, '').replace(
+                self.URL_PATH_SEP, self.DB_PATH_SEP)
+            if not self._db_path.startswith(self.DB_PATH_SEP):
+                self._db_path = self.DB_PATH_SEP + self._db_path
+        return self._db_path
 
     @property
     def sample(self):
