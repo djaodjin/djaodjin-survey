@@ -206,13 +206,14 @@ class AbstractQuestion(SlugTitleMixin, models.Model):
     path = models.CharField(max_length=1024, unique=True, db_index=True,
         help_text=_("Unique identifier that can be used in URL"))
     content = models.ForeignKey(settings.CONTENT_MODEL,
-        on_delete=models.PROTECT)
+        on_delete=models.PROTECT, related_name='question')
     ui_hint = models.CharField(
         max_length=20, choices=UI_HINTS, default=RADIO,
         help_text=_("Choose the type of answser."))
     correct_answer = models.ForeignKey(Choice, related_name='correct_for',
         null=True, on_delete=models.PROTECT, blank=True)
     default_unit = models.ForeignKey(Unit, on_delete=models.PROTECT,
+        related_name='question',
         help_text=_("Default unit for measured field when none is specified"))
     extra = get_extra_field_class()(null=True, blank=True,
         help_text=_("Extra meta data (can be stringify JSON)"))
