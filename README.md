@@ -23,11 +23,10 @@ The source code is bundled with a sample django project.
 Releases
 ========
 
-0.4.0
+0.4.1
 
-  * Makes djaodjin-resources-vue a UMB module
-  * Filters portfolios
-  * Adds get_latest_completed_by_accounts
+  * enables stable queries when Question model is swapped
+  * fixes refactoring errors
 
 [previous release notes](changelog)
 
