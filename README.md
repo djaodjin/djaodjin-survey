@@ -23,10 +23,9 @@ The source code is bundled with a sample django project.
 Releases
 ========
 
-0.4.1
+0.4.2
 
-  * enables stable queries when Question model is swapped
-  * fixes refactoring errors
+  * filters out questions in get_answers/get_candidates
 
 [previous release notes](changelog)
 

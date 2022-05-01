@@ -1,3 +1,9 @@
+0.4.2
+
+  * filters out questions in get_answers/get_candidates
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sun,  1 May 2022 14:14:00 -0700
+
 0.4.1
 
   * enables stable queries when Question model is swapped
