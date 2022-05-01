@@ -327,15 +327,24 @@ class SampleAnswersMixin(SampleMixin):
             extra = {}
         return extra
 
-    def get_answers(self, prefix=None, sample=None):
+    def get_answers(self, prefix=None, sample=None, excludes=None):
         """
         Returns answers on a sample. In case the sample is still active,
         also returns questions on the associated campaign with no answer.
+
+        The answers can be filtered such that only questions with a path
+        starting by `prefix` are included. Questions included whose
+        extra field does not contain `excludes` can be further removed
+        from the results.
         """
         if not prefix:
             prefix = self.path
         if not sample:
             sample = self.sample
+        extra_question_clause = (
+            "AND survey_question.id NOT IN (SELECT id FROM survey_question"\
+            " WHERE extra LIKE '%%%%%(extra)s%%%%')" % {
+            'extra': excludes} if excludes else "")
         if sample.is_frozen:
             query_text = """
 WITH answers AS (
@@ -366,6 +375,7 @@ campaign_questions AS (
       ON survey_question.id = survey_enumeratedquestions.question_id
     WHERE survey_enumeratedquestions.campaign_id = %(campaign)d
       AND survey_question.path LIKE '%(prefix)s%%%%'
+      %(extra_question_clause)s
 ),
 questions AS (
     SELECT * FROM campaign_questions
@@ -380,7 +390,9 @@ questions AS (
     LEFT OUTER JOIN campaign_questions
       ON answers.question_id = campaign_questions.id
     WHERE campaign_questions.id IS NULL
-      AND survey_question.path LIKE '%(prefix)s%%%%')
+      AND survey_question.path LIKE '%(prefix)s%%%%'
+      %(extra_question_clause)s
+    )
 )
 SELECT
     answers.id AS id,
@@ -397,10 +409,11 @@ SELECT
 FROM questions
 LEFT OUTER JOIN answers
   ON questions.id = answers.question_id""" % {
-      'sample': sample.pk,
       'campaign': sample.campaign.pk,
+      'convert_to_text': ("" if is_sqlite3() else "::text"),
+      'extra_question_clause': extra_question_clause,
       'prefix': prefix,
-      'convert_to_text': ("" if is_sqlite3() else "::text")
+      'sample': sample.pk,
   }
         else:
             query_text = """
@@ -432,6 +445,7 @@ campaign_questions AS (
       ON survey_question.id = survey_enumeratedquestions.question_id
     WHERE survey_enumeratedquestions.campaign_id = %(campaign)d
       AND survey_question.path LIKE '%(prefix)s%%%%'
+      %(extra_question_clause)s
 )
 SELECT
     answers.id AS id,
@@ -448,12 +462,12 @@ SELECT
 FROM campaign_questions
 LEFT OUTER JOIN answers
   ON campaign_questions.id = answers.question_id""" % {
-      'sample': sample.pk,
       'campaign': sample.campaign.pk,
+      'convert_to_text': ("" if is_sqlite3() else "::text"),
+      'extra_question_clause': extra_question_clause,
       'prefix': prefix,
-      'convert_to_text': ("" if is_sqlite3() else "::text")
+      'sample': sample.pk,
   }
-
         return Answer.objects.raw(query_text).prefetch_related(
       'unit', 'collected_by', 'question', 'question__content',
       'question__default_unit')
@@ -781,8 +795,17 @@ answers/construction/packaging-design HTTP/1.1
 
 class SampleCandidatesMixin(SampleMixin):
 
-    def get_candidates(self, prefix=None, extra=None):
-        # Get all content matching the questions
+    def get_candidates(self, prefix=None, extra=None, excludes=None):
+        """
+        Returns candidate answers on a sample. In case the sample is still
+        active, also returns questions on the associated campaign with
+        no answer.
+
+        The candidates can be filtered such that only questions with a path
+        starting by `prefix` are included. Questions included whose
+        extra field does not contain `excludes` can be further removed
+        from the results.
+        """
         if not prefix:
             prefix = self.path
         if extra:
@@ -790,6 +813,10 @@ class SampleCandidatesMixin(SampleMixin):
                 'extra':extra }
         else:
             extra_clause = "AND survey_sample.extra IS NULL"
+        extra_question_clause = (
+            "AND survey_question.id NOT IN (SELECT id FROM survey_question"\
+            " WHERE extra LIKE '%%%%%(extra)s%%%%')" % {
+            'extra': excludes} if excludes else "")
         candidates_sql = """
         WITH
         latest_answers AS (
@@ -854,6 +881,7 @@ class SampleCandidatesMixin(SampleMixin):
           candidate_answers.denominator AS denominator,
           candidate_answers.collected_by_id AS collected_by_id,
           candidate_answers.sample_id AS sample_id,
+          survey_enumeratedquestions.rank AS _rank,
           survey_enumeratedquestions.required AS required,
           candidate_answers.measured_text AS measured_text
         FROM survey_question
@@ -863,12 +891,14 @@ class SampleCandidatesMixin(SampleMixin):
           ON survey_question.content_id = candidate_answers.content_id
         WHERE survey_enumeratedquestions.campaign_id = %(campaign_id)d
           AND survey_question.path LIKE '%(prefix)s%%%%'
+          %(extra_question_clause)s
         """ % {
             'account_id': self.sample.account.pk,
             'campaign_id': self.sample.campaign.pk,
-            'prefix': prefix,
+            'convert_to_text': ("" if is_sqlite3() else "::text"),
             'extra_clause': extra_clause,
-            'convert_to_text': ("" if is_sqlite3() else "::text")
+            'extra_question_clause': extra_question_clause,
+            'prefix': prefix,
         }
         return Answer.objects.raw(candidates_sql).prefetch_related(
             'question', 'question__default_unit', 'unit', 'collected_by')
