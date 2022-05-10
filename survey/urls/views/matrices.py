@@ -22,24 +22,23 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
-from ...settings import SLUG_RE
+from ... import settings
 from ...views.matrix import (MatrixListView, MatrixDetailView,
     AccountListView, QuestionListView)
+from ...compat import re_path
 
 
 urlpatterns = [
-   url(r'^accounts/(?P<editable_filter>%s)/?' % SLUG_RE,
-       AccountListView.as_view(), name='accounts_list'),
-   url(r'^accounts/',
-       AccountListView.as_view(), name='accounts_base'),
-   url(r'^questions/(?P<editable_filter>%s)/?' % SLUG_RE,
-       QuestionListView.as_view(), name='questions_list'),
-   url(r'^questions/',
-       QuestionListView.as_view(), name='questions_base'),
-   url(r'^(?P<path>%s)/' % SLUG_RE,
-       MatrixDetailView.as_view(), name='matrix_chart'),
-   url(r'^$',
-       MatrixListView.as_view(), name='matrix_base'),
+    re_path(r'^accounts/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
+        AccountListView.as_view(), name='accounts_list'),
+    re_path(r'^accounts/',
+        AccountListView.as_view(), name='accounts_base'),
+    re_path(r'^questions/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
+        QuestionListView.as_view(), name='questions_list'),
+    re_path(r'^questions/',
+        QuestionListView.as_view(), name='questions_base'),
+    re_path(r'^(?P<path>%s)/' % settings.SLUG_RE,
+        MatrixDetailView.as_view(), name='matrix_chart'),
+    re_path(r'^$',
+        MatrixListView.as_view(), name='matrix_base'),
 ]

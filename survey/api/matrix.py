@@ -311,7 +311,8 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
             'slug': metric.slug,
             'title': metric.title,
             'metric': EditableFilterSerializer().to_representation(metric),
-            'cut': EditableFilterSerializer().to_representation(cut),
+            'cut': (EditableFilterSerializer().to_representation(cut)
+                if cut else None),
             'cohorts': cohort_serializer(many=True).to_representation(cohorts)}
 
         # In some case, a metric and cohort have a connection

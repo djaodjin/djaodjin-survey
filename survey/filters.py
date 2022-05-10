@@ -28,14 +28,13 @@ from functools import reduce
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.utils.encoding import force_text
 from django.utils.timezone import utc
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter, BaseFilterBackend)
 from rest_framework.compat import distinct
 
 from . import settings
-from .compat import six
+from .compat import force_str, six
 from .models import PortfolioDoubleOptIn
 from .utils import datetime_or_now, parse_tz
 
@@ -141,7 +140,7 @@ class SearchFilter(BaseSearchFilter):
                 'name': self.search_param,
                 'required': False,
                 'in': 'query',
-                'description': force_text(search_fields_description),
+                'description': force_str(search_fields_description),
                 'schema': {
                     'type': 'string',
                 },
@@ -257,7 +256,7 @@ class OrderingFilter(BaseOrderingFilter):
                 'name': self.ordering_param,
                 'required': False,
                 'in': 'query',
-                'description': force_text(sort_fields_description),
+                'description': force_str(sort_fields_description),
                 'schema': {
                     'type': 'string',
                 },
@@ -322,7 +321,7 @@ class DateRangeFilter(BaseFilterBackend):
                 'name': 'start_at',
                 'required': False,
                 'in': 'query',
-                'description': force_text("date/time in ISO format"\
+                'description': force_str("date/time in ISO format"\
                         " after which records were created."),
                 'schema': {
                     'type': 'string',
@@ -332,7 +331,7 @@ class DateRangeFilter(BaseFilterBackend):
                 'name': 'ends_at',
                 'required': False,
                 'in': 'query',
-                'description': force_text("date/time in ISO format"\
+                'description': force_str("date/time in ISO format"\
                         " before which records were created."),
                 'schema': {
                     'type': 'string',
@@ -367,7 +366,7 @@ class DoubleOptInStateFilter(BaseFilterBackend):
                 'name': 'state',
                 'required': False,
                 'in': 'query',
-                'description': force_text("filter by state"),
+                'description': force_str("filter by state"),
                 'schema': {
                     'type': 'string',
                 },

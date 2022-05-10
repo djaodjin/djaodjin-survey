@@ -22,10 +22,10 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
+from ...compat import re_path
 from ...views.portfolios import PortfoliosView
 
+
 urlpatterns = [
-    url(r'', PortfoliosView.as_view(), name='survey_portfolios'),
+    re_path(r'', PortfoliosView.as_view(), name='survey_portfolios'),
 ]

@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,14 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
-from ...api.matrix import MatrixCreateAPIView, MatrixDetailAPIView
 from ... import settings
+from ...api.matrix import MatrixCreateAPIView, MatrixDetailAPIView
+from ...compat import re_path
+
 
 urlpatterns = [
-   url(r'^matrix/(?P<path>%s)$' % settings.NON_EMPTY_PATH_RE,
-       MatrixDetailAPIView.as_view(), name='matrix_api'),
-   url(r'^matrix$',
-       MatrixCreateAPIView.as_view(), name='matrix_api_base'),
+    re_path(r'^matrix/(?P<path>%s)$' % settings.NON_EMPTY_PATH_RE,
+        MatrixDetailAPIView.as_view(), name='matrix_api'),
+    re_path(r'^matrix$',
+        MatrixCreateAPIView.as_view(), name='matrix_api_base'),
 ]

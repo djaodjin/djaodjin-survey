@@ -22,28 +22,27 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
 from ... import settings
 from ...api.portfolios import (PortfoliosAPIView,
     PortfoliosGrantsAPIView, PortfoliosGrantAcceptAPIView,
     PortfoliosRequestsAPIView, PortfoliosRequestAcceptAPIView)
+from ...compat import re_path
 
 
 urlpatterns = [
-    url(r'^portfolios/grants/(?P<request_key>%s)/' % settings.SLUG_RE,
+    re_path(r'^portfolios/grants/(?P<request_key>%s)/' % settings.SLUG_RE,
         PortfoliosGrantAcceptAPIView.as_view(),
         name='api_portfolios_grant_accept'),
-    url(r'^portfolios/requests/(?P<request_key>%s)/' % settings.SLUG_RE,
+    re_path(r'^portfolios/requests/(?P<request_key>%s)/' % settings.SLUG_RE,
         PortfoliosRequestAcceptAPIView.as_view(),
         name='api_portfolios_request_accept'),
-    url(r'^portfolios/requests',
+    re_path(r'^portfolios/requests',
         PortfoliosRequestsAPIView.as_view(),
         name='survey_api_portfolios_requests'),
-    url(r'^portfolios/grants',
+    re_path(r'^portfolios/grants',
         PortfoliosGrantsAPIView.as_view(),
         name='survey_api_portfolios_grants'),
-    url(r'^portfolios',
+    re_path(r'^portfolios',
         PortfoliosAPIView.as_view(),
         name='survey_api_portfolios_received'),
 ]

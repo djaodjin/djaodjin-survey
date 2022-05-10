@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,17 +24,23 @@
 
 from __future__ import unicode_literals
 
+import datetime, logging
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
+from django.db import connections
 from django.http import Http404
-from django.utils.translation import ugettext as _
+import monotonic
 from rest_framework.generics import get_object_or_404
 
 from . import settings
-from .compat import is_authenticated
+from .compat import gettext_lazy as _, is_authenticated
 from .models import (Campaign, EnumeratedQuestions, EditableFilter, Matrix,
     Sample)
 from .utils import datetime_or_now, get_account_model, get_belongs_model
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 class AccountMixin(object):
@@ -167,6 +173,7 @@ class CampaignMixin(object):
     URL_PATH_SEP = '/'
     DB_PATH_SEP = '/'
     campaign_url_kwarg = 'campaign'
+    path_url_kwarg = 'path'
 
     @property
     def campaign(self):
@@ -210,6 +217,42 @@ class CampaignQuestionMixin(CampaignMixin):
             queryset = self.get_queryset()
         return get_object_or_404(queryset,
             rank=self.kwargs.get(self.num_url_kwarg, 1))
+
+
+class EditableFilterMixin(object):
+
+    editable_filter_url_kwarg = 'editable_filter'
+
+    @property
+    def editable_filter(self):
+        if not hasattr(self, '_editable_filter'):
+            self._editable_filter = get_object_or_404(
+                EditableFilter.objects.all(),
+                slug=self.kwargs.get(self.editable_filter_url_kwarg))
+        return self._editable_filter
+
+
+class MatrixQuerysetMixin(BelongsMixin):
+
+    def get_queryset(self):
+        #pylint:disable=no-self-use
+        # We want to show all matrices but only populate with account data.
+        #if self.account:
+        #    return Matrix.objects.filter(account=self.account)
+        print("XXX return all matrices?")
+        return Matrix.objects.all()
+
+
+class MatrixMixin(MatrixQuerysetMixin):
+
+    matrix_url_kwarg = 'path'
+
+    @property
+    def matrix(self):
+        if not hasattr(self, '_matrix'):
+            self._matrix = get_object_or_404(self.get_queryset(),
+                    slug=self.kwargs.get(self.matrix_url_kwarg))
+        return self._matrix
 
 
 class SampleMixin(AccountMixin):
@@ -288,36 +331,36 @@ class SampleMixin(AccountMixin):
         return sample
 
 
-class MatrixQuerysetMixin(BelongsMixin):
+class TimersMixin(object):
+    """
+    Mixin used to track performance of queries
+    """
+    enable_report_queries = True
 
-    def get_queryset(self):
-        #pylint:disable=no-self-use
-        # We want to show all matrices but only populate with account data.
-        #if self.account:
-        #    return Matrix.objects.filter(account=self.account)
-        return Matrix.objects.all()
+    def _start_time(self):
+        if not self.enable_report_queries:
+            return
+        self.start_time = monotonic.monotonic()
 
-
-class MatrixMixin(MatrixQuerysetMixin):
-
-    matrix_url_kwarg = 'path'
-
-    @property
-    def matrix(self):
-        if not hasattr(self, '_matrix'):
-            self._matrix = get_object_or_404(self.get_queryset(),
-                    slug=self.kwargs.get(self.matrix_url_kwarg))
-        return self._matrix
-
-
-class EditableFilterMixin(object):
-
-    editable_filter_url_kwarg = 'editable_filter'
-
-    @property
-    def editable_filter(self):
-        if not hasattr(self, '_editable_filter'):
-            self._editable_filter = get_object_or_404(
-                EditableFilter.objects.all(),
-                slug=self.kwargs.get(self.editable_filter_url_kwarg))
-        return self._editable_filter
+    def _report_queries(self, descr=None):
+        if not self.enable_report_queries:
+            return
+        if not hasattr(self, 'start_time'):
+            return
+        end_time = monotonic.monotonic()
+        if descr is None:
+            descr = ""
+        nb_queries = 0
+        duration = datetime.timedelta()
+        for conn in connections.all():
+            nb_queries += len(conn.queries)
+            for query in conn.queries:
+                try:
+                    convert = datetime.datetime.strptime(query['time'], "%S.%f")
+                    duration += datetime.timedelta(
+                        0, convert.second, convert.microsecond)
+                except ValueError:
+                    duration += datetime.timedelta()
+                    # days, seconds, microseconds
+        LOGGER.debug("(elapsed: %.2fs) %s: %s for %d SQL queries",
+            (end_time - self.start_time), descr, duration, nb_queries)

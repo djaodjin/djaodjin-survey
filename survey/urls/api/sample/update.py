@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,21 +22,23 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
+from .... import settings
 from ....api.sample import (SampleAPIView, SampleAnswersAPIView,
     SampleCandidatesAPIView, SampleRecentCreateAPIView, SampleFreezeAPIView)
-from ....settings import SLUG_RE, PATH_RE
+from ....compat import re_path
 
 urlpatterns = [
-   url(r'^sample/(?P<sample>%s)/freeze/(?P<path>%s)$' % (SLUG_RE, PATH_RE),
-       SampleFreezeAPIView.as_view(), name='survey_api_sample_freeze'),
-   url(r'^sample/(?P<sample>%s)/candidates/(?P<path>%s)$' % (SLUG_RE, PATH_RE),
-       SampleCandidatesAPIView.as_view(), name='survey_api_sample_candidates'),
-   url(r'^sample/(?P<sample>%s)/answers/(?P<path>%s)$' % (SLUG_RE, PATH_RE),
-       SampleAnswersAPIView.as_view(), name='survey_api_sample_answers'),
-   url(r'^sample/(?P<sample>%s)$' % SLUG_RE,
-       SampleAPIView.as_view(), name='survey_api_sample'),
-   url(r'^sample$',
-       SampleRecentCreateAPIView.as_view(), name='survey_api_sample_new'),
+    re_path(r'^sample/(?P<sample>%s)/freeze/(?P<path>%s)$' % (
+        settings.SLUG_RE, settings.PATH_RE),
+        SampleFreezeAPIView.as_view(), name='survey_api_sample_freeze'),
+    re_path(r'^sample/(?P<sample>%s)/candidates/(?P<path>%s)$' % (
+        settings.SLUG_RE, settings.PATH_RE),
+        SampleCandidatesAPIView.as_view(), name='survey_api_sample_candidates'),
+    re_path(r'^sample/(?P<sample>%s)/answers/(?P<path>%s)$' % (
+        settings.SLUG_RE, settings.PATH_RE),
+        SampleAnswersAPIView.as_view(), name='survey_api_sample_answers'),
+    re_path(r'^sample/(?P<sample>%s)$' % settings.SLUG_RE,
+        SampleAPIView.as_view(), name='survey_api_sample'),
+    re_path(r'^sample$',
+        SampleRecentCreateAPIView.as_view(), name='survey_api_sample_new'),
 ]

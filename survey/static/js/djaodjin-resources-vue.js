@@ -32,9 +32,13 @@ var messagesMixin = {
     data: function() {
         return {
             messagesElement: '#messages-content',
+            scrollToTopOnMessages: true
         }
     },
     methods: {
+        _isArray: function (obj) {
+            return obj instanceof Object && obj.constructor === Array;
+        },
         /**
            Decorates elements when details exist, otherwise return messages
            to be shown globally.
@@ -51,7 +55,7 @@ var messagesMixin = {
                 if( data && typeof data === "object" ) {
                     if( data.detail ) {
                         messages = [data.detail];
-                    } else if( jQuery.isArray(data) ) {
+                    } else if( vm._isArray(data) ) {
                         for( var idx = 0; idx < data.length; ++idx ) {
                             messages = messages.concat(vm._showErrorMessages(data[idx]));
                         }
@@ -59,7 +63,7 @@ var messagesMixin = {
                         for( var key in data ) {
                             if (data.hasOwnProperty(key)) {
                                 var message = data[key];
-                                if( jQuery.isArray(data[key]) ) {
+                                if( vm._isArray(data[key]) ) {
                                     message = "";
                                     var sep = "";
                                     for( var i = 0; i < data[key].length; ++i ) {
@@ -91,10 +95,14 @@ var messagesMixin = {
         },
         clearMessages: function() {
             var vm = this;
-            jQuery(vm.messagesElement).empty();
+            vm.getMessagesElement().empty();
+        },
+        getMessagesElement: function() {
+            return jQuery(this.messagesElement);
         },
         showMessages: function (messages, style) {
             var vm = this;
+            var messagesElement = vm.getMessagesElement();
             if( typeof toastr !== 'undefined'
                 && $(toastr.options.containerId).length > 0 ) {
                 for( var i = 0; i < messages.length; ++i ) {
@@ -117,14 +125,19 @@ var messagesMixin = {
                     messageBlock += "<div>" + messages[i] + "</div>";
                 }
                 messageBlock += "</div>";
-                jQuery(vm.messagesElement).append(messageBlock);
+                vm.getMessagesElement().append(messageBlock);
             }
-            jQuery("#messages").removeClass("hidden");
-            jQuery("html, body").animate({
-                // scrollTop: $("#messages").offset().top - 50
-                // avoid weird animation when messages at the top:
-                scrollTop: jQuery("body").offset().top
-            }, 500);
+            var messagesContainer = messagesElement.parent();
+            if( messagesContainer && messagesContainer.hasClass("hidden") ) {
+                messagesContainer.removeClass("hidden");
+            }
+            if( vm.scrollToTopOnMessages ) {
+                jQuery("html, body").animate({
+                    // scrollTop: $("#messages").offset().top - 50
+                    // avoid weird animation when messages at the top:
+                    scrollTop: jQuery("body").offset().top
+                }, 500);
+            }
         },
         showErrorMessages: function (resp) {
             var vm = this;
@@ -156,10 +169,6 @@ var httpRequestMixin = {
     ],
     // basically a wrapper around jQuery ajax functions
     methods: {
-
-        _isArray: function (obj) {
-            return obj instanceof Object && obj.constructor === Array;
-        },
 
         _isFunction: function (func){
             // https://stackoverflow.com/a/7356528/1491475
@@ -268,6 +277,11 @@ var httpRequestMixin = {
             } else {
                 throw 'arg should be a queryParams Object or a successCallback function';
             }
+            if( !url ) {
+                vm.showErrorMessages(
+                    "Attempting GET request for component '" +
+                    vm.$options.name + "' but no url was set.");
+            }
             return jQuery.ajax({
                 method: 'GET',
                 url: url,
@@ -344,6 +358,11 @@ var httpRequestMixin = {
             } else if (arg !== undefined){
                 throw 'arg should be a data Object or a successCallback function';
             }
+            if( !url ) {
+                vm.showErrorMessages(
+                    "Attempting POST request for component '" +
+                    vm.$options.name + "' but no url was set.");
+            }
             return jQuery.ajax({
                 method: 'POST',
                 url: url,
@@ -398,6 +417,11 @@ var httpRequestMixin = {
                 }
             } else if( arg2 !== undefined ) {
                 throw 'arg2 should be successCallback function';
+            }
+            if( !url ) {
+                vm.showErrorMessages(
+                    "Attempting POST request for component '" +
+                    vm.$options.name + "' but no url was set.");
             }
             return jQuery.ajax({
                 method: 'POST',
@@ -475,7 +499,11 @@ var httpRequestMixin = {
             } else if (arg !== undefined){
                 throw 'arg should be a data Object or a successCallback function';
             }
-
+            if( !url ) {
+                vm.showErrorMessages(
+                    "Attempting PUT request for component '" +
+                    vm.$options.name + "' but no url was set.");
+            }
             return jQuery.ajax({
                 method: 'PUT',
                 url: url,
@@ -550,7 +578,11 @@ var httpRequestMixin = {
             } else if (arg !== undefined){
                 throw 'arg should be a data Object or a successCallback function';
             }
-
+            if( !url ) {
+                vm.showErrorMessages(
+                    "Attempting PATCH request for component '" +
+                    vm.$options.name + "' but no url was set.");
+            }
             return jQuery.ajax({
                 method: 'PATCH',
                 url: url,
@@ -602,7 +634,11 @@ var httpRequestMixin = {
             } else if (arg !== undefined){
                 throw 'arg should be a successCallback function';
             }
-
+            if( !url ) {
+                vm.showErrorMessages(
+                    "Attempting PATCH request for component '" +
+                    vm.$options.name + "' but no url was set.");
+            }
             return jQuery.ajax({
                 method: 'DELETE',
                 url: url,
@@ -686,7 +722,12 @@ var itemMixin = {
     methods: {
         get: function(){
             var vm = this;
-            if(!vm.url) return;
+            if( !vm.url ) {
+                vm.showErrorMessages(
+                    "API endpoint to fetch an item for component '" +
+                    vm.$options.name + "' is not configured.");
+                return;
+            }
             var cb = vm[vm.getCb];
             if( !cb ) {
                 cb = function(res){
@@ -699,10 +740,10 @@ var itemMixin = {
         validateForm: function(){
             var vm = this;
             var isEmpty = true;
-            var fields = $(vm.$el).find('[name]').not(//XXX jQuery
+            var fields = jQuery(vm.$el).find('[name]').not(
                 '[name="csrfmiddlewaretoken"]');
             for( var fieldIdx = 0; fieldIdx < fields.length; ++fieldIdx ) {
-                var field = $(fields[fieldIdx]); // XXX jQuery
+                var field = jQuery(fields[fieldIdx]);
                 var fieldName = field.attr('name');
                 var fieldValue = field.attr('type') === 'checkbox' ?
                     field.prop('checked') : field.val();
@@ -1011,7 +1052,12 @@ var itemListMixin = {
         },
         get: function(){
             var vm = this;
-            if(!vm.url) return
+            if( !vm.url ) {
+                vm.showErrorMessages(
+                    "API endpoint to fetch items for component '" +
+                    vm.$options.name + "' is not configured.");
+                return;
+            }
             if(!vm.mergeResults){
                 vm.itemsLoaded = false;
             }
@@ -1104,6 +1150,12 @@ var TypeAhead = Vue.extend({
 
         cancel: function() {},
 
+        clear: function() {
+            this.items = [];
+            this.current = -1;
+            this.loading = false;
+        },
+
         down: function() {
             var vm = this;
             if( vm.current < vm.items.length - 1 ) {
@@ -1131,7 +1183,7 @@ var TypeAhead = Vue.extend({
             vm.loading = false;
         },
 
-        setActive: function setActive(index) {
+        setActive: function(index) {
             var vm = this;
             vm.current = index;
         },
@@ -1146,8 +1198,10 @@ var TypeAhead = Vue.extend({
                 vm.current = -1;
             }
         },
-
-        update: function update() {
+        search: function() {
+            this.update();
+        },
+        update: function() {
             var vm = this;
             vm.cancel();
             if (!vm.query) {
@@ -1162,7 +1216,7 @@ var TypeAhead = Vue.extend({
             vm.reqGet(vm.url, params,
             function (resp) {
                 if (resp && vm.query) {
-                    var data = resp.data.results;
+                    var data = resp.results;
                     data = vm.prepareResponseData ? vm.prepareResponseData(data) : data;
                     vm.items = vm.limit ? data.slice(0, vm.limit) : data;
                     vm.current = -1;
@@ -1172,7 +1226,8 @@ var TypeAhead = Vue.extend({
                     }
                 }
             }, function() {
-                // on failure we just do nothing.
+                // on failure we just do nothing. - i.e. we don't want a bunch
+                // of error messages to pop up.
             });
         },
     },
@@ -1187,6 +1242,9 @@ var TypeAhead = Vue.extend({
             return !!this.query;
         }
     },
+    mounted: function(){
+        // do nothing.
+    }
 });
 
     // attach properties to the exports object to define

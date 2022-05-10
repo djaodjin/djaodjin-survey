@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,20 +22,21 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
+from ... import settings
 from ...api.matrix import (EditableFilterListAPIView,
     EditableFilterDetailAPIView, AccountListAPIView, QuestionListAPIView)
-from ... import settings
+from ...compat import re_path
+
 
 urlpatterns = [
-   url(r'^matrix/filters/(?P<editable_filter>%s)$' % settings.NON_EMPTY_PATH_RE,
-       EditableFilterDetailAPIView.as_view(), name='editable_filter_api'),
-   url(r'^matrix/filters$',
-       EditableFilterListAPIView.as_view(),
-       name='survey_api_editable_filter_list'),
-   url(r'^matrix/accounts/(?P<editable_filter>%s)$' % settings.SLUG_RE,
-       AccountListAPIView.as_view(), name='survey_api_accounts_filter'),
-   url(r'^matrix/questions/(?P<editable_filter>%s)$' % settings.SLUG_RE,
-       QuestionListAPIView.as_view(), name='survey_api_questions_filter'),
+    re_path(r'^matrix/filters/(?P<editable_filter>%s)$' %
+        settings.NON_EMPTY_PATH_RE,
+        EditableFilterDetailAPIView.as_view(), name='editable_filter_api'),
+    re_path(r'^matrix/filters$',
+        EditableFilterListAPIView.as_view(),
+        name='survey_api_editable_filter_list'),
+    re_path(r'^matrix/accounts/(?P<editable_filter>%s)$' % settings.SLUG_RE,
+        AccountListAPIView.as_view(), name='survey_api_accounts_filter'),
+    re_path(r'^matrix/questions/(?P<editable_filter>%s)$' % settings.SLUG_RE,
+        QuestionListAPIView.as_view(), name='survey_api_questions_filter'),
 ]

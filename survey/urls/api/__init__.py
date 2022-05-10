@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,15 +22,16 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url, include
+from ...compat import include, re_path
+
 
 urlpatterns = [
-    url(r'^', include('survey.urls.api.noauth')),
-    url(r'^', include('survey.urls.api.campaigns')),
-    url(r'^', include('survey.urls.api.filters')), # No trailing '/'
+    re_path(r'^', include('survey.urls.api.noauth')),
+    re_path(r'^', include('survey.urls.api.campaigns')),
+    re_path(r'^', include('survey.urls.api.filters')), # No trailing '/'
                                                   # because of PATH_RE.
-    url(r'^', include('survey.urls.api.matrix')), # No trailing '/'
+    re_path(r'^', include('survey.urls.api.matrix')), # No trailing '/'
                                                   # because of PATH_RE.
-    url(r'^', include('survey.urls.api.sample')),
-    url(r'^', include('survey.urls.api.portfolios')),
+    re_path(r'^', include('survey.urls.api.sample')),
+    re_path(r'^', include('survey.urls.api.portfolios')),
 ]

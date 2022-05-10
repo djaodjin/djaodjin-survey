@@ -24,13 +24,12 @@
 
 from django.db import transaction
 from django.template.defaultfilters import slugify
-from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 
 from .. import settings
-from ..compat import reverse, six
+from ..compat import gettext_lazy as _, reverse, six
 from ..models import (Answer, Campaign, Choice,
     EditableFilter, EditablePredicate, Matrix, PortfolioDoubleOptIn,
     Sample, Unit)

@@ -22,9 +22,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
-from ...settings import SLUG_RE
+from ... import settings
+from ...compat import re_path
 from ...views.campaigns import (CampaignListView, CampaignPublishView,
     CampaignResultView, CampaignSendView, CampaignUpdateView)
 from ...views.createquestion import (QuestionCreateView, QuestionDeleteView,
@@ -33,30 +32,30 @@ from ...views.matrix import RespondentListView
 
 
 urlpatterns = [
-   url(r'^(?P<campaign>%s)/send/' % SLUG_RE,
-       CampaignSendView.as_view(), name='survey_send'),
-   url(r'^(?P<campaign>%s)/result/' % SLUG_RE,
-       CampaignResultView.as_view(), name='survey_result'),
-   url(r'^(?P<campaign>%s)/respondents/' % SLUG_RE,
-       RespondentListView.as_view(), name='survey_respondent_list'),
-   url(r'^(?P<campaign>%s)/publish/' % SLUG_RE,
-       CampaignPublishView.as_view(), name='survey_publish'),
-   url(r'^(?P<campaign>%s)/edit/' % SLUG_RE,
-       CampaignUpdateView.as_view(), name='survey_edit'),
+    re_path(r'^(?P<campaign>%s)/send/' % settings.SLUG_RE,
+        CampaignSendView.as_view(), name='survey_send'),
+    re_path(r'^(?P<campaign>%s)/result/' % settings.SLUG_RE,
+        CampaignResultView.as_view(), name='survey_result'),
+    re_path(r'^(?P<campaign>%s)/respondents/' % settings.SLUG_RE,
+        RespondentListView.as_view(), name='survey_respondent_list'),
+    re_path(r'^(?P<campaign>%s)/publish/' % settings.SLUG_RE,
+        CampaignPublishView.as_view(), name='survey_publish'),
+    re_path(r'^(?P<campaign>%s)/edit/' % settings.SLUG_RE,
+        CampaignUpdateView.as_view(), name='survey_edit'),
 
-   url(r'^(?P<campaign>%s)/new/' % SLUG_RE,
-       QuestionCreateView.as_view(), name='survey_question_new'),
-   url(r'^(?P<campaign>%s)/(?P<num>\d+)/down/' % SLUG_RE,
-       QuestionRankView.as_view(), name='survey_question_down'),
-   url(r'^(?P<campaign>%s)/(?P<num>\d+)/up/' % SLUG_RE,
-       QuestionRankView.as_view(direction=-1), name='survey_question_up'),
-   url(r'^(?P<campaign>%s)/(?P<num>\d+)/delete/' % SLUG_RE,
-       QuestionDeleteView.as_view(), name='survey_question_delete'),
-   url(r'^(?P<campaign>%s)/(?P<num>\d+)/edit/' % SLUG_RE,
-       QuestionUpdateView.as_view(), name='survey_question_edit'),
+    re_path(r'^(?P<campaign>%s)/new/' % settings.SLUG_RE,
+        QuestionCreateView.as_view(), name='survey_question_new'),
+    re_path(r'^(?P<campaign>%s)/(?P<num>\d+)/down/' % settings.SLUG_RE,
+        QuestionRankView.as_view(), name='survey_question_down'),
+    re_path(r'^(?P<campaign>%s)/(?P<num>\d+)/up/' % settings.SLUG_RE,
+        QuestionRankView.as_view(direction=-1), name='survey_question_up'),
+    re_path(r'^(?P<campaign>%s)/(?P<num>\d+)/delete/' % settings.SLUG_RE,
+        QuestionDeleteView.as_view(), name='survey_question_delete'),
+    re_path(r'^(?P<campaign>%s)/(?P<num>\d+)/edit/' % settings.SLUG_RE,
+        QuestionUpdateView.as_view(), name='survey_question_edit'),
 
-   url(r'^(?P<campaign>%s)/' % SLUG_RE,
-       QuestionListView.as_view(), name='survey_question_list'),
-   url(r'^',
-       CampaignListView.as_view(), name='survey_campaign_list'),
+    re_path(r'^(?P<campaign>%s)/' % settings.SLUG_RE,
+        QuestionListView.as_view(), name='survey_question_list'),
+    re_path(r'^',
+        CampaignListView.as_view(), name='survey_campaign_list'),
 ]

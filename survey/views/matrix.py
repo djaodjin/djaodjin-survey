@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,10 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, DetailView, ListView
 
 from ..compat import csrf, reverse
-from survey.models import Sample
 from ..mixins import (EditableFilterMixin, MatrixMixin, MatrixQuerysetMixin,
     CampaignMixin)
-from ..models import EditableFilter
+from ..models import EditableFilter, Sample
+from ..utils import update_context_urls
 
 
 class MatrixListView(MatrixQuerysetMixin, ListView):
@@ -78,12 +78,14 @@ class MatrixDetailView(MatrixMixin, DetailView):
         context.update({
             'cohorts': self.get_cohorts(),
             'metrics': metrics,
+        })
+        update_context_urls(context, {
             'editable_filter_api_base': reverse(
                 'survey_api_editable_filter_list', kwargs=url_filters_kwargs),
         })
         url_kwargs = {self.matrix_url_kwarg: str(self.object)}
         url_kwargs.update(self.get_url_kwargs())
-        context.update({
+        update_context_urls(context, {
             'matrix_api': reverse('matrix_api', kwargs=url_kwargs),
         })
         return context

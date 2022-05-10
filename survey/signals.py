@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,20 @@ from django.dispatch import Signal
 
 #pylint: disable=invalid-name
 portfolio_grant_initiated = Signal(
-    providing_args=["portfolio", "invitee", "request"])
-portfolio_grant_accepted = Signal(providing_args=["portfolio", "request"])
-portfolio_grant_denied = Signal(providing_args=["portfolio", "request"])
+#    providing_args=["portfolio", "invitee", "request"]
+)
+portfolio_grant_accepted = Signal(
+#    providing_args=["portfolio", "request"]
+)
+portfolio_grant_denied = Signal(
+#    providing_args=["portfolio", "request"]
+)
 portfolio_request_initiated = Signal(
-    providing_args=["portfolio", "invitee", "request"])
-portfolio_request_accepted = Signal(providing_args=["portfolio", "request"])
-portfolio_request_denied = Signal(providing_args=["portfolio", "request"])
+#    providing_args=["portfolio", "invitee", "request"]
+)
+portfolio_request_accepted = Signal(
+#    providing_args=["portfolio", "request"]
+)
+portfolio_request_denied = Signal(
+#    providing_args=["portfolio", "request"]
+)

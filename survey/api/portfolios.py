@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,7 @@ import logging
 
 from django.db import transaction
 from django.db.models import Q
-from rest_framework import generics
-from rest_framework.mixins import DestroyModelMixin
+from rest_framework import generics, status
 from rest_framework.response import Response as HttpResponse
 
 from .. import signals
@@ -258,6 +257,7 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         return PortfolioDoubleOptIn.objects.filter(grantee=self.account)
 
     def post(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument
         instance = self.get_object()
         self.perform_create(instance)
         return HttpResponse(status=status.HTTP_201_CREATED)
@@ -419,6 +419,7 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         return PortfolioDoubleOptIn.objects.filter(account=self.account)
 
     def post(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument
         instance = self.get_object()
         self.perform_create(instance)
         return HttpResponse(status=status.HTTP_201_CREATED)

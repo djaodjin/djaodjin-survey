@@ -381,3 +381,75 @@ Vue.component('grant-allowed-typeahead', AccountTypeAhead.extend({
     };
   }
 }));
+
+
+// shows comparaison matrices
+Vue.component('compare-dashboard', {
+    mixins: [
+        itemMixin
+    ],
+    data: function() {
+        return {
+            url: this.$urls.matrix_api,
+            getCb: 'updateCharts',
+            charts: {}
+        }
+    },
+    methods: {
+        updateCharts: function(resp) {
+            var vm = this;
+            vm.item = resp;
+            vm.itemLoaded = true;
+            for( var idx = 0; idx < resp.length; ++idx ) {
+                var table = resp[idx];
+                var labels = [];
+                var datasets = [];
+                var chartKey = table.slug;
+                var colors = ['#e1b'];
+                for( var idx = 0; idx < table.cohorts.length; ++idx ) {
+                    labels.push(table.cohorts[idx].title);
+                }
+                var data = [];
+                for( var key in table.values.scores ) {
+                    if( table.values.scores.hasOwnProperty(key) ) {
+                        data.push(table.values.scores[key]);
+                    }
+                }
+                datasets.push({
+                    label: chartKey,
+                    backgroundColor: colors,
+                    borderColor: colors,
+                    data: data
+                });
+                if( vm.charts[chartKey] ) {
+                    vm.charts[chartKey].destroy();
+                }
+                vm.charts[chartKey] = new Chart(
+                    document.getElementById(chartKey),
+                    {
+                    type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                                title: {
+                                    display: false,
+                                    text: table.title
+                                }
+                            }
+                        },
+                    }
+                );
+            }
+        },
+    },
+    mounted: function(){
+        this.get();
+    }
+});

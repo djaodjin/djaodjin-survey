@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,22 +22,25 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
-from ...settings import SLUG_RE
+from ... import settings
+from ...compat import re_path
 from ...views.sample import (AnswerUpdateView, SampleCreateView,
     SampleResetView, SampleResultView, SampleUpdateView)
 
+
 urlpatterns = [
-   url(r'^(?P<campaign>%s)/(?P<sample>%s)/reset/' % (SLUG_RE, SLUG_RE),
-       SampleResetView.as_view(), name='survey_sample_reset'),
-   url(r'^(?P<campaign>%s)/(?P<sample>%s)/results/' % (SLUG_RE, SLUG_RE),
-       SampleResultView.as_view(), name='survey_sample_results'),
-   url(r'^(?P<campaign>%s)/(?P<sample>%s)/(?:(?P<rank>\d+)/)'
-       % (SLUG_RE, SLUG_RE),
-       AnswerUpdateView.as_view(), name='survey_answer_update'),
-   url(r'^(?P<campaign>%s)/(?P<sample>%s)/' % (SLUG_RE, SLUG_RE),
-       SampleUpdateView.as_view(), name='survey_sample_update'),
-   url(r'^(?P<campaign>%s)/' % SLUG_RE,
-       SampleCreateView.as_view(), name='survey_sample_new'),
+    re_path(r'^(?P<campaign>%s)/(?P<sample>%s)/reset/' % (
+        settings.SLUG_RE, settings.SLUG_RE),
+        SampleResetView.as_view(), name='survey_sample_reset'),
+    re_path(r'^(?P<campaign>%s)/(?P<sample>%s)/results/' % (
+        settings.SLUG_RE, settings.SLUG_RE),
+        SampleResultView.as_view(), name='survey_sample_results'),
+    re_path(r'^(?P<campaign>%s)/(?P<sample>%s)/(?:(?P<rank>\d+)/)'
+        % (settings.SLUG_RE, settings.SLUG_RE),
+        AnswerUpdateView.as_view(), name='survey_answer_update'),
+    re_path(r'^(?P<campaign>%s)/(?P<sample>%s)/' % (
+        settings.SLUG_RE, settings.SLUG_RE),
+        SampleUpdateView.as_view(), name='survey_sample_update'),
+    re_path(r'^(?P<campaign>%s)/' % settings.SLUG_RE,
+        SampleCreateView.as_view(), name='survey_sample_new'),
 ]

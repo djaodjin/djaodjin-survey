@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,12 +22,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
+from .... import settings
 from ....api.sample import SampleResetAPIView
-from ....settings import SLUG_RE, PATH_RE
+from ....compat import re_path
+
 
 urlpatterns = [
-   url(r'^sample/(?P<sample>%s)/reset/(?P<path>%s)$' % (SLUG_RE, PATH_RE),
-       SampleResetAPIView.as_view(), name='survey_api_sample_reset'),
+    re_path(r'^sample/(?P<sample>%s)/reset/(?P<path>%s)$' % (
+        settings.SLUG_RE, settings.PATH_RE),
+        SampleResetAPIView.as_view(), name='survey_api_sample_reset'),
 ]

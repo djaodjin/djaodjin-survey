@@ -26,12 +26,12 @@
 URLs for the djaodjin-survey HTML pages Django app
 """
 
-from django.conf.urls import url, include
+from ...compat import include, re_path
 
 
 urlpatterns = [
-    url(r'^campaigns/', include('survey.urls.views.campaigns')),
-    url(r'^matrix/', include('survey.urls.views.matrices')),
-    url(r'^portfolios/', include('survey.urls.views.portfolios')),
-    url(r'^assess/', include('survey.urls.views.samples')),
+    re_path(r'^campaigns/', include('survey.urls.views.campaigns')),
+    re_path(r'^matrix/', include('survey.urls.views.matrices')),
+    re_path(r'^portfolios/', include('survey.urls.views.portfolios')),
+    re_path(r'^assess/', include('survey.urls.views.samples')),
 ]

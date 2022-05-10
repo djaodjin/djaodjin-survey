@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,14 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
+from ... import settings
 from ...api.units import UnitDetailAPIView, UnitListAPIView
-from ...settings import SLUG_RE
+from ...compat import re_path
+
 
 urlpatterns = [
-   url(r'^units/(?P<unit>%s)$' % SLUG_RE,
-       UnitDetailAPIView.as_view(), name='survey_api_unit'),
-   url(r'^units$',
-       UnitListAPIView.as_view(), name='survey_api_units'),
+    re_path(r'^units/(?P<unit>%s)$' % settings.SLUG_RE,
+        UnitDetailAPIView.as_view(), name='survey_api_unit'),
+    re_path(r'^units$',
+        UnitListAPIView.as_view(), name='survey_api_units'),
 ]

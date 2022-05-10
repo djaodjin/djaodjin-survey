@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,14 +22,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.conf.urls import url
-
+from ... import settings
 from ...api.campaigns import CampaignAPIView, CampaignListAPIView
-from ...settings import SLUG_RE
+from ...compat import re_path
 
 urlpatterns = [
-   url(r'^campaigns/(?P<campaign>%s)$' % SLUG_RE,
-       CampaignAPIView.as_view(), name='survey_api_campaign'),
-  url(r'^campaigns$',
-       CampaignListAPIView.as_view(), name='survey_api_campaign_list'),
+    re_path(r'^campaigns/(?P<campaign>%s)$' % settings.SLUG_RE,
+        CampaignAPIView.as_view(), name='survey_api_campaign'),
+    re_path(r'^campaigns$',
+        CampaignListAPIView.as_view(), name='survey_api_campaign_list'),
 ]
