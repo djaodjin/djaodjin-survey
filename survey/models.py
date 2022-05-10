@@ -174,6 +174,9 @@ class Content(models.Model):
     text = models.TextField(
         help_text=_("Detailed description about the question"))
 
+    def __str__(self):
+        return slugify(self.title)
+
 
 @python_2_unicode_compatible
 class AbstractQuestion(SlugTitleMixin, models.Model):
