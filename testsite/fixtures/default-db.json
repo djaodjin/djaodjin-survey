@@ -33,6 +33,21 @@
     "fields": {
       "date_joined": "2022-01-01T00:00:00+00:00",
       "email": "supplier-1@localhost.localdomain",
+      "first_name": "Donny",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "last_login": "2022-01-01T00:00:00+00:00",
+      "last_name": "",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "energy-utility"
+    },
+    "model": "auth.User", "pk": 4
+},
+{
+    "fields": {
+      "date_joined": "2022-01-01T00:00:00+00:00",
+      "email": "supplier-1@localhost.localdomain",
       "first_name": "Steve",
       "is_active": true,
       "is_staff": true,
@@ -42,7 +57,22 @@
       "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
       "username": "supplier-1"
     },
-    "model": "auth.User", "pk": 4
+    "model": "auth.User", "pk": 6
+},
+{
+    "fields": {
+      "date_joined": "2022-01-01T00:00:00+00:00",
+      "email": "supplier-1@localhost.localdomain",
+      "first_name": "Donny",
+      "is_active": true,
+      "is_staff": true,
+      "is_superuser": true,
+      "last_login": "2022-01-01T00:00:00+00:00",
+      "last_name": "",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "water-utility"
+    },
+    "model": "auth.User", "pk": 7
 },
 {
   "fields" : {
@@ -230,8 +260,8 @@
 },
 {
   "fields": {
-    "grantee": 2,
-    "account": 4,
+    "grantee": 4,
+    "account": 6,
     "state": 3,
     "initiated_by": 2,
     "ends_at": "2022-01-01T00:00:00+00:00"
@@ -240,12 +270,23 @@
 },
 {
   "fields": {
-    "grantee": 2,
-    "account": 4,
+    "grantee": 4,
+    "account": 6,
     "state": 0,
     "initiated_by": 2,
     "verification_key": "0000000000000000000000000000000000000001",
     "ends_at": "2022-01-01T00:00:00+00:00"
   },
   "model": "survey.PortfolioDoubleOptIn", "pk": 2
+},
+{
+  "fields": {
+    "grantee": 7,
+    "account": 6,
+    "state": 4,
+    "initiated_by": 3,
+    "verification_key": "0000000000000000000000000000000000000002",
+    "ends_at": "2022-01-01T00:00:00+00:00"
+  },
+  "model": "survey.PortfolioDoubleOptIn", "pk": 3
 }]
