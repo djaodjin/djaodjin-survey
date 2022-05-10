@@ -28,9 +28,15 @@ srcDir        ?= .
 installTop    ?= $(VIRTUAL_ENV)
 binDir        ?= $(installTop)/bin
 
+NPM           ?= npm
 PYTHON        := $(binDir)/python
 
-RUNSYNCDB     = $(if $(findstring --run-syncdb,$(shell cd $(srcDir) && $(PYTHON) manage.py migrate --help 2>/dev/null)),--run-syncdb,)
+RUN_DIR       ?= $(srcDir)
+DB_NAME       ?= $(RUN_DIR)/db.sqlite
+
+MANAGE        := TESTSITE_SETTINGS_LOCATION=$(CONFIG_DIR) RUN_DIR=$(RUN_DIR) $(PYTHON) manage.py
+
+RUNSYNCDB     = $(if $(findstring --run-syncdb,$(shell cd $(srcDir) && $(MANAGE) migrate --help 2>/dev/null)),--run-syncdb,)
 
 install::
 	cd $(srcDir) && $(PYTHON) ./setup.py --quiet \
@@ -40,16 +46,15 @@ install-conf:: $(srcDir)/credentials
 
 $(srcDir)/credentials: $(srcDir)/testsite/etc/credentials
 	[ -f $@ ] || \
-		SECRET_KEY=`python -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'` ; \
+		SECRET_KEY=`$(PYTHON) -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'` ; \
 		sed -e "s,\%(SECRET_KEY)s,$${SECRET_KEY}," $< > $@
 
 # XXX Enter a superuser when asked otherwise the fixtures won't load
 # correctly.
 initdb: install-conf
 	-rm -f $(srcDir)/db.sqlite3
-	cd $(srcDir) && $(PYTHON) ./manage.py migrate $(RUNSYNCDB) --noinput
-	cd $(srcDir) && $(PYTHON) ./manage.py loaddata \
-		testsite/fixtures/default-db.json
+	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
+	cd $(srcDir) && $(MANAGE) loaddata testsite/fixtures/default-db.json
 
 
 vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-survey-packages
