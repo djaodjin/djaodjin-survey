@@ -1,0 +1,15 @@
+Django==1.11.29
+djangorestframework==3.9.4
+monotonic==1.1
+
+# testsite-only
+coverage==4.0.3
+django-debug-toolbar==1.11.1 # This version works with Py2, Django>=1.11 (incl. 2.2)
+django-extensions==2.2.5
+djaodjin-rules==0.2.9
+PyJWT==2.0.1
+gunicorn==19.7.1
+
+# development
+Sphinx==1.8.5 # This version works with Py2
+sphinxcontrib-httpdomain==1.8.0
