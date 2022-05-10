@@ -27,6 +27,8 @@
 srcDir        ?= .
 installTop    ?= $(VIRTUAL_ENV)
 binDir        ?= $(installTop)/bin
+CONFIG_DIR    ?= $(srcDir)
+LOCALSTATEDIR ?= $(installTop)/var
 
 NPM           ?= npm
 PYTHON        := $(binDir)/python
@@ -38,16 +40,23 @@ MANAGE        := TESTSITE_SETTINGS_LOCATION=$(CONFIG_DIR) RUN_DIR=$(RUN_DIR) $(P
 
 RUNSYNCDB     = $(if $(findstring --run-syncdb,$(shell cd $(srcDir) && $(MANAGE) migrate --help 2>/dev/null)),--run-syncdb,)
 
-install::
+install:: install-conf
 	cd $(srcDir) && $(PYTHON) ./setup.py --quiet \
 		build -b $(CURDIR)/build install
 
-install-conf:: $(srcDir)/credentials
+install-conf:: $(DESTDIR)$(CONFIG_DIR)/credentials \
+                $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf
 
-$(srcDir)/credentials: $(srcDir)/testsite/etc/credentials
+$(DESTDIR)$(CONFIG_DIR)/credentials: $(srcDir)/testsite/etc/credentials
+	install -d $(dir $@)
 	[ -f $@ ] || \
 		SECRET_KEY=`$(PYTHON) -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'` ; \
 		sed -e "s,\%(SECRET_KEY)s,$${SECRET_KEY}," $< > $@
+
+$(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
+	install -d $(dir $@)
+	[ -f $@ ] || sed \
+		-e 's,%(LOCALSTATEDIR)s,$(LOCALSTATEDIR),' $< > $@
 
 # XXX Enter a superuser when asked otherwise the fixtures won't load
 # correctly.
