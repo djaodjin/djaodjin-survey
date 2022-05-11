@@ -70,22 +70,17 @@ class MatrixDetailView(MatrixMixin, DetailView):
         for metric in metrics:
             if metric == self.object.metric:
                 metric.is_selected = True
-        url_filters_kwargs = {}
-        if (self.account_url_kwarg and self.account_url_kwarg in self.kwargs):
-            url_filters_kwargs.update({
-                self.account_url_kwarg: self.kwargs.get(
-                    self.account_url_kwarg)})
         context.update({
             'cohorts': self.get_cohorts(),
             'metrics': metrics,
         })
+
+        url_kwargs = self.get_url_kwargs()
+        url_filters_kwargs = self.get_url_kwargs()
+        del url_filters_kwargs[self.matrix_url_kwarg]
         update_context_urls(context, {
             'editable_filter_api_base': reverse(
                 'survey_api_editable_filter_list', kwargs=url_filters_kwargs),
-        })
-        url_kwargs = {self.matrix_url_kwarg: str(self.object)}
-        url_kwargs.update(self.get_url_kwargs())
-        update_context_urls(context, {
             'matrix_api': reverse('matrix_api', kwargs=url_kwargs),
         })
         return context

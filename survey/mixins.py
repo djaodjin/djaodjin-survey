@@ -239,7 +239,6 @@ class MatrixQuerysetMixin(BelongsMixin):
         # We want to show all matrices but only populate with account data.
         #if self.account:
         #    return Matrix.objects.filter(account=self.account)
-        print("XXX return all matrices?")
         return Matrix.objects.all()
 
 

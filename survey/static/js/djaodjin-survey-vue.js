@@ -391,6 +391,7 @@ Vue.component('compare-dashboard', {
     data: function() {
         return {
             url: this.$urls.matrix_api,
+            colors: this.$colorsTheme ? this.$colorsTheme : ['#f0ad4e'],
             getCb: 'updateCharts',
             charts: {}
         }
@@ -400,25 +401,24 @@ Vue.component('compare-dashboard', {
             var vm = this;
             vm.item = resp;
             vm.itemLoaded = true;
-            for( var idx = 0; idx < resp.length; ++idx ) {
-                var table = resp[idx];
+            for( var tdx = 0; tdx < resp.length; ++tdx ) {
+                var table = resp[tdx];
                 var labels = [];
                 var datasets = [];
                 var chartKey = table.slug;
-                var colors = ['#e1b'];
                 for( var idx = 0; idx < table.cohorts.length; ++idx ) {
                     labels.push(table.cohorts[idx].title);
                 }
                 var data = [];
-                for( var key in table.values.scores ) {
-                    if( table.values.scores.hasOwnProperty(key) ) {
-                        data.push(table.values.scores[key]);
+                for( var key in table.values ) {
+                    if( table.values.hasOwnProperty(key) ) {
+                        data.push(table.values[key]);
                     }
                 }
                 datasets.push({
-                    label: chartKey,
-                    backgroundColor: colors,
-                    borderColor: colors,
+                    label: table.title,
+                    backgroundColor: vm.colors,
+                    borderColor: vm.colors,
                     data: data
                 });
                 if( vm.charts[chartKey] ) {
