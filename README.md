@@ -23,9 +23,17 @@ The source code is bundled with a sample django project.
 Releases
 ========
 
-0.4.2
+Tested with
 
-  * filters out questions in get_answers/get_candidates
+- **Python:** 3.7, **Django:** 2.2 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.12
+- **Python:** 3.7, **Django:** 3.2 (latest), **Django Rest Framework:** 3.12
+- **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
+
+
+0.4.3
+
+  * compatibles with Django4.0
+  * fixes Vue component to display matrices
 
 [previous release notes](changelog)
 

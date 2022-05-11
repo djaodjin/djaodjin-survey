@@ -1,3 +1,10 @@
+0.4.3
+
+  * compatibles with Django4.0
+  * fixes Vue component to display matrices
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed, 11 May 2022 10:15:00 -0700
+
 0.4.2
 
   * filters out questions in get_answers/get_candidates
