@@ -360,11 +360,17 @@ WITH answers AS (
       COALESCE(survey_choice.text,
         survey_answer.measured%(convert_to_text)s) AS measured_text
     FROM survey_answer
+    INNER JOIN survey_question
+      ON survey_answer.question_id = survey_question.id
     LEFT OUTER JOIN survey_choice
       ON survey_choice.id = survey_answer.measured
       AND survey_choice.unit_id = survey_answer.unit_id
     WHERE sample_id=%(sample)d
+      AND survey_question.path LIKE '%(prefix)s%%%%'
+      %(extra_question_clause)s
 ),
+-- The following brings all current questions in the campaign
+-- in an attempt to present a consistent display (i.e. order by rank).
 campaign_questions AS (
     SELECT
       survey_question.id AS id,
@@ -377,22 +383,32 @@ campaign_questions AS (
       AND survey_question.path LIKE '%(prefix)s%%%%'
       %(extra_question_clause)s
 ),
+-- The following returns all answered and current questions.
+--questions AS (
+--    SELECT * FROM campaign_questions
+--    UNION (
+--    SELECT
+--      answers.question_id AS id,
+--      0 AS rank,
+--      'f' AS required
+--    FROM answers
+--    INNER JOIN survey_question
+--      ON answers.question_id = survey_question.id
+--    LEFT OUTER JOIN campaign_questions
+--      ON answers.question_id = campaign_questions.id
+--    WHERE campaign_questions.id IS NULL
+--      AND survey_question.path LIKE '%(prefix)s%%%%'
+--      %(extra_question_clause)s
+--    )
+--)
+-- The following returns all answered questions only.
 questions AS (
-    SELECT * FROM campaign_questions
-    UNION (
-    SELECT
-      answers.question_id AS id,
-      0 AS rank,
-      'f' AS required
+    SELECT answers.question_id AS id,
+      COALESCE(campaign_questions.rank, 0) AS rank,
+      COALESCE(campaign_questions.required, 'f') AS required
     FROM answers
-    INNER JOIN survey_question
-      ON answers.question_id = survey_question.id
     LEFT OUTER JOIN campaign_questions
       ON answers.question_id = campaign_questions.id
-    WHERE campaign_questions.id IS NULL
-      AND survey_question.path LIKE '%(prefix)s%%%%'
-      %(extra_question_clause)s
-    )
 )
 SELECT
     answers.id AS id,

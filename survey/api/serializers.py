@@ -211,6 +211,22 @@ class SampleSerializer(SampleCreateSerializer):
 
 
 class CampaignSerializer(serializers.ModelSerializer):
+    """
+    Short description of the campaign.
+    """
+
+    account = serializers.SlugRelatedField(
+        slug_field=settings.BELONGS_LOOKUP_FIELD,
+        queryset=get_belongs_model().objects.all(),
+        help_text=("Account this sample belongs to."))
+
+    class Meta(object):
+        model = Campaign
+        fields = ('slug', 'account', 'title',)
+        read_only_fields = ('slug',)
+
+
+class CampaignDetailSerializer(serializers.ModelSerializer):
 
     account = serializers.SlugRelatedField(
         slug_field=settings.BELONGS_LOOKUP_FIELD,

@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,7 @@ import logging
 from rest_framework import generics
 
 from ..mixins import CampaignMixin, CampaignQuerysetMixin, DateRangeContextMixin
-from .serializers import CampaignSerializer, CampaignCreateSerializer
+from .serializers import CampaignDetailSerializer, CampaignCreateSerializer
 from ..filters import DateRangeFilter, OrderingFilter, SearchFilter
 
 
@@ -126,7 +126,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
             ]
         }
     """
-    serializer_class = CampaignSerializer
+    serializer_class = CampaignDetailSerializer
 
     def get_object(self):
         return self.campaign
@@ -169,7 +169,7 @@ class SmartCampaignListMixin(DateRangeContextMixin):
 class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
                           generics.ListCreateAPIView):
 
-    serializer_class = CampaignSerializer
+    serializer_class = CampaignDetailSerializer
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'post':
