@@ -30,10 +30,9 @@ Tested with
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
 
-0.4.3
+0.4.4
 
-  * compatibles with Django4.0
-  * fixes Vue component to display matrices
+  * shows only answered questions on frozen samples
 
 [previous release notes](changelog)
 
