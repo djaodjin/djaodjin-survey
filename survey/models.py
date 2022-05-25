@@ -556,8 +556,10 @@ class EditableFilter(SlugTitleMixin, models.Model):
         help_text="Unique identifier for the sample. It can be used in a URL.")
     title = models.CharField(max_length=255,
         help_text="Title for the filter")
-    tags = models.CharField(max_length=255, null=True,
-        help_text="Helpful tags")
+    account = models.ForeignKey(settings.BELONGS_MODEL,
+        on_delete=models.PROTECT, null=True)
+    extra = get_extra_field_class()(null=True, blank=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     def __str__(self):
         return str(self.slug)
@@ -601,6 +603,25 @@ class EditablePredicate(models.Model):
         elif self.operator == 'contains':
             kwargs = {"%s__contains" % self.field: self.operand}
         return kwargs
+
+
+@python_2_unicode_compatible
+class EditableFilterEnumeratedAccounts(models.Model):
+    """
+    A list of directly specified accounts to include in the filter.
+    """
+    rank = models.IntegerField(
+        help_text=_("used to order accounts when presenting a filter"))
+    editable_filter = models.ForeignKey(
+        EditableFilter, on_delete=models.CASCADE, related_name='accounts')
+    account = models.ForeignKey(settings.ACCOUNT_MODEL,
+        on_delete=models.CASCADE, related_name='filters')
+
+    class Meta:
+        unique_together = ('editable_filter', 'rank')
+
+    def __str__(self):
+        return '%s-%d' % (self.editable_filter.slug, int(self.rank))
 
 
 @python_2_unicode_compatible

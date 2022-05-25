@@ -30,10 +30,12 @@ from rest_framework.generics import get_object_or_404
 
 from .. import settings
 from ..compat import gettext_lazy as _, reverse, six
+from ..helpers import extra_as_internal
 from ..models import (Answer, Campaign, Choice,
     EditableFilter, EditablePredicate, Matrix, PortfolioDoubleOptIn,
     Sample, Unit)
-from ..utils import get_account_model, get_belongs_model, get_question_model
+from ..utils import (get_account_model, get_belongs_model, get_question_model,
+    get_account_serializer)
 
 
 class EnumField(serializers.Field):
@@ -77,6 +79,40 @@ class NoModelSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         raise RuntimeError('`update()` should not be called.')
+
+
+class AccountSerializer(serializers.ModelSerializer):
+
+    slug = serializers.SerializerMethodField()
+    printable_name = serializers.SerializerMethodField(read_only=True,
+        help_text=_("Name that can be safely used for display in HTML pages"))
+    picture = serializers.SerializerMethodField(read_only=True,
+        help_text=_("URL location of the profile picture"))
+    extra = serializers.SerializerMethodField(read_only=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
+
+    class Meta:
+        model = get_account_model()
+        fields = ('slug', 'printable_name', 'picture', 'extra')
+
+    @staticmethod
+    def get_slug(obj):
+        if hasattr(obj, 'slug'):
+            return obj.slug
+        return obj.username
+
+    @staticmethod
+    def get_printable_name(obj):
+        return obj.printable_name
+
+    @staticmethod
+    def get_picture(obj):
+        return obj.picture
+
+    @staticmethod
+    def get_extra(obj):
+        extra = extra_as_internal(obj)
+        return extra
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -265,10 +301,12 @@ class EditableFilterSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False)
     likely_metric = serializers.SerializerMethodField()
     predicates = EditablePredicateSerializer(many=True)
+    results = get_account_serializer()(many=True)
 
     class Meta:
         model = EditableFilter
-        fields = ('slug', 'title', 'tags', 'predicates', 'likely_metric')
+        fields = ('slug', 'title', 'extra', 'predicates', 'likely_metric',
+                  'results')
 
     @staticmethod
     def get_likely_metric(obj):
@@ -276,7 +314,7 @@ class EditableFilterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         editable_filter = EditableFilter(
-            title=validated_data['title'], tags=validated_data['tags'])
+            title=validated_data['title'], extra=validated_data['extra'])
         with transaction.atomic():
             editable_filter.save()
             for predicate in validated_data['predicates']:
@@ -292,7 +330,7 @@ class EditableFilterSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         with transaction.atomic():
             instance.title = validated_data['title']
-            instance.tags = validated_data['tags']
+            instance.extra = validated_data['extra']
             instance.save()
             absents = set([item['pk']
                 for item in instance.predicates.all().values('pk')])
@@ -444,16 +482,10 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
         return None
 
 
-class AccountSerializer(serializers.ModelSerializer):
+class AccountsFilterAddSerializer(serializers.ModelSerializer):
 
-    slug = serializers.SerializerMethodField()
+    slug = serializers.CharField(required=False)
 
     class Meta:
         model = get_account_model()
-        fields = ('slug', 'email')
-
-    @staticmethod
-    def get_slug(obj):
-        if hasattr(obj, 'slug'):
-            return obj.slug
-        return obj.username
+        fields = ('slug', 'extra')

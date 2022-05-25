@@ -23,20 +23,26 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ... import settings
-from ...api.matrix import (EditableFilterListAPIView,
-    EditableFilterDetailAPIView, AccountListAPIView, QuestionListAPIView)
+from ...api.matrix import (AccountsFilterDetailAPIView,
+    AccountsFilterListAPIView, EditableFilterListAPIView,
+    QuestionsFilterDetailAPIView, QuestionsFilterListAPIView)
 from ...compat import re_path
 
 
 urlpatterns = [
-    re_path(r'^matrix/filters/(?P<editable_filter>%s)$' %
-        settings.NON_EMPTY_PATH_RE,
-        EditableFilterDetailAPIView.as_view(), name='editable_filter_api'),
-    re_path(r'^matrix/filters$',
+    re_path(r'^filters/accounts/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
+        AccountsFilterDetailAPIView.as_view(),
+        name='survey_api_accounts_filter'),
+    re_path(r'^filters/accounts/?',
+        AccountsFilterListAPIView.as_view(),
+        name='survey_api_accounts_filter_list'),
+    re_path(r'^filters/questions/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
+        QuestionsFilterDetailAPIView.as_view(),
+        name='survey_api_questions_filter'),
+    re_path(r'^filters/questions/?',
+        QuestionsFilterListAPIView.as_view(),
+        name='survey_api_questions_filter_list'),
+    re_path(r'^filters/?',
         EditableFilterListAPIView.as_view(),
-        name='survey_api_editable_filter_list'),
-    re_path(r'^matrix/accounts/(?P<editable_filter>%s)$' % settings.SLUG_RE,
-        AccountListAPIView.as_view(), name='survey_api_accounts_filter'),
-    re_path(r'^matrix/questions/(?P<editable_filter>%s)$' % settings.SLUG_RE,
-        QuestionListAPIView.as_view(), name='survey_api_questions_filter'),
+        name='survey_api_filter_list'),
 ]

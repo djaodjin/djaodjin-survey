@@ -26,6 +26,14 @@ import json
 
 from .compat import six
 
+def extra_as_internal(obj):
+    if isinstance(obj.extra, six.string_types):
+        try:
+            obj.extra = json.loads(obj.extra)
+        except (TypeError, ValueError):
+            pass
+    return obj.extra
+
 
 def get_extra(obj, attr_name, default=None):
     if isinstance(obj.extra, six.string_types):

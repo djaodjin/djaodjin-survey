@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,19 +25,23 @@
 import logging, re
 from collections import OrderedDict
 
-from django.db.models import F
+from django.db import transaction
+from django.db.models import F, Max
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, response as http
+from rest_framework.mixins import CreateModelMixin
 from rest_framework.filters import SearchFilter
 from rest_framework.pagination import PageNumberPagination
 
 from ..compat import reverse
-from ..mixins import MatrixMixin
-from ..models import Answer, Matrix, EditableFilter
+from ..mixins import AccountMixin, MatrixMixin
+from ..models import (Answer, Matrix, EditableFilter,
+    EditableFilterEnumeratedAccounts)
 from ..utils import (get_account_model, get_account_serializer,
     get_question_serializer)
-from .serializers import EditableFilterSerializer, MatrixSerializer
+from .serializers import (AccountsFilterAddSerializer,
+    EditableFilterSerializer, MatrixSerializer)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -345,7 +349,7 @@ class EditableFilterQuerysetMixin(object):
 
 
 class EditableFilterListAPIView(EditableFilterQuerysetMixin,
-                                generics.ListCreateAPIView):
+                                generics.ListAPIView):
     """
     Lists fitlers
 
@@ -405,62 +409,9 @@ class EditableFilterListAPIView(EditableFilterQuerysetMixin,
     )
     filter_backends = (SearchFilter,)
 
-    def post(self, request, *args, **kwargs):
-        """
-        Creates a fitler
 
-        **Tags**: reporting
-
-        **Examples**
-
-        .. code-block:: http
-
-             POST /api/xia/matrix/filters HTTP/1.1
-
-        .. code-block:: json
-
-            {
-                "slug": "construction",
-                "title": "Construction",
-                "tags": "cohort",
-                "predicates": [
-                {
-                    "rank": 0,
-                    "operator": "contains",
-                    "operand": "construction",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }
-                ],
-                "likely_metric": null
-            }
-
-        responds
-
-        .. code-block:: json
-
-            {
-                "slug": "construction",
-                "title": "Construction",
-                "tags": "cohort",
-                "predicates": [
-                {
-                    "rank": 0,
-                    "operator": "contains",
-                    "operand": "construction",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }
-                ],
-                "likely_metric": null
-            }
-        """
-        #pylint:disable=useless-super-delegation
-        return super(EditableFilterListAPIView, self).post(
-            request, *args, **kwargs)
-
-
-class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+class EditableFilterDetailAPIView(AccountMixin,
+                                  generics.RetrieveUpdateDestroyAPIView):
     """
     Retrieves a fitler
 
@@ -494,8 +445,21 @@ class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'slug'
     lookup_url_kwarg = 'editable_filter'
 
-    def get_queryset(self):
-        return EditableFilter.objects.all()
+    @property
+    def editable_filter(self):
+        if not hasattr(self, '_editable_filter'):
+            self._editable_filter = get_object_or_404(
+                EditableFilter.objects.all(),
+                account=self.account,
+                slug=self.kwargs.get(self.lookup_url_kwarg))
+        return self._editable_filter
+
+    def get_object(self):
+        editable_filter = self.editable_filter
+        editable_filter.results = get_account_model().objects.filter(
+            filters__editable_filter=self.editable_filter).order_by(
+                'filters__rank')
+        return editable_filter
 
     def put(self, request, *args, **kwargs):
         """
@@ -564,6 +528,154 @@ class EditableFilterDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
             request, *args, **kwargs)
 
 
+class AccountsFilterDetailAPIView(CreateModelMixin,
+                                  EditableFilterDetailAPIView):
+    """
+    Retrieves a fitler
+
+    **Tags**: reporting
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/energy-utility/filters/accounts/suppliers HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        vm.items.results = [{
+            facility: "Main factory",
+            fuel_type: "natural-gas",
+            allocation: "PG&E",
+            created_at: null,
+            ends_at: null,
+            amount: 100,
+            unit: "mmbtu"
+        }
+
+        {
+            "slug": "suppliers",
+            "title": "Energy utility suppliers",
+            "tags": "cohort, aggregate",
+            "predicates": [{
+                "rank": 1,
+                "operator": "contains",
+                "operand": "Energy",
+                "field": "extra",
+                "selector": "keepmatching"
+            }],
+            "likely_metric": null
+        }
+    """
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return AccountsFilterAddSerializer
+        return super(AccountsFilterDetailAPIView, self).get_serializer_class()
+
+    def post(self, request, *args, **kwargs):
+        """
+        Updates a fitler
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             PUT /api/energy-utility/matrix/filters/suppliers HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "slug": "suppliers",
+                "title": "Energy utility suppliers",
+                "tags": "cohort, aggregate",
+                "predicates": [{
+                    "rank": 1,
+                    "operator": "contains",
+                    "operand": "Energy",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }],
+                "likely_metric": null
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "slug": "suppliers",
+                "title": "Energy utility suppliers",
+                "tags": "cohort, aggregate",
+                "predicates": [{
+                    "rank": 1,
+                    "operator": "contains",
+                    "operand": "Energy",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }],
+                "likely_metric": null
+            }
+        """
+        #pylint:disable=useless-super-delegation
+        return self.create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        with transaction.atomic():
+            account_slug = serializer.validated_data.get('slug')
+            extra = serializer.validated_data.get('extra')
+            if account_slug:
+                account = get_object_or_404(get_account_model().objects.all(),
+                    slug=account_slug)
+            else:
+                account = get_account_model().objects.create(extra=extra)
+                #XXXaccount.save()
+            last_rank = EditableFilterEnumeratedAccounts.objects.filter(
+                editable_filter=self.editable_filter).aggregate(
+                Max('rank')).get('rank__max')
+            if not last_rank:
+                last_rank = 0
+            EditableFilterEnumeratedAccounts.objects.create(
+                account=account,
+                editable_filter=self.editable_filter,
+                rank=last_rank + 1)
+
+
+class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
+    """
+    Retrieves a fitler
+
+    **Tags**: reporting
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/energy-utility/filters/questions/suppliers HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "slug": "suppliers",
+            "title": "Energy utility suppliers",
+            "tags": "cohort, aggregate",
+            "predicates": [{
+                "rank": 1,
+                "operator": "contains",
+                "operand": "Energy",
+                "field": "extra",
+                "selector": "keepmatching"
+            }],
+            "likely_metric": null
+        }
+    """
+
+
 class EditableFilterPagination(PageNumberPagination):
 
     def paginate_queryset(self, queryset, request, view=None):
@@ -582,7 +694,7 @@ class EditableFilterPagination(PageNumberPagination):
         ]))
 
 
-class EditableFilterObjectsAPIView(generics.ListAPIView):
+class EditableFilterObjectsAPIView(generics.ListCreateAPIView):
     """
     List filter objects
 
@@ -618,8 +730,62 @@ class EditableFilterObjectsAPIView(generics.ListAPIView):
         return super(EditableFilterObjectsAPIView, self).get(
             request, *args, **kwargs)
 
+    def post(self, request, *args, **kwargs):
+        """
+        Creates a fitler
 
-class AccountListAPIView(EditableFilterObjectsAPIView):
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             POST /api/xia/matrix/filters HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "slug": "construction",
+                "title": "Construction",
+                "tags": "cohort",
+                "predicates": [
+                {
+                    "rank": 0,
+                    "operator": "contains",
+                    "operand": "construction",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }
+                ],
+                "likely_metric": null
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "slug": "construction",
+                "title": "Construction",
+                "tags": "cohort",
+                "predicates": [
+                {
+                    "rank": 0,
+                    "operator": "contains",
+                    "operand": "construction",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }
+                ],
+                "likely_metric": null
+            }
+        """
+        #pylint:disable=useless-super-delegation
+        return super(EditableFilterObjectsAPIView, self).post(
+            request, *args, **kwargs)
+
+
+class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
     """
     Filtered list of ``EditableFilter``.
 
@@ -629,7 +795,7 @@ class AccountListAPIView(EditableFilterObjectsAPIView):
 
     .. code-block:: http
 
-        GET /api/supplier-1/matrix/accounts/languages HTTP/1.1
+        GET /api/supplier-1/matrix/accounts HTTP/1.1
 
     responds
 
@@ -650,7 +816,7 @@ class AccountListAPIView(EditableFilterObjectsAPIView):
     serializer_class = get_account_serializer()
 
 
-class QuestionListAPIView(EditableFilterObjectsAPIView):
+class QuestionsFilterListAPIView(EditableFilterObjectsAPIView):
     """
     Filtered list of ``Question``.
 
@@ -660,7 +826,7 @@ class QuestionListAPIView(EditableFilterObjectsAPIView):
 
     .. code-block:: http
 
-        GET /api/supplier-1/matrix/questions/languages HTTP/1.1
+        GET /api/supplier-1/matrix/questions HTTP/1.1
 
     responds
 
