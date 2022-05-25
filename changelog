@@ -1,3 +1,9 @@
+0.5.0
+
+  * separates accounts and questions filters
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed, 25 May 2022 16:20:00 -0700
+
 0.4.4
 
   * shows only answered questions on frozen samples

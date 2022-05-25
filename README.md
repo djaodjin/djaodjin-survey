@@ -30,9 +30,9 @@ Tested with
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
 
-0.4.4
+0.5.0
 
-  * shows only answered questions on frozen samples
+  * separates accounts and questions filters
 
 [previous release notes](changelog)
 
