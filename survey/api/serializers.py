@@ -287,6 +287,47 @@ class CampaignCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ('slug',)
 
 
+class DatapointSerializer(AnswerSerializer):
+    """
+    Serializer of ``Answer`` when used to retrieve data points.
+    """
+    account = serializers.SerializerMethodField()
+
+    class Meta(object):
+        model = AnswerSerializer.Meta.model
+        fields = AnswerSerializer.Meta.fields + ('account',)
+
+    @staticmethod
+    def get_account(obj):
+        serializer_class = get_account_serializer()
+        return serializer_class().to_representation(obj.sample.account)
+
+
+class EditableFilterAnswerSerializer(AnswerSerializer):
+    """
+    Serializer of ``Answer`` when used to create data points.
+    """
+    slug = serializers.SlugRelatedField(slug_field='slug',
+        queryset=get_account_model().objects.all(),
+        help_text=("Account this sample belongs to."))
+
+    class Meta(object):
+        model = AnswerSerializer.Meta.model
+        fields = AnswerSerializer.Meta.fields + ('slug',)
+
+
+class EditableFilterValuesCreateSerializer(NoModelSerializer):
+
+    baseline_at = serializers.CharField(required=False)
+    created_at = serializers.CharField()
+    items = EditableFilterAnswerSerializer(many=True)
+
+    class Meta(object):
+        model = SampleCreateSerializer.Meta.model
+        fields = SampleCreateSerializer.Meta.fields + (
+            'starts_at', 'ends_at', 'items',)
+
+
 class EditablePredicateSerializer(serializers.ModelSerializer):
 
     rank = serializers.IntegerField(required=False)

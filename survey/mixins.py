@@ -37,7 +37,8 @@ from . import settings
 from .compat import gettext_lazy as _, is_authenticated
 from .models import (Campaign, EnumeratedQuestions, EditableFilter, Matrix,
     Sample)
-from .utils import datetime_or_now, get_account_model, get_belongs_model
+from .utils import (datetime_or_now, get_account_model, get_belongs_model,
+    get_question_model)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -254,18 +255,44 @@ class MatrixMixin(MatrixQuerysetMixin):
         return self._matrix
 
 
-class SampleMixin(AccountMixin):
+class QuestionMixin(object):
+    """
+    Mixin when a ``path`` identifying a question is passed as a query
+    parameter.
+    """
+
+    URL_PATH_SEP = '/'
+    DB_PATH_SEP = '/'
+
+    path_url_kwarg = 'path'
+
+    @property
+    def db_path(self):
+        if not hasattr(self, '_db_path'):
+            self._db_path = self.kwargs.get(self.path_url_kwarg, '').replace(
+                self.URL_PATH_SEP, self.DB_PATH_SEP)
+            if not self._db_path.startswith(self.DB_PATH_SEP):
+                self._db_path = self.DB_PATH_SEP + self._db_path
+        return self._db_path
+
+    @property
+    def question(self):
+        if not hasattr(self, '_question'):
+            self._question = get_object_or_404(
+                get_question_model().objects.all(),
+                path=self.db_path)
+        return self._question
+
+
+class SampleMixin(AccountMixin, QuestionMixin):
     """
     Returns a ``Sample`` to a ``Campaign``.
     """
-    URL_PATH_SEP = '/'
-    DB_PATH_SEP = '/'
 
     # We have to use a special url_kwarg here because 'sample'
     # interfers with the way rest_framework handles **kwargs.
     sample_url_kwarg = 'sample'
     campaign_url_kwarg = 'campaign'
-    path_url_kwarg = 'path'
 
     def get_reverse_kwargs(self):
         """
@@ -283,15 +310,6 @@ class SampleMixin(AccountMixin):
             if self._path and not self._path.startswith('/'):
                 self._path = '/%s' % self._path
         return self._path
-
-    @property
-    def db_path(self):
-        if not hasattr(self, '_db_path'):
-            self._db_path = self.kwargs.get(self.path_url_kwarg, '').replace(
-                self.URL_PATH_SEP, self.DB_PATH_SEP)
-            if not self._db_path.startswith(self.DB_PATH_SEP):
-                self._db_path = self.DB_PATH_SEP + self._db_path
-        return self._db_path
 
     @property
     def sample(self):

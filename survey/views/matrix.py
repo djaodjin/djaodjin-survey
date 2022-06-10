@@ -58,7 +58,7 @@ class MatrixDetailView(MatrixMixin, DetailView):
         with ``is_selected`` for cohorts the user shows.
         """
         selected = list(self.object.cohorts.all())
-        cohorts = EditableFilter.objects.filter(tags='cohort')
+        cohorts = EditableFilter.objects.filter(extra__contains='cohort')
         for cohort in cohorts:
             if cohort in selected:
                 cohort.is_selected = True
@@ -66,7 +66,7 @@ class MatrixDetailView(MatrixMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super(MatrixDetailView, self).get_context_data(**kwargs)
-        metrics = EditableFilter.objects.filter(tags='metric')
+        metrics = EditableFilter.objects.filter(extra__contains='metric')
         for metric in metrics:
             if metric == self.object.metric:
                 metric.is_selected = True
@@ -79,8 +79,8 @@ class MatrixDetailView(MatrixMixin, DetailView):
         url_filters_kwargs = self.get_url_kwargs()
         del url_filters_kwargs[self.matrix_url_kwarg]
         update_context_urls(context, {
-            'editable_filter_api_base': reverse(
-                'survey_api_editable_filter_list', kwargs=url_filters_kwargs),
+            #'editable_filter_api_base': reverse(
+            #    'survey_api_filter_list', kwargs=url_filters_kwargs),
             'matrix_api': reverse('matrix_api', kwargs=url_kwargs),
         })
         return context

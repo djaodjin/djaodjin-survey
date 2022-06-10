@@ -850,7 +850,10 @@ var paginationMixin = {
             return this.items.count
         },
         pageCount: function(){
-            var nbFullPages = Math.ceil(this.totalItems / this.itemsPerPage);
+            // We use `max` here in case the API returns more elements
+            // than specified in `itemsPerPage`.
+            var nbFullPages = Math.ceil(this.totalItems / Math.max(
+                this.items.results.length, this.itemsPerPage));
             if( nbFullPages * this.itemsPerPage < this.totalItems ) {
                 ++nbFullPages;
             }

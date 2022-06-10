@@ -23,34 +23,14 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from ... import settings
-from ...api.matrix import (AccountsFilterDetailAPIView,
-    AccountsFilterListAPIView, EditableFilterListAPIView,
-    QuestionsFilterDetailAPIView, QuestionsFilterListAPIView)
-from ...api.metrics import AccountsValuesAPIView, AccountsFilterValuesAPIView
+from ...api.metrics import AggregateMetricsAPIView
 from ...compat import re_path
 
 
 urlpatterns = [
-    re_path(r'^filters/accounts/values/?',
-        AccountsValuesAPIView.as_view(),
-        name='survey_api_accounts_values'),
-    re_path(r'^filters/accounts/(?P<editable_filter>%s)/values/?' %
-        settings.SLUG_RE,
-        AccountsFilterValuesAPIView.as_view(),
-        name='survey_api_accounts_filter_values'),
-    re_path(r'^filters/accounts/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
-        AccountsFilterDetailAPIView.as_view(),
-        name='survey_api_accounts_filter'),
-    re_path(r'^filters/accounts/?',
-        AccountsFilterListAPIView.as_view(),
-        name='survey_api_accounts_filter_list'),
-    re_path(r'^filters/questions/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
-        QuestionsFilterDetailAPIView.as_view(),
-        name='survey_api_questions_filter'),
-    re_path(r'^filters/questions/?',
-        QuestionsFilterListAPIView.as_view(),
-        name='survey_api_questions_filter_list'),
-    re_path(r'^filters/?',
-        EditableFilterListAPIView.as_view(),
-        name='survey_api_filter_list'),
+    re_path(r'^metrics/aggregate/(?P<path>%s)' % settings.PATH_RE,
+        AggregateMetricsAPIView.as_view(), name='survey_api_aggregate_metric'),
+    re_path(r'^metrics/aggregate/',
+        AggregateMetricsAPIView.as_view(),
+        name='survey_api_aggregate_metric_base'),
 ]

@@ -535,8 +535,11 @@ class Answer(models.Model):
     @property
     def rank(self):
         if not hasattr(self, '_rank'):
-            self._rank = EnumeratedQuestions.objects.get(
-                campaign=self.sample.campaign, question=self.question).rank
+            try:
+                self._rank = EnumeratedQuestions.objects.get(
+                    campaign=self.sample.campaign, question=self.question).rank
+            except EnumeratedQuestions.DoesNotExist:
+                self._rank = 0
         return self._rank
 
     def get_multiple_choices(self):
