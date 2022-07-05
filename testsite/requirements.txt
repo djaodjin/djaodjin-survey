@@ -11,5 +11,6 @@ PyJWT==2.0.1
 gunicorn==20.0.4
 
 # development
+coreapi==2.3.3
 Sphinx==4.5.0
 sphinxcontrib-httpdomain==1.8.0

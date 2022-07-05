@@ -29,6 +29,7 @@ import datetime, logging
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connections
+from django.db.models import Q, F
 from django.http import Http404
 import monotonic
 from rest_framework.generics import get_object_or_404
@@ -329,8 +330,15 @@ class SampleMixin(AccountMixin, QuestionMixin):
             # We have an id for the sample, let's get it and check
             # the user has rights to it.
             try:
-                sample = Sample.objects.filter(slug=sample_slug).select_related(
-                    'campaign').get()
+                if settings.BYPASS_SAMPLE_AVAILABLE:
+                    queryset = Sample.objects.filter(slug=sample_slug)
+                else:
+                    queryset = Sample.objects.filter(
+                        Q(account=self.account) |
+                        (Q(account__portfolios__grantee=self.account) &
+                         Q(account__portfolios__ends_at__gte=F('created_at'))),
+                        slug=sample_slug)
+                sample = queryset.select_related('campaign').get()
             except Sample.DoesNotExist:
                 raise Http404("Cannot find Sample(slug='%s')" % sample_slug)
         else:

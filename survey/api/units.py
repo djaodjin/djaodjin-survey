@@ -37,10 +37,29 @@ class EquivalenceFilter(BaseFilterBackend):
     """
     Units that can be used intercheably
     """
+    equiv_term = 'eq'
+
+    def get_equiv_terms(self, request):
+        """
+        Search terms are set by a ?eq=... query parameter,
+        and may be comma and/or whitespace delimited.
+        """
+        params = request.query_params.get(self.equiv_term, '')
+        params = params.replace('\x00', '')  # strip null characters
+        params = params.replace(',', ' ')
+        return params.split()
+
+    def filter_queryset(self, request, queryset, view):
+        equiv_terms = self.get_equiv_terms(request)
+        if equiv_terms:
+            return queryset.filter(
+                source_equivalences__in=equiv_terms)
+        return queryset
+
     def get_schema_operation_parameters(self, view):
         return [
             {
-                'name': 'eq',
+                'name': self.equiv_term,
                 'required': False,
                 'in': 'query',
                 'description':
@@ -50,6 +69,7 @@ class EquivalenceFilter(BaseFilterBackend):
                 },
             },
         ]
+
 
 
 class UnitDetailAPIView(generics.RetrieveAPIView):

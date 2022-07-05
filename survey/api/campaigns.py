@@ -46,7 +46,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
     .. code-block:: http
 
-        GET /api/envconnect/campaign/construction HTTP/1.1
+        GET /api/alliance/campaigns/construction HTTP/1.1
 
     responds
 
@@ -54,7 +54,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
         {
             "slug": "construction",
-            "account": "envconnect",
+            "account": "alliance",
             "title": "Assessment on sustainable construction practices",
             "active": true,
             "quizz_mode": false,
@@ -146,7 +146,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
         .. code-block:: http
 
-            DELETE /api/envconnect/campaign/boxes-enclosures HTTP/1.1
+            DELETE /api/alliance/campaign/boxes-enclosures HTTP/1.1
         """
         #pylint:disable=useless-super-delegation
         return super(CampaignAPIView, self).delete(request, *args, **kwargs)
@@ -168,13 +168,72 @@ class SmartCampaignListMixin(DateRangeContextMixin):
 
 class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
                           generics.ListCreateAPIView):
+    """
+    Lists campaigns
 
+    Lists campaigns that belongs to an account.
+
+    **Tags**: assessments
+
+    **Examples**
+
+    .. code-block:: http
+
+        GET /api/alliance/campaigns HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+          "results": [{
+            "slug": "construction",
+            "account": "alliance",
+            "title": "Assessment on sustainable construction practices",
+            "active": true
+          }]
+        }
+    """
     serializer_class = CampaignDetailSerializer
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'post':
             return CampaignCreateSerializer
         return super(CampaignListAPIView, self).get_serializer_class()
+
+    def post(self, request, *args, **kwargs):
+        """
+        Creates a campaign
+
+        Creates a campaign.
+
+        **Tags**: assessments
+
+        **Examples**
+
+        .. code-block:: http
+
+            POST /api/alliance/campaigns HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "slug": "construction",
+                "account": "alliance",
+                "title": "Assessment on sustainable construction practices"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "slug": "construction",
+                "account": "alliance",
+                "title": "Assessment on sustainable construction practices"
+            }
+        """
+        return self.create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(account=self.account)

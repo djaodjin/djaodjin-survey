@@ -1104,7 +1104,6 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
             Answer.objects.bulk_create(answers)
             at_least_one_created = bool(answers)
         results = []
-        serializer = self.get_serializer()
 
         # XXX manual serializer to deliver to production Monday.
         choices = {}

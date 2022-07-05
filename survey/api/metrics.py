@@ -23,11 +23,12 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pylint:disable=too-many-lines
 
-import decimal, json, logging
-from collections import OrderedDict
+import datetime, logging
 
 from django.db import transaction
 from django.db.models import F, Sum
+from django.utils.dateparse import parse_date, parse_datetime
+from django.utils.timezone import utc
 from rest_framework import status
 from rest_framework.generics import (get_object_or_404, RetrieveAPIView,
     ListAPIView)
@@ -38,10 +39,10 @@ from ..compat import six
 from ..filters import DateRangeFilter
 from ..helpers import get_extra
 from ..mixins import AccountMixin, EditableFilterMixin, QuestionMixin
-from ..models import Answer, Sample
+from ..models import Answer, Sample, Unit
 from .serializers import (AnswerSerializer, DatapointSerializer,
     EditableFilterValuesCreateSerializer)
-from ..utils import get_question_model
+from ..utils import datetime_or_now, get_question_model
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
 
     .. code-block:: http
 
-         GET /api/xia/metrics/ghg-emissions/ HTTP/1.1
+         GET /api/xia/metrics/aggregate/ghg-emissions/ HTTP/1.1
 
     responds
 
@@ -74,14 +75,20 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
     @property
     def unit(self):
         if not hasattr(self, '_unit'):
-            self._unit = self.question.default_unit
+            unit_slug = self.request.query_params.get('unit')
+            if unit_slug:
+                self._unit = get_object_or_404(
+                    Unit.objects.all(), slug=unit_slug)
+            if not self._unit:
+                self._unit = self.question.default_unit
         return self._unit
 
     def get_queryset(self):
-        return Answer.objects.filter(
+        queryset = Answer.objects.filter(
             question__path=self.db_path,
             unit=self.unit,
             sample__account__filters__editable_filter__account=self.account)
+        return queryset
 
     def get(self, request, *args, **kwargs):
         #pylint:disable=useless-super-delegation
@@ -182,10 +189,21 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
 
 
     def create(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument,too-many-locals
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        created_at = datetime_or_now(serializer.validated_data['created_at'])
         baseline_at = serializer.validated_data['baseline_at']
-        created_at = serializer.validated_data['created_at']
+        if baseline_at:
+            baseline_at = parse_datetime(
+                serializer.validated_data['baseline_at'])
+            if not baseline_at:
+                baseline_at = datetime.datetime.combine(
+                    parse_date(serializer.validated_data['baseline_at']),
+                    datetime.time.min)
+            if baseline_at and baseline_at.tzinfo is None:
+                baseline_at = baseline_at.replace(tzinfo=utc)
 
         by_accounts = {}
         path = get_extra(self.editable_filter, 'path', "")
@@ -198,6 +216,14 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
             measured = item.get('measured')
             if not measured:
                 continue
+            try:
+                measured = int(measured)
+            except ValueError:
+                pass
+            try:
+                measured = round(float(measured))
+            except ValueError:
+                raise ValidationError({"measured": "must be a number"})
             account = item.get('slug')
             if account not in by_accounts:
                 by_accounts[account] = {
@@ -213,7 +239,6 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
             )]
 
         with transaction.atomic():
-            samples_by_accounts = {}
             for item in six.itervalues(by_accounts):
                 sample = item['sample']
                 answers = item['answers']
@@ -223,13 +248,24 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
                 if baseline_at:
                     baseline_answers = []
                     for answer in answers:
-                        baseline_answers += [
-                            Answer(
-                                question=answer.question,
-                                created_at=baseline_at,
-                                collected_by=answer.collected_by,
-                                unit=answer.unit,
-                                measured=0)]
+                        # If we already have a data point for that account
+                        # and metric at ``baseline_at``, we don't create
+                        # a dummy (i.e. measured == 0) data point to store
+                        # the start date of the period.
+                        answer_at_baseline = Answer.objects.filter(
+                            created_at=baseline_at,
+                            sample__account=sample.account,
+                            question=answer.question,
+                            unit=answer.unit)
+                        if not answer_at_baseline.exists():
+                            baseline_answers += [
+                                Answer(
+                                    question=answer.question,
+                                    sample=answer.sample,
+                                    created_at=baseline_at,
+                                    collected_by=answer.collected_by,
+                                    unit=answer.unit,
+                                    measured=0)]
                     Answer.objects.bulk_create(baseline_answers)
                 Answer.objects.bulk_create(answers)
 

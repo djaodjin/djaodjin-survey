@@ -401,6 +401,7 @@ Vue.component('compare-dashboard', {
             var vm = this;
             vm.item = resp;
             vm.itemLoaded = true;
+            var chartsData = {};
             for( var tdx = 0; tdx < resp.length; ++tdx ) {
                 var table = resp[tdx];
                 var labels = [];
@@ -421,31 +422,77 @@ Vue.component('compare-dashboard', {
                     borderColor: vm.colors,
                     data: data
                 });
+                const chartLookup = chartKey.startsWith('aggregates-') ? chartKey.substr(11) : chartKey;
+                if( chartsData[chartLookup] ) {
+                    datasets['type'] = 'line'
+                    chartsData[chartLookup].datasets = [
+                        chartsData[chartLookup].datasets,
+                        datasets,
+                    ];
+                } else {
+                    datasets['type'] = 'bar'
+                    chartsData[chartLookup] = {
+                        datasets: datasets,
+                        labels: labels,
+                    };
+                }
+            }
+            for( var chartKey in chartsData ) {
+                if( !chartsData.hasOwnProperty(chartKey) ) continue;
+
+                var table = chartsData[chartKey];
                 if( vm.charts[chartKey] ) {
                     vm.charts[chartKey].destroy();
                 }
-                vm.charts[chartKey] = new Chart(
-                    document.getElementById(chartKey),
-                    {
-                    type: 'bar',
-                        data: {
-                            labels: labels,
-                            datasets: datasets
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                            legend: {
-                                position: 'top',
+                const element = document.getElementById(chartKey);
+                if( element ) {
+                    if( table.length >= 2 ) {
+                        vm.charts[chartKey] = new Chart(
+                            element,
+                            {
+                                data: table,
+                                options: {
+                                    responsive: true,
+                                    plugins: {
+                                        legend: {
+                                            display: false,
+                                        },
+                                        title: {
+                                            display: false,
+                                            text: table.title
+                                        }
+                                    }
+                                },
                             },
-                                title: {
-                                    display: false,
-                                    text: table.title
-                                }
+
+                        );
+                    } else {
+                        vm.charts[chartKey] = new Chart(
+                            element,
+                            {
+                                type: 'bar',
+                                data: table,
+                                options: {
+                                    responsive: true,
+                                    scales: {
+                                        x: {
+                                            display: (chartKey === 'totals'),
+                                        }
+                                    },
+                                    plugins: {
+                                        legend: {
+                                            display: false,
+                                        },
+                                        title: {
+                                            display: false,
+                                            text: table.title
+                                        }
+                                    }
+                                },
                             }
-                        },
+                        );
                     }
-                );
+                }
             }
         },
     },

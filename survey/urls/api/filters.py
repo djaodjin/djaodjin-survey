@@ -24,8 +24,9 @@
 
 from ... import settings
 from ...api.matrix import (AccountsFilterDetailAPIView,
-    AccountsFilterListAPIView, EditableFilterListAPIView,
-    QuestionsFilterDetailAPIView, QuestionsFilterListAPIView)
+    AccountsFilterListAPIView, AccountsFilterEnumeratedAPIView,
+    EditableFilterListAPIView, QuestionsFilterDetailAPIView,
+    QuestionsFilterListAPIView)
 from ...api.metrics import AccountsValuesAPIView, AccountsFilterValuesAPIView
 from ...compat import re_path
 
@@ -38,6 +39,10 @@ urlpatterns = [
         settings.SLUG_RE,
         AccountsFilterValuesAPIView.as_view(),
         name='survey_api_accounts_filter_values'),
+    re_path(r'^filters/accounts/(?P<editable_filter>%s)/(?P<rank>[0-9]+)/?' %
+        settings.SLUG_RE,
+        AccountsFilterEnumeratedAPIView.as_view(),
+        name='survey_api_accounts_filter_enumerated'),
     re_path(r'^filters/accounts/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
         AccountsFilterDetailAPIView.as_view(),
         name='survey_api_accounts_filter'),

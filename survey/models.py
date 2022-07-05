@@ -31,7 +31,7 @@ from rest_framework.exceptions import ValidationError
 from . import settings
 from .compat import (gettext_lazy as _, import_string,
     python_2_unicode_compatible)
-from .utils import get_account_model, get_question_model
+from .utils import datetime_or_now, get_account_model, get_question_model
 
 
 def get_extra_field_class():
@@ -92,6 +92,7 @@ class Unit(models.Model):
     SYSTEM_RANK = 2
     SYSTEM_ENUMERATED = 3
     SYSTEM_FREETEXT = 4
+    SYSTEM_DATETIME = 5
 
     SYSTEMS = [
             (SYSTEM_STANDARD, 'standard'),
@@ -99,6 +100,7 @@ class Unit(models.Model):
             (SYSTEM_RANK, 'rank'),
             (SYSTEM_ENUMERATED, 'enum'),
             (SYSTEM_FREETEXT, 'freetext'),
+            (SYSTEM_DATETIME, 'datetime'),
         ]
 
     NUMERICAL_SYSTEMS = [
@@ -488,6 +490,7 @@ class AnswerManager(models.Manager):
         associated to a *sample* even when there are no such record
         in the db.
         """
+        at_time = datetime_or_now()
         answers = self.filter(sample=sample)
         if sample.campaign:
             questions = get_question_model().objects.filter(
@@ -495,7 +498,8 @@ class AnswerManager(models.Manager):
                 pk__in=answers.values('question'))
             answers = list(answers)
             for question in questions:
-                answers += [Answer(question=question, sample=sample)]
+                answers += [Answer(
+                    created_at=at_time, question=question, sample=sample)]
         return answers
 
 
@@ -506,7 +510,7 @@ class Answer(models.Model):
     """
     objects = AnswerManager()
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField()
     question = models.ForeignKey(settings.QUESTION_MODEL,
         on_delete=models.PROTECT)
     unit = models.ForeignKey(Unit, on_delete=models.PROTECT)

@@ -97,7 +97,7 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
                     "grantee": "energy-utility",
                     "endst_at": "2018-01-01T00:00:00Z",
                     "accept_api_url":"http://localhost:8000/api/energy-utility/\
-portfolios/0123456789abcdef",
+portfolios/0123456789abcdef"
                  }
             ]
         }
@@ -124,7 +124,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
 
     .. code-block:: http
 
-        GET /api/envconnect/grants HTTP/1.1
+        GET /api/energy-utility/portfolios/grants HTTP/1.1
 
     responds
 
@@ -140,7 +140,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
                     "grantee": "energy-utility",
                     "endst_at": "2018-01-01T00:00:00Z",
                     "accept_api_url":"http://localhost:8000/api/energy-utility/\
-portfolios/0123456789abcdef",
+portfolios/0123456789abcdef"
                  }
             ]
         }
@@ -164,7 +164,7 @@ portfolios/0123456789abcdef",
 
         .. code-block:: http
 
-            POST /api/supplier-1/grants HTTP/1.1
+            POST /api/supplier-1/portfolios/grants HTTP/1.1
 
         .. code-block:: json
 
@@ -242,7 +242,7 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
     .. code-block:: http
 
-        POST /api/envconnect/grants/0123456789abcef HTTP/1.1
+        POST /api/energy-utility/portfolios/grants/0123456789abcef HTTP/1.1
 
     responds
 
@@ -272,7 +272,8 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
         .. code-block:: http
 
-            DELETE /api/envconnect/grants/0123456789abcef HTTP/1.1
+            DELETE /api/energy-utility/portfolios/grants/0123456789abcef\
+ HTTP/1.1
         """
         return self.destroy(request, *args, **kwargs)
 
@@ -304,7 +305,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
 
     .. code-block:: http
 
-        GET /api/envconnect/requests HTTP/1.1
+        GET /api/energy-utility/portfolios/requests HTTP/1.1
 
     responds
 
@@ -320,7 +321,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                     "grantee": "energy-utility",
                     "endst_at": "2018-01-01T00:00:00Z",
                     "accept_api_url":"http://localhost:8000/api/energy-utility/\
-portfolios/0123456789abcdef",
+portfolios/0123456789abcdef"
                  }
             ]
         }
@@ -342,7 +343,7 @@ portfolios/0123456789abcdef",
 
         .. code-block:: http
 
-            POST /api/energy-utility/requests HTTP/1.1
+            POST /api/energy-utility/portfolios/requests HTTP/1.1
 
         .. code-block:: json
 
@@ -404,7 +405,7 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
     .. code-block:: http
 
-        POST /api/envconnect/requests/0123456789abcef HTTP/1.1
+        POST /api/energy-utility/portfolios/requests/0123456789abcef HTTP/1.1
 
     responds
 
@@ -434,7 +435,8 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
         .. code-block:: http
 
-            DELETE /api/envconnect/requests/0123456789abcef HTTP/1.1
+            DELETE /api/energy-utility/portfolios/requests/0123456789abcef\
+ HTTP/1.1
         """
         return self.destroy(request, *args, **kwargs)
 

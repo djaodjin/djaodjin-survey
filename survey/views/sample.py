@@ -215,10 +215,14 @@ class SampleCreateView(AccountMixin, CreateView):
     def form_valid(self, form):
         # We are going to create all the Answer records for that Sample here,
         # initialize them with a text when present in the submitted form.
+        at_time = datetime_or_now()
         self.object = form.save()
         for enum_q in EnumeratedQuestions.objects.filter(
                 campaign=self.object.campaign):
-            kwargs = {'sample': self.object, 'question': enum_q.question}
+            kwargs = {
+                'created_at': at_time,
+                'sample': self.object,
+                'question': enum_q.question}
             answer_text = form.cleaned_data.get(
                 'question-%d' % enum_q.rank, None)
             if answer_text:

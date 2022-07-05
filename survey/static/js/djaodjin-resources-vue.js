@@ -854,7 +854,8 @@ var paginationMixin = {
             // than specified in `itemsPerPage`.
             var nbFullPages = Math.ceil(this.totalItems / Math.max(
                 this.items.results.length, this.itemsPerPage));
-            if( nbFullPages * this.itemsPerPage < this.totalItems ) {
+            if( nbFullPages * Math.max(this.items.results.length,
+                this.itemsPerPage) < this.totalItems ) {
                 ++nbFullPages;
             }
             return nbFullPages;

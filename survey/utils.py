@@ -29,7 +29,7 @@ from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connections
 from django.db.utils import DEFAULT_DB_ALIAS
-from django.utils.dateparse import parse_datetime
+from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.timezone import utc
 from pytz import timezone, UnknownTimeZoneError
 from pytz.tzinfo import DstTzInfo
@@ -49,13 +49,17 @@ def as_timestamp(dtime_at=None):
 
 
 def datetime_or_now(dtime_at=None):
+    as_datetime = dtime_at
     if isinstance(dtime_at, six.string_types):
-        dtime_at = parse_datetime(dtime_at)
-    if not dtime_at:
-        dtime_at = datetime.datetime.utcnow().replace(tzinfo=utc)
-    if dtime_at.tzinfo is None:
-        dtime_at = dtime_at.replace(tzinfo=utc)
-    return dtime_at
+        as_datetime = parse_datetime(dtime_at)
+        if not as_datetime:
+            as_datetime = datetime.datetime.combine(
+                parse_date(dtime_at), datetime.time.min)
+    if not as_datetime:
+        as_datetime = datetime.datetime.utcnow().replace(tzinfo=utc)
+    if as_datetime.tzinfo is None:
+        as_datetime = as_datetime.replace(tzinfo=utc)
+    return as_datetime
 
 
 def is_sqlite3(db_key=None):

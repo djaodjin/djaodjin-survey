@@ -187,8 +187,8 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
               "slug": "languages",
               "title": "All cohorts for all questions"
               "values":{
-                "portfolio-a": "0.1",
-                 "portfolio-b": "0.5",
+                "portfolio-a": 0.1,
+                "portfolio-b": 0.5
              }
             }]
         """
@@ -359,7 +359,7 @@ class EditableFilterListAPIView(EditableFilterQuerysetMixin,
 
     .. code-block:: http
 
-         GET /api/xia/matrix/filters HTTP/1.1
+         GET /api/xia/filters HTTP/1.1
 
     responds
 
@@ -412,35 +412,6 @@ class EditableFilterListAPIView(EditableFilterQuerysetMixin,
 
 class EditableFilterDetailAPIView(AccountMixin,
                                   generics.RetrieveUpdateDestroyAPIView):
-    """
-    Retrieves a fitler
-
-    **Tags**: reporting
-
-    **Examples**
-
-    .. code-block:: http
-
-         GET /api/energy-utility/matrix/filters/suppliers HTTP/1.1
-
-    responds
-
-    .. code-block:: json
-
-        {
-            "slug": "suppliers",
-            "title": "Energy utility suppliers",
-            "tags": "cohort, aggregate",
-            "predicates": [{
-                "rank": 1,
-                "operator": "contains",
-                "operand": "Energy",
-                "field": "extra",
-                "selector": "keepmatching"
-            }],
-            "likely_metric": null
-        }
-    """
     serializer_class = EditableFilterSerializer
     lookup_field = 'slug'
     lookup_url_kwarg = 'editable_filter'
@@ -457,75 +428,9 @@ class EditableFilterDetailAPIView(AccountMixin,
     def get_object(self):
         editable_filter = self.editable_filter
         editable_filter.results = get_account_model().objects.filter(
-            filters__editable_filter=self.editable_filter).order_by(
-                'filters__rank')
+            filters__editable_filter=self.editable_filter).annotate(
+                rank=Max('filters__rank')).order_by('rank')
         return editable_filter
-
-    def put(self, request, *args, **kwargs):
-        """
-        Updates a fitler
-
-        **Tags**: reporting
-
-        **Examples**
-
-        .. code-block:: http
-
-             PUT /api/energy-utility/matrix/filters/suppliers HTTP/1.1
-
-        .. code-block:: json
-
-            {
-                "slug": "suppliers",
-                "title": "Energy utility suppliers",
-                "tags": "cohort, aggregate",
-                "predicates": [{
-                    "rank": 1,
-                    "operator": "contains",
-                    "operand": "Energy",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }],
-                "likely_metric": null
-            }
-
-        responds
-
-        .. code-block:: json
-
-            {
-                "slug": "suppliers",
-                "title": "Energy utility suppliers",
-                "tags": "cohort, aggregate",
-                "predicates": [{
-                    "rank": 1,
-                    "operator": "contains",
-                    "operand": "Energy",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }],
-                "likely_metric": null
-            }
-        """
-        #pylint:disable=useless-super-delegation
-        return super(EditableFilterDetailAPIView, self).put(
-            request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        """
-        Deletes a fitler
-
-        **Tags**: reporting
-
-        **Examples**
-
-        .. code-block:: http
-
-             DELETE /api/energy-utility/matrix/filters/suppliers HTTP/1.1
-        """
-        #pylint:disable=useless-super-delegation
-        return super(EditableFilterDetailAPIView, self).delete(
-            request, *args, **kwargs)
 
 
 class AccountsFilterDetailAPIView(CreateModelMixin,
@@ -545,28 +450,19 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
 
     .. code-block:: json
 
-        vm.items.results = [{
-            facility: "Main factory",
-            fuel_type: "natural-gas",
-            allocation: "PG&E",
-            created_at: null,
-            ends_at: null,
-            amount: 100,
-            unit: "mmbtu"
-        }
-
         {
-            "slug": "suppliers",
-            "title": "Energy utility suppliers",
-            "tags": "cohort, aggregate",
-            "predicates": [{
-                "rank": 1,
-                "operator": "contains",
-                "operand": "Energy",
-                "field": "extra",
-                "selector": "keepmatching"
-            }],
-            "likely_metric": null
+            "count": 1,
+            "previous": null,
+            "next": null,
+            "results": [{
+                "facility": "Main factory",
+                "fuel_type": "natural-gas",
+                "allocation": "Energy utility",
+                "created_at": null,
+                "ends_at": null,
+                "amount": 100,
+                "unit": "mmbtu"
+            }]
         }
     """
     def get_serializer_class(self):
@@ -574,7 +470,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
             return AccountsFilterAddSerializer
         return super(AccountsFilterDetailAPIView, self).get_serializer_class()
 
-    def post(self, request, *args, **kwargs):
+    def put(self, request, *args, **kwargs):
         """
         Updates a fitler
 
@@ -584,7 +480,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
 
         .. code-block:: http
 
-             PUT /api/energy-utility/matrix/filters/suppliers HTTP/1.1
+             PUT /api/energy-utility/filters/accounts/suppliers HTTP/1.1
 
         .. code-block:: json
 
@@ -621,6 +517,59 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
             }
         """
         #pylint:disable=useless-super-delegation
+        return super(AccountsFilterDetailAPIView, self).put(
+            request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Deletes a fitler
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             DELETE /api/energy-utility/filters/accounts/suppliers HTTP/1.1
+        """
+        #pylint:disable=useless-super-delegation
+        return super(AccountsFilterDetailAPIView, self).delete(
+            request, *args, **kwargs)
+
+    def post(self, request, *args, **kwargs):
+        """
+        Updates a fitler
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             PUT /api/energy-utility/filters/accounts/suppliers HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "full_name": "Main",
+                "extra": {
+                  "fuel-type": "gasoline"
+                }
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "slug": "main",
+                "full_name": "Main",
+                "extra": {
+                  "fuel-type": "gasoline"
+                }
+            }
+        """
+        #pylint:disable=useless-super-delegation
         return self.create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
@@ -631,8 +580,9 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
                 account = get_object_or_404(get_account_model().objects.all(),
                     slug=account_slug)
             else:
-                account = get_account_model().objects.create(extra=extra)
-                #XXXaccount.save()
+                account = get_account_model().objects.create(
+                    full_name=serializer.validated_data.get('full_name'),
+                    extra=extra)
             last_rank = EditableFilterEnumeratedAccounts.objects.filter(
                 editable_filter=self.editable_filter).aggregate(
                 Max('rank')).get('rank__max')
@@ -642,6 +592,74 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
                 account=account,
                 editable_filter=self.editable_filter,
                 rank=last_rank + 1)
+
+
+class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Retrieves a single account inside a accounts filter
+
+    **Tags**: reporting
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/energy-utility/filters/accounts/suppliers HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "count": 1,
+            "previous": null,
+            "next": null,
+            "results": [{
+                "facility": "Main factory",
+                "fuel_type": "natural-gas",
+                "allocation": "Energy utility",
+                "created_at": null,
+                "ends_at": null,
+                "amount": 100,
+                "unit": "mmbtu"
+            }]
+        }
+    """
+    lookup_field = 'rank'
+    serializer_class = EditableFilterSerializer
+
+    def get_queryset(self):
+        queryset = EditableFilterEnumeratedAccounts.objects.filter(
+            editable_filter__slug=self.kwargs.get('editable_filter'))
+        return queryset
+
+    def get_object(self):
+        """
+        Returns the object the view is displaying.
+
+        You may want to override this if you need to provide non-standard
+        queryset lookups.  Eg if objects are referenced using multiple
+        keyword arguments in the url conf.
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Perform the lookup filtering.
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+
+        assert lookup_url_kwarg in self.kwargs, (
+            'Expected view %s to be called with a URL keyword argument '
+            'named "%s". Fix your URL conf, or set the `.lookup_field` '
+            'attribute on the view correctly.' %
+            (self.__class__.__name__, lookup_url_kwarg)
+        )
+
+        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
+        obj = get_object_or_404(queryset, **filter_kwargs)
+
+        # May raise a permission denied
+        self.check_object_permissions(self.request, obj)
+
+        return obj
 
 
 class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
@@ -675,6 +693,72 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
         }
     """
 
+    def put(self, request, *args, **kwargs):
+        """
+        Updates a fitler
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             PUT /api/energy-utility/filters/questions/suppliers HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "slug": "suppliers",
+                "title": "Energy utility suppliers",
+                "tags": "cohort, aggregate",
+                "predicates": [{
+                    "rank": 1,
+                    "operator": "contains",
+                    "operand": "Energy",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }],
+                "likely_metric": null
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "slug": "suppliers",
+                "title": "Energy utility suppliers",
+                "tags": "cohort, aggregate",
+                "predicates": [{
+                    "rank": 1,
+                    "operator": "contains",
+                    "operand": "Energy",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }],
+                "likely_metric": null
+            }
+        """
+        #pylint:disable=useless-super-delegation
+        return super(QuestionsFilterDetailAPIView, self).put(
+            request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Deletes a fitler
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             DELETE /api/energy-utility/filters/questions/suppliers HTTP/1.1
+        """
+        #pylint:disable=useless-super-delegation
+        return super(QuestionsFilterDetailAPIView, self).delete(
+            request, *args, **kwargs)
+
 
 class EditableFilterPagination(PageNumberPagination):
 
@@ -704,7 +788,7 @@ class EditableFilterObjectsAPIView(generics.ListCreateAPIView):
 
     .. code-block:: http
 
-         GET /api/xia/matrix/filters HTTP/1.1
+         GET /api/xia/filters HTTP/1.1
 
     responds
 
@@ -740,7 +824,7 @@ class EditableFilterObjectsAPIView(generics.ListCreateAPIView):
 
         .. code-block:: http
 
-             POST /api/xia/matrix/filters HTTP/1.1
+             POST /api/xia/filters HTTP/1.1
 
         .. code-block:: json
 
@@ -795,7 +879,7 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
 
     .. code-block:: http
 
-        GET /api/supplier-1/matrix/accounts HTTP/1.1
+        GET /api/supplier-1/filters/accounts HTTP/1.1
 
     responds
 
@@ -826,7 +910,7 @@ class QuestionsFilterListAPIView(EditableFilterObjectsAPIView):
 
     .. code-block:: http
 
-        GET /api/supplier-1/matrix/questions HTTP/1.1
+        GET /api/supplier-1/filters/questions HTTP/1.1
 
     responds
 

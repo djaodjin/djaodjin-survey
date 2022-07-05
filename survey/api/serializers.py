@@ -90,10 +90,12 @@ class AccountSerializer(serializers.ModelSerializer):
         help_text=_("URL location of the profile picture"))
     extra = serializers.SerializerMethodField(read_only=True,
         help_text=_("Extra meta data (can be stringify JSON)"))
+    rank = serializers.SerializerMethodField(read_only=True,
+        help_text=_("rank in filter"))
 
     class Meta:
         model = get_account_model()
-        fields = ('slug', 'printable_name', 'picture', 'extra')
+        fields = ('slug', 'printable_name', 'picture', 'extra', 'rank')
 
     @staticmethod
     def get_slug(obj):
@@ -113,6 +115,14 @@ class AccountSerializer(serializers.ModelSerializer):
     def get_extra(obj):
         extra = extra_as_internal(obj)
         return extra
+
+    @staticmethod
+    def get_rank(obj):
+        try:
+            return obj.rank
+        except AttributeError:
+            pass
+        return 0
 
 
 class AnswerSerializer(serializers.ModelSerializer):
@@ -323,9 +333,7 @@ class EditableFilterValuesCreateSerializer(NoModelSerializer):
     items = EditableFilterAnswerSerializer(many=True)
 
     class Meta(object):
-        model = SampleCreateSerializer.Meta.model
-        fields = SampleCreateSerializer.Meta.fields + (
-            'starts_at', 'ends_at', 'items',)
+        fields = ('baseline_at', 'created_at', 'items',)
 
 
 class EditablePredicateSerializer(serializers.ModelSerializer):
@@ -526,7 +534,8 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
 class AccountsFilterAddSerializer(serializers.ModelSerializer):
 
     slug = serializers.CharField(required=False)
+    full_name = serializers.CharField(required=False)
 
     class Meta:
         model = get_account_model()
-        fields = ('slug', 'extra')
+        fields = ('slug', 'full_name', 'extra')
