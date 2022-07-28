@@ -167,7 +167,7 @@ class UnitSerializer(serializers.ModelSerializer):
     class Meta:
         model = Unit
         fields = ('slug', 'title', 'system', 'choices')
-        read_only_fields = ('choices',)
+        read_only_fields = ('slug', 'choices',)
 
 
 class QuestionCreateSerializer(serializers.ModelSerializer):
