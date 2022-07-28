@@ -1,4 +1,4 @@
-# Copyright (c) 2018, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,8 @@ binDir        ?= $(installTop)/bin
 CONFIG_DIR    ?= $(srcDir)
 LOCALSTATEDIR ?= $(installTop)/var
 
+installDirs   ?= install -d
+installFiles  ?= install -p -m 644
 NPM           ?= npm
 PYTHON        := $(binDir)/python
 
@@ -40,7 +42,7 @@ MANAGE        := TESTSITE_SETTINGS_LOCATION=$(CONFIG_DIR) RUN_DIR=$(RUN_DIR) $(P
 
 RUNSYNCDB     = $(if $(findstring --run-syncdb,$(shell cd $(srcDir) && $(MANAGE) migrate --help 2>/dev/null)),--run-syncdb,)
 
-install:: install-conf
+install::
 	cd $(srcDir) && $(PYTHON) ./setup.py --quiet \
 		build -b $(CURDIR)/build install
 
@@ -56,7 +58,7 @@ doc:
 
 # XXX Enter a superuser when asked otherwise the fixtures won't load
 # correctly.
-initdb: install-conf
+initdb:
 	-rm -f $(srcDir)/db.sqlite3
 	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
 	cd $(srcDir) && $(MANAGE) loaddata testsite/fixtures/default-db.json
@@ -66,14 +68,14 @@ vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-survey-packages
 
 
 $(DESTDIR)$(CONFIG_DIR)/credentials: $(srcDir)/testsite/etc/credentials
-	install -d $(dir $@)
+	$(installDirs) $(dir $@)
 	[ -f $@ ] || \
 		SECRET_KEY=`$(PYTHON) -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'` ; \
 		sed -e "s,\%(SECRET_KEY)s,$${SECRET_KEY}," $< > $@
 
 
 $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
-	install -d $(dir $@)
+	$(installDirs) $(dir $@)
 	[ -f $@ ] || sed \
 		-e 's,%(LOCALSTATEDIR)s,$(LOCALSTATEDIR),' $< > $@
 

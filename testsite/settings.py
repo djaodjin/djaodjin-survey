@@ -110,10 +110,17 @@ DATABASES = {
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 REST_FRAMEWORK = {
-    'PAGE_SIZE': 25,
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'testsite.authentication.JWTAuthentication',
+        # `rest_framework.authentication.SessionAuthentication` is the last
+        # one in the list because it will raise a PermissionDenied if the CSRF
+        # is absent.
+        'rest_framework.authentication.SessionAuthentication',
+    ),
     'DEFAULT_PAGINATION_CLASS':
         'rest_framework.pagination.PageNumberPagination',
     'ORDERING_PARAM': 'o',
+    'PAGE_SIZE': 25,
     'SEARCH_PARAM': 'q'
 }
 

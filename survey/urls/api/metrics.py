@@ -22,6 +22,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from rest_framework.views import APIView
+
 from ... import settings
 from ...api.metrics import AggregateMetricsAPIView
 from ...compat import re_path
@@ -31,6 +33,6 @@ urlpatterns = [
     re_path(r'^metrics/aggregate/(?P<path>%s)' % settings.PATH_RE,
         AggregateMetricsAPIView.as_view(), name='survey_api_aggregate_metric'),
     re_path(r'^metrics/aggregate/',
-        AggregateMetricsAPIView.as_view(),
+        APIView.as_view(schema=None),
         name='survey_api_aggregate_metric_base'),
 ]

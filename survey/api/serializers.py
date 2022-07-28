@@ -268,7 +268,7 @@ class CampaignSerializer(serializers.ModelSerializer):
 
     class Meta(object):
         model = Campaign
-        fields = ('slug', 'account', 'title',)
+        fields = ('slug', 'account', 'title', 'description', 'active',)
         read_only_fields = ('slug',)
 
 
@@ -350,7 +350,7 @@ class EditableFilterSerializer(serializers.ModelSerializer):
     slug = serializers.CharField(required=False)
     likely_metric = serializers.SerializerMethodField()
     predicates = EditablePredicateSerializer(many=True)
-    results = get_account_serializer()(many=True)
+    results = get_account_serializer()(many=True, required=False) # XXX do we still need this field?
 
     class Meta:
         model = EditableFilter

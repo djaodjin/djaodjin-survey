@@ -36,7 +36,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
 from ..compat import six, is_authenticated
-from ..docs import swagger_auto_schema
+from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..mixins import AccountMixin, SampleMixin
 from ..models import Answer, Choice, Sample, Unit, UnitEquivalences
 from .serializers import (AnswerSerializer, SampleAnswerSerializer,
@@ -150,7 +150,7 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
         {
             "created_at": "2020-01-01T00:00:00Z",
             "measured": 12,
-            "unit": "liters"
+            "unit": "tons"
         }
     """
     serializer_class = AnswerSerializer
@@ -532,7 +532,7 @@ class SampleAnswersAPIView(SampleAnswersMixin, generics.ListCreateAPIView):
 -process-is-rigorous",
                     "title": "The assessment process is rigorous",
                     "default_unit": {
-                        "slug": "assessments",
+                        "slug": "assessment",
                         "title": "assessments",
                         "system": "enum",
                         "choices": [
@@ -572,7 +572,7 @@ class SampleAnswersAPIView(SampleAnswersMixin, generics.ListCreateAPIView):
 -process-is-rigorous",
                     "title": "The assessment process is rigorous",
                     "default_unit": {
-                        "slug": "assessments",
+                        "slug": "assessment",
                         "title": "assessments",
                         "system": "enum",
                         "choices": [
@@ -611,7 +611,7 @@ class SampleAnswersAPIView(SampleAnswersMixin, generics.ListCreateAPIView):
 -ratio",
                     "title": "Adjust Air fuel ratio",
                     "default_unit": {
-                        "slug": "assessments",
+                        "slug": "assessment",
                         "title": "assessments",
                         "system": "enum",
                         "choices": [
@@ -710,7 +710,7 @@ answers/construction/packaging-design HTTP/1.1
                 "question": {
                     "path": "/construction/packaging-design",
                     "default_unit": {
-                        "slug": "assessments",
+                        "slug": "assessment",
                         "title": "assessments",
                         "system": "enum",
                         "choices": [
@@ -963,7 +963,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
 -process-is-rigorous",
                     "title": "The assessment process is rigorous",
                     "default_unit": {
-                        "slug": "assessments",
+                        "slug": "assessment",
                         "title": "assessments",
                         "system": "enum",
                         "choices": [
@@ -1003,7 +1003,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
 -process-is-rigorous",
                     "title": "The assessment process is rigorous",
                     "default_unit": {
-                        "slug": "assessments",
+                        "slug": "assessment",
                         "title": "assessments",
                         "system": "enum",
                         "choices": [
@@ -1042,7 +1042,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
 -ratio",
                     "title": "Adjust Air fuel ratio",
                     "default_unit": {
-                        "slug": "assessments",
+                        "slug": "assessment",
                         "title": "assessments",
                         "system": "enum",
                         "choices": [
@@ -1183,6 +1183,8 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
     def get_queryset(self):
         return self.get_candidates()
 
+    @swagger_auto_schema(responses={
+        200: OpenAPIResponse("Create successful", SampleAnswerSerializer, many=True)})
     def post(self, request, *args, **kwargs):
         """
         Uses candidate measurements for a sample
@@ -1210,6 +1212,10 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
              POST /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a\
 /candidates/construction HTTP/1.1
 
+        .. code-block:: json
+
+        {}
+
         responds
 
         .. code-block:: json
@@ -1225,7 +1231,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
 -process-is-rigorous",
                         "title": "The assessment process is rigorous",
                         "default_unit": {
-                            "slug": "assessments",
+                            "slug": "assessment",
                             "title": "assessments",
                             "system": "enum",
                             "choices": [
@@ -1265,7 +1271,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
 -process-is-rigorous",
                         "title": "The assessment process is rigorous",
                         "default_unit": {
-                            "slug": "assessments",
+                            "slug": "assessment",
                             "title": "assessments",
                             "system": "enum",
                             "choices": [
@@ -1304,7 +1310,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
 -ratio",
                         "title": "Adjust Air fuel ratio",
                         "default_unit": {
-                            "slug": "assessments",
+                            "slug": "assessment",
                             "title": "assessments",
                             "system": "enum",
                             "choices": [

@@ -27,7 +27,8 @@ import logging
 from rest_framework import generics
 
 from ..mixins import CampaignMixin, CampaignQuerysetMixin, DateRangeContextMixin
-from .serializers import CampaignDetailSerializer, CampaignCreateSerializer
+from .serializers import (CampaignSerializer, CampaignDetailSerializer,
+    CampaignCreateSerializer)
 from ..filters import DateRangeFilter, OrderingFilter, SearchFilter
 
 
@@ -63,7 +64,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
                     "path": "/construction/product-design",
                     "title": "Product Design",
                     "default_unit": {
-                        "slug": "assessments",
+                        "slug": "assessment",
                         "title": "assessments",
                         "system": "enum",
                         "choices": [
@@ -95,7 +96,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
                     "path": "/construction/packaging-design",
                     "title": "Packaging Design",
                     "default_unit": {
-                        "slug": "assessments",
+                        "slug": "assessment",
                         "title": "assessments",
                         "system": "enum",
                         "choices": [
@@ -186,6 +187,7 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
     .. code-block:: json
 
         {
+          "count": 1,
           "results": [{
             "slug": "construction",
             "account": "alliance",
@@ -194,7 +196,7 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
           }]
         }
     """
-    serializer_class = CampaignDetailSerializer
+    serializer_class = CampaignSerializer
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'post':

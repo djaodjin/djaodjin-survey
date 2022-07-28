@@ -57,7 +57,7 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
 
     .. code-block:: http
 
-         GET /api/xia/metrics/aggregate/ghg-emissions/ HTTP/1.1
+         GET /api/supplier-1/metrics/aggregate/ghg-emissions/ HTTP/1.1
 
     responds
 
@@ -66,7 +66,7 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
         {
             "created_at": "2020-01-01T00:00:00Z",
             "measured": 12,
-            "unit": "liters"
+            "unit": "tons"
         }
     """
     serializer_class = AnswerSerializer
@@ -111,16 +111,21 @@ class AccountsValuesAPIView(AccountMixin, ListAPIView):
 
     .. code-block:: http
 
-         GET /api/xia/filters/accounts/values HTTP/1.1
+         GET /api/supplier-1/filters/accounts/values HTTP/1.1
 
     responds
 
     .. code-block:: json
 
         {
+          "count": 0,
+          "next": null,
+          "previous": null,
+          "results": [{
             "created_at": "2020-01-01T00:00:00Z",
             "measured": 12,
-            "unit": "liters"
+            "unit": "tons"
+          }]
         }
     """
     serializer_class = DatapointSerializer
@@ -143,16 +148,21 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
 
     .. code-block:: http
 
-         GET /api/xia/filters/accounts/ghg-emissions/values HTTP/1.1
+         GET /api/supplier-1/filters/accounts/ghg-emissions/values HTTP/1.1
 
     responds
 
     .. code-block:: json
 
         {
+          "count": 0,
+          "next": null,
+          "previous": null,
+          "results": [{
             "created_at": "2020-01-01T00:00:00Z",
             "measured": 12,
-            "unit": "liters"
+            "unit": "tons"
+          }]
         }
     """
     serializer_class = AnswerSerializer
@@ -173,7 +183,15 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
 
         .. code-block:: http
 
-             POST /api/xia/filters/accounts/ghg-emissions/values HTTP/1.1
+             POST /api/supplier-1/filters/accounts/ghg-emissions/values HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "created_at": "2020-01-01T00:00:00Z",
+                "measured": 12,
+                "unit": "tons"
+            }
 
         responds
 
@@ -182,7 +200,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
             {
                 "created_at": "2020-01-01T00:00:00Z",
                 "measured": 12,
-                "unit": "liters"
+                "unit": "tons"
             }
         """
         return self.create(request, *args, **kwargs)

@@ -31,7 +31,7 @@ from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, response as http
 from rest_framework.mixins import CreateModelMixin
-from rest_framework.filters import SearchFilter
+from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import PageNumberPagination
 
 from ..compat import reverse
@@ -84,6 +84,8 @@ class MatrixCreateAPIView(generics.ListCreateAPIView):
     def post(self, request, *args, **kwargs):
         """
         Creates a new matrix
+
+        **Examples**:
 
         .. code-block:: http
 
@@ -139,7 +141,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
     .. code-block:: http
 
-        GET /api/matrix/languages HTTP/1.1
+        GET /api/energy-utility/reporting/sustainability/matrix/languages HTTP/1.1
 
    responds
 
@@ -147,7 +149,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
         [{
            "slug": "languages",
-           "title": "All cohorts for all questions"
+           "title": "All cohorts for all questions",
            "values": {
                "portfolio-a": 0.1,
                "portfolio-b": 0.5
@@ -170,7 +172,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
         .. code-block:: http
 
-            PUT /api/matrix/languages HTTP/1.1
+            PUT /api/energy-utility/reporting/sustainability/matrix/languages HTTP/1.1
 
         .. code-block:: json
 
@@ -185,7 +187,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
             [{
               "slug": "languages",
-              "title": "All cohorts for all questions"
+              "title": "All cohorts for all questions",
               "values":{
                 "portfolio-a": 0.1,
                 "portfolio-b": 0.5
@@ -206,7 +208,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
         .. code-block:: http
 
-            DELETE /api/matrix/languages HTTP/1.1
+            DELETE /api/energy-utility/reporting/sustainability/matrix/languages HTTP/1.1
         """
         #pylint:disable=useless-super-delegation
         return super(MatrixDetailAPIView, self).put(
@@ -345,7 +347,7 @@ class EditableFilterQuerysetMixin(object):
 
     @staticmethod
     def get_queryset():
-        return EditableFilter.objects.all()
+        return EditableFilter.objects.all().order_by('slug')
 
 
 class EditableFilterListAPIView(EditableFilterQuerysetMixin,
@@ -359,55 +361,37 @@ class EditableFilterListAPIView(EditableFilterQuerysetMixin,
 
     .. code-block:: http
 
-         GET /api/xia/filters HTTP/1.1
+         GET /api/energy-utility/filters HTTP/1.1
 
     responds
 
     .. code-block:: json
 
-        {
-            "count": 2,
-            "previous": null,
-            "next": null,
-            "results": [
-                {
-                    "slug": "construction",
-                    "title": "Construction",
-                    "tags": "cohort",
-                    "predicates": [
-                    {
-                        "rank": 0,
-                        "operator": "contains",
-                        "operand": "construction",
-                        "field": "extra",
-                        "selector": "keepmatching"
-                    }
-                    ],
-                    "likely_metric": null
-                },
-                {
-                    "slug": "boxes-and-enclosures",
-                    "title": "Boxes and enclosures",
-                    "tags": "metric",
-                    "predicates": [
-                    {
-                        "rank": 0,
-                        "operator": "startsWith",
-                        "operand": "/metal/boxes-and-enclosures/",
-                        "field": "path",
-                        "selector": "keepmatching"
-                     }
-                     ],
-                     "likely_metric": null
-                }
-            ]
-        }
+      {
+          "count": 2,
+          "next": null,
+          "previous": null,
+          "results": [{
+              "slug": "boxes-and-enclosures",
+              "title": "Boxes & enclosures",
+              "extra": "",
+              "predicates": [{
+                  "rank": 0,
+                  "operator": "startswith",
+                  "operand": "/metal/boxes-and-enclosures",
+                  "field": "extra",
+                  "selector": "keepmatching"
+              }],
+              "likely_metric": null
+          }]
+      }
     """
     serializer_class = EditableFilterSerializer
+    ordering_fields = ('slug',)
     search_fields = (
         'tags',
     )
-    filter_backends = (SearchFilter,)
+    filter_backends = (SearchFilter, OrderingFilter)
 
 
 class EditableFilterDetailAPIView(AccountMixin,
@@ -454,6 +438,9 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
             "count": 1,
             "previous": null,
             "next": null,
+            "slug": "boxes-and-enclosures",
+            "title": "Boxes & enclosures",
+            "predicates": [],
             "results": [{
                 "facility": "Main factory",
                 "fuel_type": "natural-gas",
@@ -551,10 +538,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
         .. code-block:: json
 
             {
-                "full_name": "Main",
-                "extra": {
-                  "fuel-type": "gasoline"
-                }
+                "full_name": "Main"
             }
 
         responds
@@ -563,10 +547,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
 
             {
                 "slug": "main",
-                "full_name": "Main",
-                "extra": {
-                  "fuel-type": "gasoline"
-                }
+                "full_name": "Main"
             }
         """
         #pylint:disable=useless-super-delegation
@@ -604,7 +585,7 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     .. code-block:: http
 
-         GET /api/energy-utility/filters/accounts/suppliers HTTP/1.1
+         GET /api/energy-utility/filters/accounts/suppliers/1 HTTP/1.1
 
     responds
 
@@ -614,6 +595,14 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
             "count": 1,
             "previous": null,
             "next": null,
+            "title": "Energy utility suppliers",
+            "predicates": [{
+                "rank": 1,
+                "operator": "contains",
+                "operand": "Energy",
+                "field": "extra",
+                "selector": "keepmatching"
+            }],
             "results": [{
                 "facility": "Main factory",
                 "fuel_type": "natural-gas",
@@ -660,6 +649,61 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
         self.check_object_permissions(self.request, obj)
 
         return obj
+
+
+    def put(self, request, *args, **kwargs):
+        """
+        Updates a single account inside a accounts filter
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             PUT /api/energy-utility/filters/accounts/suppliers/1 HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "facility": "Main factory",
+                "fuel_type": "natural-gas",
+                "allocation": "Energy utility",
+                "created_at": null,
+                "ends_at": null,
+                "amount": 100,
+                "unit": "mmbtu"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "facility": "Main factory",
+                "fuel_type": "natural-gas",
+                "allocation": "Energy utility",
+                "created_at": null,
+                "ends_at": null,
+                "amount": 100,
+                "unit": "mmbtu"
+            }
+        """
+        return super(self).put(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Deletes a single account inside a accounts filter
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             DELETE /api/energy-utility/filters/accounts/suppliers/1 HTTP/1.1
+        """
+        return super(self).delete(request, *args, **kwargs)
 
 
 class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
@@ -780,24 +824,7 @@ class EditableFilterPagination(PageNumberPagination):
 
 class EditableFilterObjectsAPIView(generics.ListCreateAPIView):
     """
-    List filter objects
-
-    **Tags**: reporting
-
-    **Examples**
-
-    .. code-block:: http
-
-         GET /api/xia/filters HTTP/1.1
-
-    responds
-
-    .. code-block:: json
-
-        {
-            "created_at": "2020-01-01T00:00:00Z",
-            "measured": 12
-        }
+    Base class to filter accounts and questions
     """
     pagination_class = EditableFilterPagination
     serializer_class = None # override in subclasses
@@ -824,7 +851,7 @@ class EditableFilterObjectsAPIView(generics.ListCreateAPIView):
 
         .. code-block:: http
 
-             POST /api/xia/filters HTTP/1.1
+             POST /api/energy-utility/filters HTTP/1.1
 
         .. code-block:: json
 
@@ -920,12 +947,37 @@ class QuestionsFilterListAPIView(EditableFilterObjectsAPIView):
             "count": 1,
             "previous": null,
             "next": null,
-            "results": [
-            {
-               "operator": "contains",
-               "operand": "language",
-               "field": "text",
-               "selector":"keepmatching"
+            "results": [{
+              "path": "/construction/product-design",
+              "title": "Product Design",
+              "default_unit": {
+                  "slug": "assessment",
+                  "title": "assessments",
+                  "system": "enum",
+                  "choices": [
+                    {
+                      "rank": 1,
+                      "text": "mostly-yes",
+                       "descr": "Mostly yes"
+                    },
+                    {
+                      "rank": 2,
+                      "text": "yes",
+                      "descr": "Yes"
+                    },
+                    {
+                      "rank": 3,
+                      "text": "no",
+                      "descr": "No"
+                    },
+                    {
+                      "rank": 4,
+                      "text": "mostly-no",
+                      "descr": "Mostly no"
+                    }
+                  ]
+              },
+              "ui_hint": "radio"
             }]
         }
     """

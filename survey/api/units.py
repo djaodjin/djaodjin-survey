@@ -91,7 +91,7 @@ class UnitDetailAPIView(generics.RetrieveAPIView):
     .. code-block:: json
 
         {
-            "slug": "assessments",
+            "slug": "assessment",
             "title": "assessments",
             "system": "enum",
             "choices": [
@@ -153,7 +153,7 @@ class UnitListAPIView(generics.ListAPIView):
           "previous": null,
           "next": null,
           "results": [{
-            "slug": "assessments",
+            "slug": "assessment",
             "title": "assessments",
             "system": "enum",
             "choices": [

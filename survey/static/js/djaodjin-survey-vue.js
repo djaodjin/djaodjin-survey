@@ -67,7 +67,7 @@ Vue.component('portfolios-received-list', {
             vm.reqPost(portfolio.api_accept,
             function(resp) { // success
                 vm.remove(vm.requested, index);
-                showMessages(
+                vm.showMessages(
                     ["You have accepted the request(s)."],
                         "success");
             });
@@ -77,7 +77,7 @@ Vue.component('portfolios-received-list', {
             vm.reqDelete(portfolio.api_accept,
             function(resp) { // success
                 vm.remove(vm.items, index);
-                showMessages(
+                vm.showMessages(
                     ["You have denied the request(s)."],
                         "success");
             });
@@ -169,7 +169,7 @@ Vue.component('portfolios-grant-list', {
             var vm = this;
             vm.reqPost(vm.url, portfolios,
             function(resp) { // success
-                showMessages(
+                vm.showMessages(
                     ["Your porfolio grant was successfully sent."],
                     "success");
             });
@@ -240,7 +240,7 @@ Vue.component('portfolios-request-list', {
             var vm = this;
             vm.reqPost(vm.url, vm.request,
             function(resp) { // success
-                showMessages(
+                vm.showMessages(
                     ["Your porfolio request(s) was successfully sent."],
                     "success");
                 vm.requests = [];
@@ -272,34 +272,43 @@ var AccountTypeAhead = Vue.component('account-typeahead', TypeAhead.extend({
       this.current = -1;
       this.loading = false;
     },
-
+    // Almost identical to `update` except we call onHit.
     search: function() {
-      var vm = this;
-      vm.loading = true;
-      vm.fetch().then(
-      function (resp) {
-        vm.loading = false;
-        if (resp && vm.query) {
-          var data = resp.data.results;
-          data = vm.prepareResponseData ? vm.prepareResponseData(data) : data;
-          if( data.length > 0 ) {
-              vm.onHit(data[0]);
-          } else {
-              vm.onHit({email: vm.query});
-          }
+        var vm = this;
+        vm.cancel();
+        if (!vm.query) {
+            return vm.reset();
         }
-      }).catch(function(resp) {
-          vm.loading = false;
-          vm.onHit({email: vm.query});
-      });
+        if( vm.minChars && vm.query.length < vm.minChars ) {
+            return;
+        }
+        vm.loading = true;
+        var params = {};
+        params[vm.queryParamName] = vm.query;
+        vm.reqGet(vm.url, params,
+        function (resp) {
+            if (resp && vm.query) {
+                var data = resp.results;
+                data = vm.prepareResponseData ? vm.prepareResponseData(data) : data;
+                vm.items = vm.limit ? data.slice(0, vm.limit) : data;
+                vm.current = -1;
+                vm.loading = false;
+                if( data.length > 0 ) {
+                    vm.onHit(data[0]);
+                } else {
+                    vm.onHit({email: vm.query});
+                }
+            }
+        }, function() {
+            // on failure we just do nothing. - i.e. we don't want a bunch
+            // of error messages to pop up.
+        });
     },
-
     setActiveAndHit: function(item) {
       var vm = this;
       vm.setActive(item);
       vm.hit();
     },
-
     hit: function hit() {
       var vm = this;
       if( vm.current !== -1 ) {
@@ -308,7 +317,6 @@ var AccountTypeAhead = Vue.component('account-typeahead', TypeAhead.extend({
         vm.search();
       }
     },
-
     onHit: function onHit(newItem) {
       var vm = this;
       vm.$emit('selectitem', vm.dataset, newItem);

@@ -29,7 +29,7 @@ from django.db.models import Q
 from rest_framework import generics, status
 from rest_framework.response import Response as HttpResponse
 
-from .. import signals
+from .. import settings, signals
 from ..mixins import AccountMixin
 from ..models import PortfolioDoubleOptIn
 from .serializers import (PortfolioOptInSerializer,
@@ -92,13 +92,14 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
             "next": null,
             "previous": null,
             "results": [
-                {
-                    "account": "supplier-1",
-                    "grantee": "energy-utility",
-                    "endst_at": "2018-01-01T00:00:00Z",
-                    "accept_api_url":"http://localhost:8000/api/energy-utility/\
-portfolios/0123456789abcdef"
-                 }
+              {
+                "grantee": "energy-utility",
+                "account": "supplier-1",
+                "campaign": "sustainability",
+                "ends_at": "2022-01-01T00:00:00Z",
+                "state": "request-initiated",
+                "api_accept": "/api/supplier-1/portfolios/requests/0000000000000000000000000000000000000002/"
+              }
             ]
         }
     """
@@ -124,7 +125,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
 
     .. code-block:: http
 
-        GET /api/energy-utility/portfolios/grants HTTP/1.1
+        GET /api/supplier-1/portfolios/grants HTTP/1.1
 
     responds
 
@@ -136,16 +137,19 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
             "previous": null,
             "results": [
                 {
-                    "account": "supplier-1",
-                    "grantee": "energy-utility",
-                    "endst_at": "2018-01-01T00:00:00Z",
-                    "accept_api_url":"http://localhost:8000/api/energy-utility/\
-portfolios/0123456789abcdef"
+                  "grantee": "water-utility",
+                  "account": "supplier-1",
+                  "campaign": "sustainability",
+                  "ends_at": "2022-01-01T00:00:00Z",
+                  "state": "grant-initiated",
+                  "api_accept": "/api/water-utility/portfolios/grants\
+/0000000000000000000000000000000000000003/"
                  }
             ]
         }
     """
     serializer_class = PortfolioOptInSerializer
+    lookup_field = settings.ACCOUNT_LOOKUP_FIELD
 
     def get_queryset(self):
         return PortfolioDoubleOptIn.objects.filter(
@@ -199,29 +203,24 @@ portfolios/0123456789abcdef"
             'state': PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED,
             'ends_at': created_at
         }
-        grantee_slug = grantee_data.pop('slug')
+        lookups = {self.lookup_field: grantee_data.pop('slug')}
         grantee, unused_created = get_account_model().objects.get_or_create(
-            slug=grantee_slug, defaults=grantee_data)
-        if accounts:
+            defaults=grantee_data, **lookups)
+        if not accounts:
+            accounts = [self.account]
+        with transaction.atomic():
             for account in accounts:
                 # XXX assert self.account has access to `account`
                 portfolio, unused_created = \
-                    PortfolioDoubleOptIn.objects.update_or_create(
+                    PortfolioDoubleOptIn.objects.exclude(
+                        state=PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED
+                    ).update_or_create(
                         account=account,
                         grantee=grantee,
                         campaign=campaign,
                         defaults=defaults)
                 signals.portfolio_grant_initiated.send(sender=__name__,
                     portfolio=portfolio, request=self.request)
-
-        else:
-            serializer.instance = PortfolioDoubleOptIn.objects.update_or_create(
-                account=self.account,
-                grantee=grantee,
-                campaign=campaign,
-                defaults=defaults)
-            signals.portfolio_grant_initiated.send(sender=__name__,
-                portfolio=serializer.instance, request=self.request)
 
 
 class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
@@ -312,17 +311,34 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
     .. code-block:: json
 
         {
-            "count": 1,
+            "count": 3,
             "next": null,
             "previous": null,
             "results": [
-                {
-                    "account": "supplier-1",
-                    "grantee": "energy-utility",
-                    "endst_at": "2018-01-01T00:00:00Z",
-                    "accept_api_url":"http://localhost:8000/api/energy-utility/\
-portfolios/0123456789abcdef"
-                 }
+              {
+                "grantee": "energy-utility",
+                "account": "supplier-1",
+                "campaign": "sustainability",
+                "ends_at": "2022-01-01T00:00:00Z",
+                "state": "request-denied",
+                "api_accept": null
+              },
+              {
+                "grantee": "energy-utility",
+                "account": "supplier-1",
+                "campaign": "sustainability",
+                "ends_at": "2022-01-01T00:00:00Z",
+                "state": "request-initiated",
+                "api_accept": "/api/supplier-1/portfolios/requests/0000000000000000000000000000000000000002/"
+              },
+              {
+                "grantee": "energy-utility",
+                "account": "andy-shop",
+                "campaign": "sustainability",
+                "ends_at": "2022-01-01T00:00:00Z",
+                "state": "request-initiated",
+                "api_accept": "/api/andy-shop/portfolios/requests/0000000000000000000000000000000000000004/"
+              }
             ]
         }
     """
