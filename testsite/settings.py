@@ -108,7 +108,7 @@ LOGGING = {
         },
         'log':{
             'level':'DEBUG',
-            'formatter': 'json',
+            'formatter': 'simple',
             'class':'logging.StreamHandler',
         },
     },

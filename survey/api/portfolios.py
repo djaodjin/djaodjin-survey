@@ -30,6 +30,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response as HttpResponse
 
 from .. import settings, signals
+from ..compat import six
 from ..mixins import AccountMixin
 from ..models import PortfolioDoubleOptIn
 from .serializers import (PortfolioOptInSerializer,
@@ -98,7 +99,8 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
                 "campaign": "sustainability",
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-initiated",
-                "api_accept": "/api/supplier-1/portfolios/requests/0000000000000000000000000000000000000002/"
+                "api_accept": "/api/supplier-1/portfolios/requests/\
+0000000000000000000000000000000000000002/"
               }
             ]
         }
@@ -197,17 +199,31 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
         grantee_data = {}
         grantee_data.update(serializer.validated_data['grantee'])
         campaign = serializer.validated_data.get('campaign')
+
+        # Django1.11: we need to remove invalid fields when creating
+        # a new grantee account otherwise Django1.11 will raise an error.
+        # This is not the case with Django>=3.2
+        account_model = get_account_model()
+        lookups = {self.lookup_field: grantee_data.pop('slug')}
+        invalid_fields = []
+        model_fields = set([
+            field.name for field in account_model._meta.get_fields()])
+        for field_name in six.iterkeys(grantee_data):
+            if field_name not in model_fields:
+                invalid_fields += [field_name]
+        for field_name in invalid_fields:
+            grantee_data.pop(field_name)
+        grantee, unused_created = account_model.objects.get_or_create(
+            defaults=grantee_data, **lookups)
+
         accounts = serializer.validated_data.get('accounts', [])
+        if not accounts:
+            accounts = [self.account]
         defaults = {
             'initiated_by': self.request.user,
             'state': PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED,
             'ends_at': created_at
         }
-        lookups = {self.lookup_field: grantee_data.pop('slug')}
-        grantee, unused_created = get_account_model().objects.get_or_create(
-            defaults=grantee_data, **lookups)
-        if not accounts:
-            accounts = [self.account]
         with transaction.atomic():
             for account in accounts:
                 # XXX assert self.account has access to `account`
@@ -329,7 +345,8 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                 "campaign": "sustainability",
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-initiated",
-                "api_accept": "/api/supplier-1/portfolios/requests/0000000000000000000000000000000000000002/"
+                "api_accept": "/api/supplier-1/portfolios/requests/\
+0000000000000000000000000000000000000002/"
               },
               {
                 "grantee": "energy-utility",
@@ -337,7 +354,8 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                 "campaign": "sustainability",
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-initiated",
-                "api_accept": "/api/andy-shop/portfolios/requests/0000000000000000000000000000000000000004/"
+                "api_accept": "/api/andy-shop/portfolios/requests/\
+0000000000000000000000000000000000000004/"
               }
             ]
         }
@@ -381,25 +399,33 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
         return super(PortfoliosRequestsAPIView, self).get_serializer_class()
 
     def perform_create(self, serializer):
+        account_model = get_account_model()
         defaults = {
             'state': PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
             'ends_at': datetime_or_now(),
             'initiated_by': self.request.user
         }
         accounts = serializer.validated_data['accounts']
-        for account in accounts:
-            account, unused_created = get_account_model().objects.get_or_create(
-                slug=account.get('slug'),
-                defaults={
-                    'email': account.get('email')
-                })
-            portfolio, unused_created = \
-                PortfolioDoubleOptIn.objects.update_or_create(
-                    grantee=self.account,
-                    account=account,
-                    campaign=serializer.validated_data.get('campaign'),
-                    defaults=defaults)
-            signals.portfolio_requests_initiated.send(sender=__name__,
+        requests_initiated = []
+        with transaction.atomic():
+            for account in accounts:
+                lookups = {self.lookup_field: account.get('slug')}
+                account, unused_created = account_model.objects.get_or_create(
+                    defaults={
+                        'email': account.get('email')
+                    }, **lookups)
+                portfolio, unused_created = \
+                    PortfolioDoubleOptIn.objects.update_or_create(
+                        grantee=self.account,
+                        account=account,
+                        campaign=serializer.validated_data.get('campaign'),
+                        defaults=defaults)
+                requests_initiated += [(portfolio, account)]
+
+        for request in requests_initiated:
+            portfolio = request[0]
+            account = request[1]
+            signals.portfolio_request_initiated.send(sender=__name__,
                 portfolio=portfolio, invitee=account, request=self.request)
 
 
