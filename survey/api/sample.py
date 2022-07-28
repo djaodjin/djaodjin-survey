@@ -403,7 +403,7 @@ campaign_questions AS (
 --)
 -- The following returns all answered questions only.
 questions AS (
-    SELECT answers.question_id AS id,
+    SELECT DISTINCT(answers.question_id) AS id,
       COALESCE(campaign_questions.rank, 0) AS rank,
       COALESCE(campaign_questions.required, 'f') AS required
     FROM answers
