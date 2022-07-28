@@ -7,10 +7,16 @@ https://docs.djangoproject.com/en/1.6/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/1.6/ref/settings/
 """
+import logging, os, re, sys
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-import os, re, sys
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+APP_NAME = os.path.basename(BASE_DIR)
+RUN_DIR = os.getenv('RUN_DIR', os.getcwd())
+DB_NAME = os.path.join(RUN_DIR, 'db.sqlite')
+LOG_FILE = os.path.join(RUN_DIR, 'testsite-app.log')
+
+DEBUG = True
 
 def load_config(confpath):
     '''
@@ -38,7 +44,8 @@ def load_config(confpath):
     else:
         sys.stderr.write('warning: config file %s does not exist.\n' % confpath)
 
-load_config(os.path.join(BASE_DIR, 'credentials'))
+load_config(os.path.join(
+    os.getenv('TESTSITE_SETTINGS_LOCATION', RUN_DIR), 'credentials'))
 
 if not hasattr(sys.modules[__name__], "SECRET_KEY"):
     from random import choice
@@ -63,12 +70,71 @@ INSTALLED_APPS = (
     'testsite'
 )
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'formatters': {
+        'simple': {
+            'format': 'X X %(levelname)s [%(asctime)s] %(message)s',
+            'datefmt': '%d/%b/%Y:%H:%M:%S %z'
+        },
+        'json': {
+            '()': 'deployutils.apps.django.logging.JSONFormatter',
+            'format':
+            'gunicorn.' + APP_NAME + '.app: [%(process)d] '\
+                '%(log_level)s %(remote_addr)s %(http_host)s %(username)s'\
+                ' [%(asctime)s] %(message)s',
+            'datefmt': '%d/%b/%Y:%H:%M:%S %z',
+            'replace': False,
+            'whitelists': {
+                'record': [
+                    'nb_queries', 'queries_duration',
+                    'charge', 'amount', 'unit', 'modified',
+                    'customer', 'organization', 'provider'],
+            }
+        },
+    },
+    'handlers': {
+        'db_log': {
+            'level': 'DEBUG',
+            'formatter': 'simple',
+            'filters': ['require_debug_true'],
+            'class':'logging.StreamHandler',
+        },
+        'log':{
+            'level':'DEBUG',
+            'formatter': 'json',
+            'class':'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'survey': {
+            'level': 'INFO',
+            'propagate': True,
+        },
+#        'django.db.backends': {
+#           'handlers': ['db_log'],
+#           'level': 'DEBUG',
+#        },
+        # This is the root logger. Apparently setting the level has no effect
+        # ... anymore?
+        '': {
+            'handlers': ['log'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
+if logging.getLogger('gunicorn.error').handlers:
+    LOGGING['handlers']['log'].update({
+        'class':'logging.handlers.WatchedFileHandler',
+        'filename': LOG_FILE
+    })
 
 MIDDLEWARE = (
     'debug_toolbar.middleware.DebugToolbarMiddleware',
@@ -103,7 +169,7 @@ EMAIL_HOST_PASSWORD = ""
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': DB_NAME,
     }
 }
 
