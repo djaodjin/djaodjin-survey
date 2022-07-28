@@ -56,10 +56,9 @@ doc:
 	cd $(srcDir) && sphinx-build -b html ./docs $(PWD)/build/docs
 
 
-# XXX Enter a superuser when asked otherwise the fixtures won't load
-# correctly.
 initdb:
-	-rm -f $(srcDir)/db.sqlite3
+	-rm -f $(DB_NAME)
+	$(installDirs) $(dir $(DB_NAME))
 	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
 	cd $(srcDir) && $(MANAGE) loaddata testsite/fixtures/default-db.json
 
