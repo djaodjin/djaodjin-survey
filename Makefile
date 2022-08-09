@@ -51,6 +51,12 @@ install-conf:: $(DESTDIR)$(CONFIG_DIR)/credentials \
                 $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf
 
 
+build-assets: vendor-assets-prerequisites
+
+
+vendor-assets-prerequisites: $(srcDir)/testsite/package.json
+
+
 doc:
 	$(installDirs) build/docs
 	cd $(srcDir) && sphinx-build -b html ./docs $(PWD)/build/docs
