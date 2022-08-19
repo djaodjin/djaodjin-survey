@@ -54,6 +54,15 @@ install-conf:: $(DESTDIR)$(CONFIG_DIR)/credentials \
 build-assets: vendor-assets-prerequisites
 
 
+clean: clean-dbs
+	[ ! -f $(srcDir)/package-lock.json ] || rm $(srcDir)/package-lock.json
+	find $(srcDir) -name '__pycache__' -exec rm -rf {} +
+	find $(srcDir) -name '*~' -exec rm -rf {} +
+
+clean-dbs:
+	[ ! -f $(DB_NAME) ] || rm $(DB_NAME)
+
+
 vendor-assets-prerequisites: $(srcDir)/testsite/package.json
 
 
@@ -62,8 +71,7 @@ doc:
 	cd $(srcDir) && sphinx-build -b html ./docs $(PWD)/build/docs
 
 
-initdb:
-	-rm -f $(DB_NAME)
+initdb: clean-dbs
 	$(installDirs) $(dir $(DB_NAME))
 	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
 	cd $(srcDir) && $(MANAGE) loaddata testsite/fixtures/default-db.json
