@@ -29,12 +29,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.0 (latest), **Django Rest Framework:** 3.12
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
+0.6.3
 
-0.6.2
-
-  * insures answers appear only once in final output
-  * stores data points with baseline when necessary
-  * adds aggregate filter values APIs
+  * fixes bogus super() call when deleting from set
+  * defaults space-separated search terms to `or` instead of `and`
 
 [previous release notes](changelog)
 
