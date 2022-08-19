@@ -1346,8 +1346,8 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
         }
         """
         #pylint:disable=useless-super-delegation
-        return super(
-            SampleCandidatesAPIView, self).post(request, *args, **kwargs)
+        return super(SampleCandidatesAPIView, self).post(
+            request, *args, **kwargs)
 
 
 class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):

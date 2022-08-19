@@ -689,7 +689,8 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
                 "unit": "mmbtu"
             }
         """
-        return super(self).put(request, *args, **kwargs)
+        return super(AccountsFilterEnumeratedAPIView, self).put(
+            request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
         """
@@ -703,7 +704,8 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
 
              DELETE /api/energy-utility/filters/accounts/suppliers/1 HTTP/1.1
         """
-        return super(self).delete(request, *args, **kwargs)
+        return super(AccountsFilterEnumeratedAPIView, self).delete(
+            request, *args, **kwargs)
 
 
 class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
