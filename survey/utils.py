@@ -53,8 +53,10 @@ def datetime_or_now(dtime_at=None):
     if isinstance(dtime_at, six.string_types):
         as_datetime = parse_datetime(dtime_at)
         if not as_datetime:
-            as_datetime = datetime.datetime.combine(
-                parse_date(dtime_at), datetime.time.min)
+            as_date = parse_date(dtime_at)
+            if as_date:
+                as_datetime = datetime.datetime.combine(
+                    as_date, datetime.time.min)
     if not as_datetime:
         as_datetime = datetime.datetime.utcnow().replace(tzinfo=utc)
     if as_datetime.tzinfo is None:
