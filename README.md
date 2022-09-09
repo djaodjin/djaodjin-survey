@@ -29,10 +29,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.0 (latest), **Django Rest Framework:** 3.12
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
-0.6.3
+0.7.0
 
-  * fixes bogus super() call when deleting from set
-  * defaults space-separated search terms to `or` instead of `and`
+  * filter portfolio double opt-in by creation date
+  * fixes missing timezone when parsing a date instead of a datetime
 
 [previous release notes](changelog)
 

@@ -1,3 +1,10 @@
+0.7.0
+
+  * filter portfolio double opt-in by creation date
+  * fixes missing timezone when parsing a date instead of a datetime
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu, 8 Sep 2022 22:15:00 -0700
+
 0.6.3
 
   * fixes bogus super() call when deleting from set
