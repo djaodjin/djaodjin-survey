@@ -677,40 +677,88 @@ class Portfolio(models.Model):
         return "portfolio-%s-%d" % (self.grantee, self.pk)
 
 
-class PortfolioDoubleOptInManager(models.Manager):
+class PortfolioDoubleOptInQuerySet(models.QuerySet):
 
     def by_invoice_keys(self, invoice_keys):
         return self.filter(invoice_key__in=invoice_keys)
 
-    def get_requested_by(self, account, ends_at=None):
-        kwargs = {}
-        if ends_at:
-            kwargs.update({'ends_at__lt': ends_at})
-        return self.filter(grantee=account, grant_key__isnull=True, **kwargs)
-
-    def get_requested_on(self, account, ends_at=None):
-        kwargs = {}
-        if ends_at:
-            kwargs.update({'ends_at__lt': ends_at})
-        return self.filter(account=account, grant_key__isnull=True, **kwargs)
-
-    def unsolicited(self, account, ends_at=None):
-        kwargs = {}
-        if ends_at:
-            kwargs.update({'ends_at__lt': ends_at})
-        return self.filter(grantee=account, request_key__isnull=True, **kwargs)
-
-    def accepted(self, account, ends_at=None):
+    def by_grantee(self, account, start_at=None, ends_at=None, until=None):
         """
-        Returns a ``QuerySet`` of portfolios that were accepted by
-        their respective accounts but which haven't been invoiced yet.
+        Returns the portfolio grant/request for `account` that were
+        created in the period [start_at, ends_at[ (when specified)
+        and that extend beyond `until` (when specified).
         """
         kwargs = {}
+        if start_at:
+            kwargs.update({'created_at__gte': start_at})
         if ends_at:
-            kwargs.update({'ends_at__lt': ends_at})
-        return self.filter(grantee=account, request_key__isnull=False,
-            grant_key=PortfolioDoubleOptIn.ACCEPTED, invoice_key__isnull=True,
-            **kwargs)
+            kwargs.update({'created_at__lt': ends_at})
+        if until:
+            kwargs.update({'ends_at__gte': until})
+        return self.filter(grantee=account, **kwargs)
+
+    def requested(self, account, start_at=None, ends_at=None, until=None):
+        """
+        Returns the portfolio requests made by `account` that were
+        created in the period [start_at, ends_at[ (when specified)
+        and that extend beyond `ends_at` (when specified).
+        """
+        return self.by_grantee(account,
+            start_at=start_at, ends_at=ends_at, until=until).filter(state__in=(
+            PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
+            PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED,
+            PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED))
+
+
+    def unsolicited(self, account, start_at=None, ends_at=None, until=None):
+        """
+        Returns the portfolio grants where `account` is the benefiary that were
+        created in the period [start_at, ends_at[ (when specified)
+        and that extend beyond `ends_at` (when specified).
+        """
+        return self.by_grantee(account,
+            start_at=start_at, ends_at=ends_at, until=until).filter(state__in=(
+            PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED,
+            PortfolioDoubleOptIn.OPTIN_GRANT_ACCEPTED,
+            PortfolioDoubleOptIn.OPTIN_GRANT_DENIED))
+
+
+    def accepted(self, account, start_at=None, ends_at=None, until=None):
+        """
+        Returns the portfolio grant/request where `account` is the benefiary
+        that were accepted and which had been created in the period
+        [start_at, ends_at[ (when specified) and that extend beyond
+        `ends_at` (when specified).
+        """
+        return self.by_grantee(account,
+            start_at=start_at, ends_at=ends_at, until=until).filter(state__in=(
+            PortfolioDoubleOptIn.OPTIN_GRANT_ACCEPTED,
+            PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED))
+
+
+class PortfolioDoubleOptInManager(models.Manager):
+
+    def get_queryset(self):
+        return PortfolioDoubleOptInQuerySet(self.model, using=self._db)
+
+    def by_invoice_keys(self, invoice_keys):
+        return self.get_queryset().by_invoice_keys(invoice_key__in=invoice_keys)
+
+    def by_grantee(self, account, start_at=None, ends_at=None, until=None):
+        return self.get_queryset().by_grantee(account,
+            start_at=start_at, ends_at=ends_at, until=until)
+
+    def requested(self, account, start_at=None, ends_at=None, until=None):
+        return self.get_queryset().requested(account,
+            start_at=start_at, ends_at=ends_at, until=until)
+
+    def unsolicited(self, account, start_at=None, ends_at=None, until=None):
+        return self.get_queryset().unsolicited(account,
+            start_at=start_at, ends_at=ends_at, until=until)
+
+    def accepted(self, account, start_at=None, ends_at=None, until=None):
+        return self.get_queryset().accepted(account,
+            start_at=start_at, ends_at=ends_at, until=until)
 
 
 @python_2_unicode_compatible
@@ -752,6 +800,8 @@ class PortfolioDoubleOptIn(models.Model):
 
     objects = PortfolioDoubleOptInManager()
 
+    created_at = models.DateTimeField(auto_now_add=True,
+        help_text=_("Date/time at which the grant/request was created"))
     # Either we have an AccountModel or we have an e-mail to invite
     # someone to register an AccountModel.
     grantee = models.ForeignKey(settings.ACCOUNT_MODEL, null=True,
