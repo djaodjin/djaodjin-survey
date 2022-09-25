@@ -237,7 +237,6 @@ class EditableFilterMixin(object):
 class MatrixQuerysetMixin(BelongsMixin):
 
     def get_queryset(self):
-        #pylint:disable=no-self-use
         # We want to show all matrices but only populate with account data.
         #if self.account:
         #    return Matrix.objects.filter(account=self.account)

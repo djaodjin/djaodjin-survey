@@ -33,7 +33,7 @@ from .. import settings, signals
 from ..compat import six
 from ..mixins import AccountMixin
 from ..models import PortfolioDoubleOptIn
-from .serializers import (PortfolioOptInSerializer,
+from .serializers import (NoModelSerializer, PortfolioOptInSerializer,
     PortfolioGrantCreateSerializer, PortfolioRequestCreateSerializer)
 from ..filters import (DateRangeFilter, DoubleOptInStateFilter, OrderingFilter,
      SearchFilter)
@@ -175,14 +175,22 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
         .. code-block:: json
 
             {
-               "grantee": "energy-utility"
+               "grantee": {
+                 "slug": "energy-utility",
+                 "full_name": "Energy Utility"
+               }
             }
 
         responds
 
         .. code-block:: json
 
-            {}
+            {
+               "grantee": {
+                 "slug": "energy-utility",
+                 "full_name": "Energy Utility"
+               }
+            }
         """
         return self.create(request, *args, **kwargs)
 
@@ -192,6 +200,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
         return super(PortfoliosGrantsAPIView, self).get_serializer_class()
 
     def perform_create(self, serializer):
+        #pylint:disable=too-many-locals
         created_at = datetime_or_now()
         # If we don't make a copy, we will get an exception "Got KeyError
         # when attempting to get a value for field `slug`" later on in
@@ -259,14 +268,19 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
         POST /api/energy-utility/portfolios/grants/0123456789abcef HTTP/1.1
 
+    .. code-block:: json
+
+        {}
+
     responds
 
     .. code-block:: json
 
         {}
     """
-    serializer_class = PortfolioOptInSerializer
-    lookup_url_kwarg = 'verification_key'
+#    lookup_url_kwarg = 'verification_key'
+    lookup_field = 'verification_key'
+    serializer_class = NoModelSerializer
 
     def get_queryset(self):
         return PortfolioDoubleOptIn.objects.filter(grantee=self.account)
@@ -293,12 +307,9 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         return self.destroy(request, *args, **kwargs)
 
     def perform_create(self, instance):
-        with transaction.atomic():
-            instance.create_portfolios()
-            instance.state = PortfolioDoubleOptIn.OPTIN_GRANT_ACCEPTED
-            instance.save()
-            signals.portfolio_grant_accepted.send(sender=__name__,
-                portfolio=instance, request=self.request)
+        instance.grant_accepted()
+        signals.portfolio_grant_accepted.send(sender=__name__,
+            portfolio=instance, request=self.request)
 
     def perform_destroy(self, instance):
         instance.state = PortfolioDoubleOptIn.OPTIN_GRANT_DENIED
@@ -360,6 +371,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
             ]
         }
     """
+    lookup_field = settings.ACCOUNT_LOOKUP_FIELD
     serializer_class = PortfolioOptInSerializer
 
     def get_queryset(self):
@@ -382,14 +394,26 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
         .. code-block:: json
 
             {
-               "account": "supplier-1"
+               "accounts": [
+                 {
+                   "slug": "supplier-1",
+                   "full_name": "Supplier 1"
+                 }
+               ]
             }
 
         responds
 
         .. code-block:: json
 
-            {}
+            {
+               "accounts": [
+                 {
+                   "slug": "supplier-1",
+                   "full_name": "Supplier 1"
+                 }
+               ]
+             }
         """
         return self.create(request, *args, **kwargs)
 
@@ -400,9 +424,10 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
 
     def perform_create(self, serializer):
         account_model = get_account_model()
+        ends_at = datetime_or_now()
         defaults = {
             'state': PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
-            'ends_at': datetime_or_now(),
+            'ends_at': ends_at,
             'initiated_by': self.request.user
         }
         accounts = serializer.validated_data['accounts']
@@ -414,12 +439,24 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                     defaults={
                         'email': account.get('email')
                     }, **lookups)
-                portfolio, unused_created = \
-                    PortfolioDoubleOptIn.objects.update_or_create(
+                campaign = serializer.validated_data.get('campaign')
+                double_optin_queryset = PortfolioDoubleOptIn.objects.filter(
+                    Q(ends_at__isnull=True) | Q(ends_at__gt=ends_at),
+                    grantee=self.account,
+                    account=account,
+                    campaign=campaign).order_by('-created_at')
+                portfolio = double_optin_queryset.first()
+                if portfolio:
+                    portfolio.state = defaults.get('state')
+                    portfolio.ends_at = defaults.get('ends_at')
+                    portfolio.initiated_by = defaults.get('initiated_by')
+                    portfolio.save()
+                else:
+                    portfolio = PortfolioDoubleOptIn.objects.create(
                         grantee=self.account,
                         account=account,
-                        campaign=serializer.validated_data.get('campaign'),
-                        defaults=defaults)
+                        campaign=campaign,
+                        **defaults)
                 requests_initiated += [(portfolio, account)]
 
         for request in requests_initiated:
@@ -447,7 +484,11 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
     .. code-block:: http
 
-        POST /api/energy-utility/portfolios/requests/0123456789abcef HTTP/1.1
+        POST /api/supplier-1/portfolios/requests/0123456789abcef HTTP/1.1
+
+    .. code-block:: json
+
+        {}
 
     responds
 
@@ -455,8 +496,9 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
         {}
     """
-    serializer_class = PortfolioOptInSerializer
-    lookup_url_kwarg = 'verification_key'
+#    lookup_url_kwarg = 'verification_key'
+    lookup_field = 'verification_key'
+    serializer_class = NoModelSerializer
 
     def get_queryset(self):
         return PortfolioDoubleOptIn.objects.filter(account=self.account)
@@ -483,13 +525,9 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         return self.destroy(request, *args, **kwargs)
 
     def perform_create(self, instance):
-        with transaction.atomic():
-            instance.create_portfolios()
-            instance.state = \
-                PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED
-            instance.save()
-            signals.portfolio_request_accepted.send(sender=__name__,
-                portfolio=instance, request=self.request)
+        instance.request_accepted()
+        signals.portfolio_request_accepted.send(sender=__name__,
+            portfolio=instance, request=self.request)
 
     def perform_destroy(self, instance):
         instance.state = PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED

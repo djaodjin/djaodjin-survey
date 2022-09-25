@@ -22,10 +22,16 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import re_path
-from ...views.portfolios import PortfoliosView
-
+from ...compat import path
+from ...views.portfolios import (PortfoliosView, PortfoliosGrantAcceptView,
+    PortfoliosRequestAcceptView)
 
 urlpatterns = [
-    re_path(r'', PortfoliosView.as_view(), name='survey_portfolios'),
+    path('grants/<slug:verification_key>/accept/',
+        PortfoliosGrantAcceptView.as_view(),
+        name='portfolios_grant_accept'),
+    path('requests/<slug:verification_key>/accept/',
+        PortfoliosRequestAcceptView.as_view(),
+        name='portfolios_request_accept'),
+    path('', PortfoliosView.as_view(), name='survey_portfolios'),
 ]

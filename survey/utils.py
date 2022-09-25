@@ -26,16 +26,19 @@ import datetime, logging
 from importlib import import_module
 
 from django.apps import apps as django_apps
+from django.conf import settings as django_settings
+from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connections
 from django.db.utils import DEFAULT_DB_ALIAS
+from django.http.request import split_domain_port, validate_host
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.timezone import utc
 from pytz import timezone, UnknownTimeZoneError
 from pytz.tzinfo import DstTzInfo
 
 from . import settings
-from .compat import six
+from .compat import six, urlparse, urlunparse
 
 
 LOGGER = logging.getLogger(__name__)
@@ -178,6 +181,30 @@ def get_question_serializer():
         raise ImproperlyConfigured('Module "%s" does not define a "%s"'\
 ' check the value of QUESTION_SERIALIZER' % (module, attr))
     return cls
+
+
+def validate_redirect(request):
+    """
+    Get the REDIRECT_FIELD_NAME and validates it is a URL on allowed hosts.
+    """
+    return validate_redirect_url(request.GET.get(REDIRECT_FIELD_NAME, None))
+
+
+def validate_redirect_url(next_url):
+    """
+    Returns the next_url path if next_url matches allowed hosts.
+    """
+    if not next_url:
+        return None
+    parts = urlparse(next_url)
+    if parts.netloc:
+        domain, _ = split_domain_port(parts.netloc)
+        allowed_hosts = (['*'] if django_settings.DEBUG
+            else django_settings.ALLOWED_HOSTS)
+        if not (domain and validate_host(domain, allowed_hosts)):
+            return None
+    return urlunparse(("", "", parts.path,
+        parts.params, parts.query, parts.fragment))
 
 
 def update_context_urls(context, urls):

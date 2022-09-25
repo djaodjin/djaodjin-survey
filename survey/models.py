@@ -187,6 +187,7 @@ class AbstractQuestion(SlugTitleMixin, models.Model):
 
     TEXT = 'textarea'
     RADIO = 'radio'
+    SELECT_MULTIPLE = 'checkbox'
     NUMBER = 'number'
     ENERGY = 'energy'
     WATER = 'water'
@@ -197,6 +198,7 @@ class AbstractQuestion(SlugTitleMixin, models.Model):
     UI_HINTS = (
             (TEXT, 'textarea'),
             (RADIO, 'radio'),
+            (SELECT_MULTIPLE, 'checkbox'),
             (NUMBER, 'number'),
             (ENERGY, 'energy'),
             (WATER, 'water'),
@@ -350,7 +352,6 @@ class SampleManager(models.Manager):
         All accounts in ``excludes`` are not added to the index. This is
         typically used to filter out 'testing' accounts
         """
-        #pylint:disable=no-self-use
         if excludes:
             if isinstance(excludes, list):
                 excludes = ','.join([
@@ -384,7 +385,7 @@ WHERE survey_sample.is_frozen
        'filter_out_testing': filter_out_testing}
         return self.raw(sql_query)
 
-    def get_score(self, sample): #pylint: disable=no-self-use
+    def get_score(self, sample):
         answers = Answer.objects.populate(sample)
         nb_correct_answers = 0
         nb_questions = len(answers)
@@ -438,6 +439,7 @@ class Sample(models.Model):
 
     @property
     def nb_answers(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_nb_answers'):
             self._nb_answers = Answer.objects.filter(
                 sample=self,
@@ -446,6 +448,7 @@ class Sample(models.Model):
 
     @property
     def nb_required_answers(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_nb_required_answers'):
             self._nb_required_answers = Answer.objects.filter(
                 sample=self,
@@ -538,6 +541,7 @@ class Answer(models.Model):
 
     @property
     def rank(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_rank'):
             try:
                 self._rank = EnumeratedQuestions.objects.get(
@@ -742,7 +746,7 @@ class PortfolioDoubleOptInManager(models.Manager):
         return PortfolioDoubleOptInQuerySet(self.model, using=self._db)
 
     def by_invoice_keys(self, invoice_keys):
-        return self.get_queryset().by_invoice_keys(invoice_key__in=invoice_keys)
+        return self.get_queryset().by_invoice_keys(invoice_keys)
 
     def by_grantee(self, account, start_at=None, ends_at=None, until=None):
         return self.get_queryset().by_grantee(account,
@@ -774,28 +778,34 @@ class PortfolioDoubleOptIn(models.Model):
     When we see ``invoice_key`` back, we create the ``Portfolio`` records.
 
     State definition (bits)
-                         request/grant | accept/denied | completed
-    grant initiated                  1               0           0
-    grant accepted                   1               1           1
-    grant denied                     1               0           1
-    request initiated                0               0           0
-    request accepted                 0               1           1
-    request denied                   0               0           1
+                         request/grant | expired | accept/denied | completed
+    grant initiated                  1         0               0           0
+    grant accepted                   1         0               1           1
+    grant denied                     1         0               0           1
+    grant expired                    1         1               0           1
+    request initiated                0         0               0           0
+    request accepted                 0         0               1           1
+    request denied                   0         0               0           1
+    request expired                  0         1               0           1
     """
-    OPTIN_GRANT_INITIATED = 4
-    OPTIN_GRANT_ACCEPTED = 7
-    OPTIN_GRANT_DENIED = 5
+    OPTIN_GRANT_INITIATED = 8
+    OPTIN_GRANT_ACCEPTED = 11
+    OPTIN_GRANT_DENIED = 9
+    OPTIN_GRANT_EXPIRED = 13
     OPTIN_REQUEST_INITIATED = 0
-    OPTIN_REQUEST_ACCEPTED = 1
-    OPTIN_REQUEST_DENIED = 3
+    OPTIN_REQUEST_ACCEPTED = 3
+    OPTIN_REQUEST_DENIED = 1
+    OPTIN_REQUEST_EXPIRED = 5
 
     STATES = [
         (OPTIN_GRANT_INITIATED, 'grant-initiated'),
         (OPTIN_GRANT_ACCEPTED, 'grant-accepted'),
         (OPTIN_GRANT_DENIED, 'grant-denied'),
+        (OPTIN_GRANT_EXPIRED, 'grant-expired'),
         (OPTIN_REQUEST_INITIATED, 'request-initiated'),
         (OPTIN_REQUEST_ACCEPTED, 'request-accepted'),
         (OPTIN_REQUEST_DENIED, 'request-denied'),
+        (OPTIN_REQUEST_EXPIRED, 'request-expired'),
     ]
 
     objects = PortfolioDoubleOptInManager()
@@ -843,3 +853,15 @@ class PortfolioDoubleOptIn(models.Model):
         verification_key = hashlib.sha1(
             (salt+str(account)).encode('utf-8')).hexdigest()
         return verification_key
+
+    def grant_accepted(self):
+        with transaction.atomic():
+            self.create_portfolios()
+            self.state = PortfolioDoubleOptIn.OPTIN_GRANT_ACCEPTED
+            self.save()
+
+    def request_accepted(self):
+        with transaction.atomic():
+            self.create_portfolios()
+            self.state = PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED
+            self.save()

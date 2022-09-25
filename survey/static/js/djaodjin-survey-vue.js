@@ -62,21 +62,21 @@ Vue.component('portfolios-received-list', {
                 vm._decorateProfile(vm.items.results[idx]);
             }
         },
-        accept: function(portfolio, index) {
+        accept: function(portfolio, idx) {
             var vm = this;
             vm.reqPost(portfolio.api_accept,
             function(resp) { // success
-                vm.remove(vm.requested, index);
+                vm.items.results.splice(idx, 1);
                 vm.showMessages(
                     ["You have accepted the request(s)."],
                         "success");
             });
         },
-        ignore: function(portfolio, index) {
+        ignore: function(portfolio, idx) {
             var vm = this;
             vm.reqDelete(portfolio.api_accept,
             function(resp) { // success
-                vm.remove(vm.items, index);
+                vm.items.results.splice(idx, 1);
                 vm.showMessages(
                     ["You have denied the request(s)."],
                         "success");
@@ -432,11 +432,13 @@ Vue.component('compare-dashboard', {
                 });
                 const chartLookup = chartKey.startsWith('aggregates-') ? chartKey.substr(11) : chartKey;
                 if( chartsData[chartLookup] ) {
+                    /*
                     datasets['type'] = 'line'
                     chartsData[chartLookup].datasets = [
                         chartsData[chartLookup].datasets,
                         datasets,
                     ];
+                    */
                 } else {
                     datasets['type'] = 'bar'
                     chartsData[chartLookup] = {

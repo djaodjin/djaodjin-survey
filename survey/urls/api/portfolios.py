@@ -22,27 +22,26 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ... import settings
 from ...api.portfolios import (PortfoliosAPIView,
     PortfoliosGrantsAPIView, PortfoliosGrantAcceptAPIView,
     PortfoliosRequestsAPIView, PortfoliosRequestAcceptAPIView)
-from ...compat import re_path
+from ...compat import path
 
 
 urlpatterns = [
-    re_path(r'^portfolios/grants/(?P<request_key>%s)/' % settings.SLUG_RE,
+    path(r'portfolios/grants/<slug:verification_key>',
         PortfoliosGrantAcceptAPIView.as_view(),
         name='api_portfolios_grant_accept'),
-    re_path(r'^portfolios/requests/(?P<request_key>%s)/' % settings.SLUG_RE,
+    path(r'portfolios/requests/<slug:verification_key>',
         PortfoliosRequestAcceptAPIView.as_view(),
         name='api_portfolios_request_accept'),
-    re_path(r'^portfolios/requests',
+    path('portfolios/requests',
         PortfoliosRequestsAPIView.as_view(),
         name='survey_api_portfolios_requests'),
-    re_path(r'^portfolios/grants',
+    path('portfolios/grants',
         PortfoliosGrantsAPIView.as_view(),
         name='survey_api_portfolios_grants'),
-    re_path(r'^portfolios',
+    path('portfolios',
         PortfoliosAPIView.as_view(),
         name='survey_api_portfolios_received'),
 ]

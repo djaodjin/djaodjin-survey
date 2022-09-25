@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,11 +24,15 @@
 
 import logging
 
-from django.views.generic.base import TemplateView
+from django.conf import settings as django_settings
+from django.views.generic.base import RedirectView, TemplateView
+from django.views.generic.detail import SingleObjectMixin
 
+from .. import signals
 from ..compat import reverse, NoReverseMatch
 from ..mixins import AccountMixin
-from ..utils import update_context_urls
+from ..models import PortfolioDoubleOptIn
+from ..utils import validate_redirect, update_context_urls
 
 LOGGER = logging.getLogger(__name__)
 
@@ -60,3 +64,45 @@ class PortfoliosView(AccountMixin, TemplateView):
             pass
         update_context_urls(context, urls)
         return context
+
+
+class PortfoliosAcceptView(RedirectView):
+
+    slug_field = 'verification_key'
+    slug_url_kwarg = 'verification_key'
+
+    def get_redirect_url(self, *args, **kwargs):
+        redirect_path = validate_redirect(self.request)
+        if not redirect_path:
+            redirect_path = django_settings.LOGIN_REDIRECT_URL
+        return redirect_path
+
+
+class PortfoliosGrantAcceptView(AccountMixin, SingleObjectMixin,
+                                PortfoliosAcceptView):
+
+    def get_queryset(self):
+        return PortfolioDoubleOptIn.objects.filter(grantee=self.account)
+
+    def get(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.grant_accepted()
+        signals.portfolio_grant_accepted.send(sender=__name__,
+            portfolio=instance, request=self.request)
+        return super(PortfoliosGrantAcceptView, self).get(
+            request, *args, **kwargs)
+
+
+class PortfoliosRequestAcceptView(AccountMixin, SingleObjectMixin,
+                                  PortfoliosAcceptView):
+
+    def get_queryset(self):
+        return PortfolioDoubleOptIn.objects.filter(account=self.account)
+
+    def get(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.request_accepted()
+        signals.portfolio_request_accepted.send(sender=__name__,
+            portfolio=instance, request=self.request)
+        return super(PortfoliosRequestAcceptView, self).get(
+            request, *args, **kwargs)
