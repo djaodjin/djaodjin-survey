@@ -35,7 +35,7 @@ from rest_framework.generics import (get_object_or_404, RetrieveAPIView,
 from rest_framework.response import Response as HttpResponse
 from rest_framework.exceptions import ValidationError
 
-from ..compat import six
+from ..compat import gettext_lazy as _, six
 from ..filters import DateRangeFilter
 from ..helpers import get_extra
 from ..mixins import AccountMixin, EditableFilterMixin, QuestionMixin
@@ -57,7 +57,7 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
 
     .. code-block:: http
 
-         GET /api/supplier-1/metrics/aggregate/ghg-emissions/ HTTP/1.1
+         GET /api/supplier-1/metrics/aggregate/ghg-emissions HTTP/1.1
 
     responds
 
@@ -74,14 +74,22 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
 
     @property
     def unit(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_unit'):
-            unit_slug = self.request.query_params.get('unit')
+            unit_slug = self.get_query_param('unit')
             if unit_slug:
                 self._unit = get_object_or_404(
                     Unit.objects.all(), slug=unit_slug)
             if not self._unit:
                 self._unit = self.question.default_unit
         return self._unit
+
+    def get_query_param(self, key):
+        try:
+            return self.request.query_params.get(key, None)
+        except AttributeError:
+            pass
+        return self.request.GET.get(key, None)
 
     def get_queryset(self):
         queryset = Answer.objects.filter(
@@ -140,7 +148,7 @@ class AccountsValuesAPIView(AccountMixin, ListAPIView):
 
 class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
     """
-    Lists values in a filter
+    Lists quantitative measurements
 
     **Tags**: assessments
 
@@ -173,9 +181,35 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
             return EditableFilterValuesCreateSerializer
         return super(AccountsFilterValuesAPIView, self).get_serializer_class()
 
+    @property
+    def editable_filter_question(self):
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_editable_filter_question'):
+            path = get_extra(self.editable_filter, 'path', "")
+            if not path:
+                raise ValidationError(
+                    _("No question specified is the editablefilter.extra"))
+            self._editable_filter_question = get_object_or_404(
+                get_question_model().objects.all(), path=path)
+        return self._editable_filter_question
+
+    def get_queryset(self):
+        queryset = Answer.objects.filter(
+            question=self.editable_filter_question,
+            sample__account__filters__editable_filter=self.editable_filter)
+        return queryset
+
     def post(self, request, *args, **kwargs):
         """
-        Appends values in a filter
+        Records quantitative measurements
+
+        Records numeric measurements towards a specific
+        metric.
+
+        When `baseline_at` is specified, the measurement refers to
+        a relative value since `baseline_at`. When `baseline_at` is not
+        specified, the intent is to record an absolute measurement at time
+        `created_at`.
 
         **Tags**: assessments
 
@@ -188,9 +222,12 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
         .. code-block:: json
 
             {
-                "created_at": "2020-01-01T00:00:00Z",
+              "created_at": "2020-01-01T00:00:00Z",
+              "items": [{
+                "slug": "main-factory",
                 "measured": 12,
                 "unit": "tons"
+              }]
             }
 
         responds
@@ -198,9 +235,12 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
         .. code-block:: json
 
             {
-                "created_at": "2020-01-01T00:00:00Z",
+              "created_at": "2020-01-01T00:00:00Z",
+              "items": [{
+                "slug": "main-factory",
                 "measured": 12,
                 "unit": "tons"
+              }]
             }
         """
         return self.create(request, *args, **kwargs)
@@ -212,7 +252,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
         serializer.is_valid(raise_exception=True)
 
         created_at = datetime_or_now(serializer.validated_data['created_at'])
-        baseline_at = serializer.validated_data['baseline_at']
+        baseline_at = serializer.validated_data.get('baseline_at')
         if baseline_at:
             baseline_at = parse_datetime(
                 serializer.validated_data['baseline_at'])
@@ -224,12 +264,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
                 baseline_at = baseline_at.replace(tzinfo=utc)
 
         by_accounts = {}
-        path = get_extra(self.editable_filter, 'path', "")
-        if not path:
-            raise ValidationError()
-        question = get_object_or_404(
-            get_question_model().objects.all(), path=path)
-
+        question = self.editable_filter_question
         for item in serializer.validated_data['items']:
             measured = item.get('measured')
             if not measured:
