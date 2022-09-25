@@ -47,7 +47,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
     .. code-block:: http
 
-        GET /api/alliance/campaigns/construction HTTP/1.1
+        GET /api/alliance/campaigns/sustainability HTTP/1.1
 
     responds
 
@@ -147,7 +147,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
         .. code-block:: http
 
-            DELETE /api/alliance/campaign/boxes-enclosures HTTP/1.1
+            DELETE /api/alliance/campaign/sustainability HTTP/1.1
         """
         #pylint:disable=useless-super-delegation
         return super(CampaignAPIView, self).delete(request, *args, **kwargs)
@@ -172,7 +172,7 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
     """
     Lists campaigns
 
-    Lists campaigns that belongs to an account.
+    Lists campaigns that belongs to a profile.
 
     **Tags**: assessments
 
@@ -207,7 +207,7 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
         """
         Creates a campaign
 
-        Creates a campaign.
+        Creates a campaign against which profiles can be assessed.
 
         **Tags**: assessments
 
@@ -220,9 +220,7 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
         .. code-block:: json
 
             {
-                "slug": "construction",
-                "account": "alliance",
-                "title": "Assessment on sustainable construction practices"
+                "title": "Sustainable construction practices"
             }
 
         responds
@@ -230,9 +228,8 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
         .. code-block:: json
 
             {
-                "slug": "construction",
-                "account": "alliance",
-                "title": "Assessment on sustainable construction practices"
+                "slug": "sustainable-construction-practices",
+                "title": "Sustainable construction practices"
             }
         """
         return self.create(request, *args, **kwargs)

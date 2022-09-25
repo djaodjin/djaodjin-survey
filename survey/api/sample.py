@@ -39,8 +39,8 @@ from ..compat import six, is_authenticated
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..mixins import AccountMixin, SampleMixin
 from ..models import Answer, Choice, Sample, Unit, UnitEquivalences
-from .serializers import (AnswerSerializer, SampleAnswerSerializer,
-    SampleCreateSerializer, SampleSerializer)
+from .serializers import (AnswerSerializer, NoModelSerializer,
+    SampleAnswerSerializer, SampleCreateSerializer, SampleSerializer)
 from ..utils import datetime_or_now, get_question_model, is_sqlite3
 
 
@@ -158,12 +158,14 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
 
     @property
     def unit(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_unit'):
             self._unit = self.question.default_unit
         return self._unit
 
     @property
     def question(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_question'):
             if self.sample:
                 self._question = get_object_or_404(
@@ -288,7 +290,7 @@ class SampleAPIView(SampleMixin, generics.RetrieveAPIView):
     """
     Retrieves a sample
 
-    Returns the state of a ``Sample`` (frozen or not) and other meta data.
+    Returns top level information about a sample.
 
     **Tags**: assessments
 
@@ -308,7 +310,7 @@ class SampleAPIView(SampleMixin, generics.RetrieveAPIView):
         "updated_at": "2018-01-24T17:03:34.926193Z",
         "is_frozen": false,
         "account": "supplier-1",
-        "campaign": "best-practices"
+        "campaign": "sustainability"
     }
     """
     serializer_class = SampleSerializer
@@ -492,7 +494,7 @@ LEFT OUTER JOIN answers
 
 class SampleAnswersAPIView(SampleAnswersMixin, generics.ListCreateAPIView):
     """
-    Lists measurements from a sample
+    Lists answers
 
     The list returned contains at least one measurement for each question
     in the campaign. If there are no measurement yet on a question, ``measured``
@@ -651,6 +653,7 @@ class SampleAnswersAPIView(SampleAnswersMixin, generics.ListCreateAPIView):
     # Used to POST and create an answer.
     @property
     def question(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_question'):
             self._question = get_object_or_404(
                 get_question_model().objects.all(), path=self.path)
@@ -672,7 +675,7 @@ class SampleAnswersAPIView(SampleAnswersMixin, generics.ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         """
-        Updates a measurement in a sample
+        Updates an answer
 
         This API end-point attaches a measurement (``measured`` field)
         in ``unit`` (meters, kilograms, etc.) to a question (also called metric)
@@ -693,7 +696,7 @@ class SampleAnswersAPIView(SampleAnswersMixin, generics.ListCreateAPIView):
         .. code-block:: http
 
             POST /api/supplier-1/sample/724bf9648af6420ba79c8a37f962e97e/\
-answers/construction/packaging-design HTTP/1.1
+answers/construction HTTP/1.1
 
         .. code-block:: json
 
@@ -707,37 +710,6 @@ answers/construction/packaging-design HTTP/1.1
         .. code-block:: json
 
             {
-                "question": {
-                    "path": "/construction/packaging-design",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "title": "Packaging design"
-                },
                 "created_at": "2020-09-28T00:00:00.000000Z",
                 "collected_by": "steve",
                 "measured": "mostly-no",
@@ -923,7 +895,7 @@ class SampleCandidatesMixin(SampleMixin):
 class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
                               generics.ListCreateAPIView):
     """
-    Retrieves candidate measurements for a sample
+    Lists candidate answers
 
     The list returned contains at least one answer for each question
     in the campaign. If there are no answer yet on a question, ``measured``
@@ -1079,6 +1051,11 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
     """
     serializer_class = SampleAnswerSerializer
 
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return NoModelSerializer
+        return super(SampleCandidatesAPIView, self).get_serializer_class()
+
     def create(self, request, *args, **kwargs):
         #pylint:disable=too-many-locals
         if self.sample.is_frozen:
@@ -1184,10 +1161,11 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
         return self.get_candidates()
 
     @swagger_auto_schema(responses={
-        200: OpenAPIResponse("Create successful", SampleAnswerSerializer, many=True)})
+        201: OpenAPIResponse("Create successful", SampleAnswerSerializer,
+        many=True)})
     def post(self, request, *args, **kwargs):
         """
-        Uses candidate measurements for a sample
+        Uses candidate answers
 
         The list returned contains at least one answer for each question
         in the campaign. If there are no answer yet on a question, ``measured``
@@ -1352,7 +1330,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
 
 class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
     """
-    Freezes a sample of measurements
+    Freezes a sample
 
     The ``sample`` must belong to ``organization``.
 
@@ -1378,7 +1356,7 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
         {
             "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
             "created_at": "2018-01-24T17:03:34.926193Z",
-            "campaign": "best-practices",
+            "campaign": "sustainability",
             "is_frozen": true
         }
     """
@@ -1393,7 +1371,7 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
 
 class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
     """
-    Resets measurements in a sample
+    Clears answers
 
     The ``sample`` must belong to ``organization``.
 
@@ -1419,7 +1397,7 @@ class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
         {
             "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
             "created_at": "2018-01-24T17:03:34.926193Z",
-            "campaign": "best-practices"
+            "campaign": "sustainability"
         }
     """
     serializer_class = SampleSerializer
@@ -1468,7 +1446,7 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
             {
                 "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
                 "created_at": "2018-01-24T17:03:34.926193Z",
-                "campaign": "best-practices",
+                "campaign": "sustainability",
                 "is_frozen": false,
                 "extra": null
             }
@@ -1486,6 +1464,8 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
         """
         Creates a new sample
 
+        Creates a new sample to record qualitative and/or quantitative data.
+
         **Tags**: assessments
 
         **Examples**
@@ -1497,7 +1477,6 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
         .. code-block:: json
 
             {
-                "campaign": "best-practices"
             }
 
         responds
@@ -1507,7 +1486,7 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
             {
                 "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
                 "created_at": "2018-01-24T17:03:34.926193Z",
-                "campaign": "best-practices"
+                "campaign": "sustainability"
             }
         """
         #pylint:disable=useless-super-delegation

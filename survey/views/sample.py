@@ -60,6 +60,7 @@ class AnswerUpdateView(SampleMixin, UpdateView):
 
     @property
     def question(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_question'):
             if self.sample:
                 self._question = get_object_or_404(
@@ -207,6 +208,7 @@ class SampleCreateView(AccountMixin, CreateView):
 
     @property
     def campaign(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_campaign'):
             self._campaign = get_object_or_404(Campaign.objects.all(),
                 slug=self.kwargs.get(self.campaign_url_kwarg))

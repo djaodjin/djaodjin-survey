@@ -74,7 +74,7 @@ class EquivalenceFilter(BaseFilterBackend):
 
 class UnitDetailAPIView(generics.RetrieveAPIView):
     """
-    Retrieves a unit of measurement
+    Retrieves a unit
 
     Retrieves the details of a ``Unit``.
 

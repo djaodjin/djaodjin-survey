@@ -26,11 +26,11 @@
 URLs for the djaodjin-survey django app testsite.
 """
 
+import debug_toolbar
 from django.views.generic import RedirectView, TemplateView
+from rules.urldecorators import include, url
 from survey.compat import reverse_lazy
 from survey.settings import SLUG_RE
-from rules.urldecorators import include, url
-import debug_toolbar
 
 from .api.auth import LoginAPIView
 from .api.accounts import AccountsAPIView

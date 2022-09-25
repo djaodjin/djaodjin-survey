@@ -26,7 +26,7 @@ import logging, re
 from collections import OrderedDict
 
 from django.db import transaction
-from django.db.models import F, Max
+from django.db.models import F, Max, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, response as http
@@ -55,25 +55,30 @@ class MatrixCreateAPIView(generics.ListCreateAPIView):
 
     .. code-block:: http
 
-        GET /api/matrix/ HTTP/1.1
+        GET /api/energy-utility/reporting/sustainability/matrix HTTP/1.1
 
     responds
 
     .. code-block:: json
 
         {
-           "slug": "all",
-           "title": "All accounts against all questions",
-           "metric": {
-               "slug": "all-questions",
-               "title": "All questions",
-               "predicates": []
-           },
-           "cohorts": [{
-               "slug": "all-accounts",
-               "title": "All accounts",
-               "predicates": []
-           }]
+          "count": 1,
+          "results": [
+            {
+              "slug": "all",
+              "title": "All accounts against all questions",
+              "metric": {
+                "slug": "all-questions",
+                "title": "All questions",
+                "predicates": []
+              },
+              "cohorts": [{
+                 "slug": "all-accounts",
+                 "title": "All accounts",
+                 "predicates": []
+              }]
+            }
+          ]
         }
     """
     serializer_class = MatrixSerializer
@@ -89,7 +94,7 @@ class MatrixCreateAPIView(generics.ListCreateAPIView):
 
         .. code-block:: http
 
-            POST /api/matrix/ HTTP/1.1
+            POST /api/energy-utility/reporting/sustainability/matrix HTTP/1.1
 
         .. code-block:: json
 
@@ -147,14 +152,14 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
     .. code-block:: json
 
-        [{
+        {
            "slug": "languages",
            "title": "All cohorts for all questions",
            "values": {
                "portfolio-a": 0.1,
                "portfolio-b": 0.5
            }
-        }]
+        }
     """
 
     serializer_class = MatrixSerializer
@@ -185,14 +190,11 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
         .. code-block:: json
 
-            [{
+            {
               "slug": "languages",
               "title": "All cohorts for all questions",
-              "values":{
-                "portfolio-a": 0.1,
-                "portfolio-b": 0.5
-             }
-            }]
+              "cohorts": []
+            }
         """
         #pylint:disable=useless-super-delegation
         return super(MatrixDetailAPIView, self).put(
@@ -253,13 +255,14 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
     @property
     def matrix(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_matrix'):
             self._matrix = Matrix.objects.filter(
                 slug=self.kwargs.get(self.matrix_url_kwarg)).first()
         return self._matrix
 
     def get_accounts(self):
-        #pylint:disable=unused-argument,no-self-use
+        #pylint:disable=unused-argument
         return get_account_model().objects.all()
 
     def get_likely_metric(self, cohort_slug):
@@ -343,11 +346,11 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
         return http.Response(result)
 
 
-class EditableFilterQuerysetMixin(object):
+class EditableFilterQuerysetMixin(AccountMixin):
 
-    @staticmethod
-    def get_queryset():
-        return EditableFilter.objects.all().order_by('slug')
+    def get_queryset(self):
+        return EditableFilter.objects.filter(
+            Q(account__isnull=True) | Q(account=self.account)).order_by('slug')
 
 
 class EditableFilterListAPIView(EditableFilterQuerysetMixin,
@@ -402,6 +405,7 @@ class EditableFilterDetailAPIView(AccountMixin,
 
     @property
     def editable_filter(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_editable_filter'):
             self._editable_filter = get_object_or_404(
                 EditableFilter.objects.all(),
@@ -420,7 +424,7 @@ class EditableFilterDetailAPIView(AccountMixin,
 class AccountsFilterDetailAPIView(CreateModelMixin,
                                   EditableFilterDetailAPIView):
     """
-    Retrieves a fitler
+    Retrieves a profiles fitler
 
     **Tags**: reporting
 
@@ -434,14 +438,13 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
 
     .. code-block:: json
 
-        {
-            "count": 1,
-            "previous": null,
-            "next": null,
-            "slug": "boxes-and-enclosures",
-            "title": "Boxes & enclosures",
-            "predicates": [],
-            "results": [{
+         {
+           "slug": "suppliers",
+           "title": "Energy utility suppliers",
+           "extra": null,
+           "predicates": [],
+           "likely_metric": null,
+           "results": [{
                 "facility": "Main factory",
                 "fuel_type": "natural-gas",
                 "allocation": "Energy utility",
@@ -472,36 +475,30 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
         .. code-block:: json
 
             {
-                "slug": "suppliers",
                 "title": "Energy utility suppliers",
-                "tags": "cohort, aggregate",
-                "predicates": [{
-                    "rank": 1,
-                    "operator": "contains",
-                    "operand": "Energy",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }],
-                "likely_metric": null
+                "predicates": []
             }
 
         responds
 
         .. code-block:: json
 
-            {
-                "slug": "suppliers",
-                "title": "Energy utility suppliers",
-                "tags": "cohort, aggregate",
-                "predicates": [{
-                    "rank": 1,
-                    "operator": "contains",
-                    "operand": "Energy",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }],
-                "likely_metric": null
-            }
+         {
+           "slug": "suppliers",
+           "title": "Energy utility suppliers",
+           "extra": null,
+           "predicates": [],
+           "likely_metric": null,
+           "results": [{
+                "facility": "Main factory",
+                "fuel_type": "natural-gas",
+                "allocation": "Energy utility",
+                "created_at": null,
+                "ends_at": null,
+                "amount": 100,
+                "unit": "mmbtu"
+            }]
+        }
         """
         #pylint:disable=useless-super-delegation
         return super(AccountsFilterDetailAPIView, self).put(
@@ -509,7 +506,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
 
     def delete(self, request, *args, **kwargs):
         """
-        Deletes a fitler
+        Deletes a profiles fitler
 
         **Tags**: reporting
 
@@ -525,7 +522,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
 
     def post(self, request, *args, **kwargs):
         """
-        Updates a fitler
+        Updates a profiles fitler
 
         **Tags**: reporting
 
@@ -577,7 +574,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
 
 class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
     """
-    Retrieves a single account inside a accounts filter
+    Retrieves a profile in an enumerated profiles filter
 
     **Tags**: reporting
 
@@ -591,28 +588,10 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     .. code-block:: json
 
-        {
-            "count": 1,
-            "previous": null,
-            "next": null,
-            "title": "Energy utility suppliers",
-            "predicates": [{
-                "rank": 1,
-                "operator": "contains",
-                "operand": "Energy",
-                "field": "extra",
-                "selector": "keepmatching"
-            }],
-            "results": [{
-                "facility": "Main factory",
-                "fuel_type": "natural-gas",
-                "allocation": "Energy utility",
-                "created_at": null,
-                "ends_at": null,
-                "amount": 100,
-                "unit": "mmbtu"
-            }]
-        }
+         {
+           "title": "Main factory",
+           "predicates": []
+         }
     """
     lookup_field = 'rank'
     serializer_class = EditableFilterSerializer
@@ -653,7 +632,7 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     def put(self, request, *args, **kwargs):
         """
-        Updates a single account inside a accounts filter
+        Updates a profile in an enumerated profiles filter
 
         **Tags**: reporting
 
@@ -666,13 +645,8 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
         .. code-block:: json
 
             {
-                "facility": "Main factory",
-                "fuel_type": "natural-gas",
-                "allocation": "Energy utility",
-                "created_at": null,
-                "ends_at": null,
-                "amount": 100,
-                "unit": "mmbtu"
+                "title": "Main factory",
+                "predicates": []
             }
 
         responds
@@ -680,21 +654,17 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
         .. code-block:: json
 
             {
-                "facility": "Main factory",
-                "fuel_type": "natural-gas",
-                "allocation": "Energy utility",
-                "created_at": null,
-                "ends_at": null,
-                "amount": 100,
-                "unit": "mmbtu"
+                "title": "Main factory",
+                "predicates": []
             }
         """
+        #pylint:disable=useless-parent-delegation
         return super(AccountsFilterEnumeratedAPIView, self).put(
             request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
         """
-        Deletes a single account inside a accounts filter
+        Deletes a profile in an enumerated profiles filter
 
         **Tags**: reporting
 
@@ -704,13 +674,14 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
 
              DELETE /api/energy-utility/filters/accounts/suppliers/1 HTTP/1.1
         """
+        #pylint:disable=useless-parent-delegation
         return super(AccountsFilterEnumeratedAPIView, self).delete(
             request, *args, **kwargs)
 
 
 class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
     """
-    Retrieves a fitler
+    Retrieves a questions fitler
 
     **Tags**: reporting
 
@@ -727,21 +698,19 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
         {
             "slug": "suppliers",
             "title": "Energy utility suppliers",
-            "tags": "cohort, aggregate",
             "predicates": [{
                 "rank": 1,
                 "operator": "contains",
                 "operand": "Energy",
                 "field": "extra",
                 "selector": "keepmatching"
-            }],
-            "likely_metric": null
+            }]
         }
     """
 
     def put(self, request, *args, **kwargs):
         """
-        Updates a fitler
+        Updates a questions fitler
 
         **Tags**: reporting
 
@@ -756,15 +725,13 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
             {
                 "slug": "suppliers",
                 "title": "Energy utility suppliers",
-                "tags": "cohort, aggregate",
                 "predicates": [{
                     "rank": 1,
                     "operator": "contains",
                     "operand": "Energy",
                     "field": "extra",
                     "selector": "keepmatching"
-                }],
-                "likely_metric": null
+                }]
             }
 
         responds
@@ -774,15 +741,13 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
             {
                 "slug": "suppliers",
                 "title": "Energy utility suppliers",
-                "tags": "cohort, aggregate",
                 "predicates": [{
                     "rank": 1,
                     "operator": "contains",
                     "operand": "Energy",
                     "field": "extra",
                     "selector": "keepmatching"
-                }],
-                "likely_metric": null
+                }]
             }
         """
         #pylint:disable=useless-super-delegation
@@ -791,7 +756,7 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
 
     def delete(self, request, *args, **kwargs):
         """
-        Deletes a fitler
+        Deletes a questions fitler
 
         **Tags**: reporting
 
@@ -828,20 +793,13 @@ class EditableFilterObjectsAPIView(generics.ListCreateAPIView):
     """
     Base class to filter accounts and questions
     """
-    pagination_class = EditableFilterPagination
+#    pagination_class = EditableFilterPagination
     serializer_class = None # override in subclasses
     lookup_field = 'slug'
     lookup_url_kwarg = 'editable_filter'
 
     def get_queryset(self):
         return self.get_serializer_class().Meta.model.objects.all()
-
-    def get(self, request, *args, **kwargs): #pylint: disable=unused-argument
-        self.editable_filter = generics.get_object_or_404(
-            EditableFilter.objects.all(),
-            slug=self.kwargs[self.lookup_url_kwarg])
-        return super(EditableFilterObjectsAPIView, self).get(
-            request, *args, **kwargs)
 
     def post(self, request, *args, **kwargs):
         """
@@ -900,7 +858,7 @@ class EditableFilterObjectsAPIView(generics.ListCreateAPIView):
 
 class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
     """
-    Filtered list of ``EditableFilter``.
+    Lists profiles filters
 
     **Tags**: reporting
 
@@ -928,10 +886,41 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
     """
     serializer_class = get_account_serializer()
 
+    def post(self, request, *args, **kwargs):
+        """
+        Creates a profiles fitler
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             POST /api/energy-utility/filters/accounts HTTP/1.1
+
+        .. code-block:: json
+
+            {
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+               "slug": "supplier-1",
+               "printable_name": "Supplier 1",
+               "extra": null
+            }
+        """
+        #pylint:disable=useless-super-delegation
+        return super(AccountsFilterListAPIView, self).post(
+            request, *args, **kwargs)
+
 
 class QuestionsFilterListAPIView(EditableFilterObjectsAPIView):
     """
-    Filtered list of ``Question``.
+    Lists questions filters
 
     **Tags**: reporting
 
@@ -952,35 +941,43 @@ class QuestionsFilterListAPIView(EditableFilterObjectsAPIView):
             "results": [{
               "path": "/construction/product-design",
               "title": "Product Design",
-              "default_unit": {
-                  "slug": "assessment",
-                  "title": "assessments",
-                  "system": "enum",
-                  "choices": [
-                    {
-                      "rank": 1,
-                      "text": "mostly-yes",
-                       "descr": "Mostly yes"
-                    },
-                    {
-                      "rank": 2,
-                      "text": "yes",
-                      "descr": "Yes"
-                    },
-                    {
-                      "rank": 3,
-                      "text": "no",
-                      "descr": "No"
-                    },
-                    {
-                      "rank": 4,
-                      "text": "mostly-no",
-                      "descr": "Mostly no"
-                    }
-                  ]
-              },
+              "default_unit": "assessment",
               "ui_hint": "radio"
             }]
         }
     """
     serializer_class = get_question_serializer()
+
+    def post(self, request, *args, **kwargs):
+        """
+        Creates a questions fitler
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             POST /api/energy-utility/filters/questions HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "title": "Construction",
+                "default_unit": "assessment",
+                "path": "/construction/product-design"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "title": "Construction",
+                "default_unit": "assessment",
+                "path": "/construction/product-design"
+            }
+        """
+        #pylint:disable=useless-super-delegation
+        return super(QuestionsFilterListAPIView, self).post(
+            request, *args, **kwargs)
