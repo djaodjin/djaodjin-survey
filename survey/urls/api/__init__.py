@@ -22,16 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import include, re_path
+from ...compat import include, path
 
 
 urlpatterns = [
-    re_path(r'^', include('survey.urls.api.noauth')),
-    re_path(r'^', include('survey.urls.api.campaigns')),
-    re_path(r'^', include('survey.urls.api.filters')), # No trailing '/'
-                                                  # because of PATH_RE.
-    re_path(r'^', include('survey.urls.api.matrix')), # No trailing '/'
-                                                  # because of PATH_RE.
-    re_path(r'^', include('survey.urls.api.sample')),
-    re_path(r'^', include('survey.urls.api.portfolios')),
+    path('', include('survey.urls.api.noauth')),
+    path('', include('survey.urls.api.campaigns')),
+    path('', include('survey.urls.api.filters')),
+    path('', include('survey.urls.api.matrix')),
+    path('', include('survey.urls.api.sample')),
+    path('', include('survey.urls.api.portfolios')),
 ]

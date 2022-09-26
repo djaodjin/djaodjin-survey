@@ -26,9 +26,9 @@
 URLs for djaodjin-survey Django app
 """
 
-from ..compat import include, re_path
+from ..compat import include, path
 
 urlpatterns = [
-    re_path(r'^api/', include('survey.urls.api')),
-    re_path(r'^', include('survey.urls.views')),
+    path('api/', include('survey.urls.api')),
+    path('', include('survey.urls.views')),
 ]

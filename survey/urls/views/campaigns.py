@@ -22,8 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ... import settings
-from ...compat import re_path
+from ...compat import path
 from ...views.campaigns import (CampaignListView, CampaignPublishView,
     CampaignResultView, CampaignSendView, CampaignUpdateView)
 from ...views.createquestion import (QuestionCreateView, QuestionDeleteView,
@@ -32,30 +31,30 @@ from ...views.matrix import RespondentListView
 
 
 urlpatterns = [
-    re_path(r'^(?P<campaign>%s)/send/' % settings.SLUG_RE,
+    path(r'<slug:campaign>/send/',
         CampaignSendView.as_view(), name='survey_send'),
-    re_path(r'^(?P<campaign>%s)/result/' % settings.SLUG_RE,
+    path(r'<slug:campaign>/result/',
         CampaignResultView.as_view(), name='survey_result'),
-    re_path(r'^(?P<campaign>%s)/respondents/' % settings.SLUG_RE,
+    path(r'<slug:campaign>/respondents/',
         RespondentListView.as_view(), name='survey_respondent_list'),
-    re_path(r'^(?P<campaign>%s)/publish/' % settings.SLUG_RE,
+    path(r'<slug:campaign>/publish/',
         CampaignPublishView.as_view(), name='survey_publish'),
-    re_path(r'^(?P<campaign>%s)/edit/' % settings.SLUG_RE,
+    path(r'<slug:campaign>/edit/',
         CampaignUpdateView.as_view(), name='survey_edit'),
 
-    re_path(r'^(?P<campaign>%s)/new/' % settings.SLUG_RE,
+    path(r'<slug:campaign>/new/',
         QuestionCreateView.as_view(), name='survey_question_new'),
-    re_path(r'^(?P<campaign>%s)/(?P<num>\d+)/down/' % settings.SLUG_RE,
+    path(r'<slug:campaign>/<int:num>/down/',
         QuestionRankView.as_view(), name='survey_question_down'),
-    re_path(r'^(?P<campaign>%s)/(?P<num>\d+)/up/' % settings.SLUG_RE,
+    path(r'<slug:campaign>/<int:num>/up/',
         QuestionRankView.as_view(direction=-1), name='survey_question_up'),
-    re_path(r'^(?P<campaign>%s)/(?P<num>\d+)/delete/' % settings.SLUG_RE,
+    path(r'<slug:campaign>/<int:num>/delete/',
         QuestionDeleteView.as_view(), name='survey_question_delete'),
-    re_path(r'^(?P<campaign>%s)/(?P<num>\d+)/edit/' % settings.SLUG_RE,
+    path(r'<slug:campaign>/<int:num>/edit/',
         QuestionUpdateView.as_view(), name='survey_question_edit'),
 
-    re_path(r'^(?P<campaign>%s)/' % settings.SLUG_RE,
+    path('<slug:campaign>/',
         QuestionListView.as_view(), name='survey_question_list'),
-    re_path(r'^',
+    path('',
         CampaignListView.as_view(), name='survey_campaign_list'),
 ]

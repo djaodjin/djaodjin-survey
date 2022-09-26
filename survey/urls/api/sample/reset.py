@@ -22,13 +22,11 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from .... import settings
 from ....api.sample import SampleResetAPIView
-from ....compat import re_path
+from ....compat import path
 
 
 urlpatterns = [
-    re_path(r'^sample/(?P<sample>%s)/reset/(?P<path>%s)$' % (
-        settings.SLUG_RE, settings.PATH_RE),
+    path('sample/<slug:sample>/reset/<path:path>',
         SampleResetAPIView.as_view(), name='survey_api_sample_reset'),
 ]

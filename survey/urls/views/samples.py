@@ -22,25 +22,22 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ... import settings
-from ...compat import re_path
+from ...compat import path
 from ...views.sample import (AnswerUpdateView, SampleCreateView,
     SampleResetView, SampleResultView, SampleUpdateView)
 
 
 urlpatterns = [
-    re_path(r'^(?P<campaign>%s)/(?P<sample>%s)/reset/' % (
-        settings.SLUG_RE, settings.SLUG_RE),
+    path('<slug:campaign>/<slug:sample>/reset/',
         SampleResetView.as_view(), name='survey_sample_reset'),
-    re_path(r'^(?P<campaign>%s)/(?P<sample>%s)/results/' % (
-        settings.SLUG_RE, settings.SLUG_RE),
+    path('<slug:campaign>/<slug:sample>/results/',
         SampleResultView.as_view(), name='survey_sample_results'),
-    re_path(r'^(?P<campaign>%s)/(?P<sample>%s)/(?:(?P<rank>\d+)/)'
-        % (settings.SLUG_RE, settings.SLUG_RE),
+    path('<slug:campaign>/<slug:sample>/<int:rank>/',
         AnswerUpdateView.as_view(), name='survey_answer_update'),
-    re_path(r'^(?P<campaign>%s)/(?P<sample>%s)/' % (
-        settings.SLUG_RE, settings.SLUG_RE),
+    path('<slug:campaign>/<slug:sample>/',
+        AnswerUpdateView.as_view(), name='survey_answer_update_index'),
+    path('<slug:campaign>/<slug:sample>/',
         SampleUpdateView.as_view(), name='survey_sample_update'),
-    re_path(r'^(?P<campaign>%s)/' % settings.SLUG_RE,
+    path('<slug:campaign>/',
         SampleCreateView.as_view(), name='survey_sample_new'),
 ]

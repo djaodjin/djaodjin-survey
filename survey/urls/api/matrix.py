@@ -22,14 +22,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ... import settings
 from ...api.matrix import MatrixCreateAPIView, MatrixDetailAPIView
-from ...compat import re_path
+from ...compat import path
 
 
 urlpatterns = [
-    re_path(r'^matrix/(?P<path>%s)$' % settings.NON_EMPTY_PATH_RE,
+    path(r'^matrix/<path:path>',
         MatrixDetailAPIView.as_view(), name='matrix_api'),
-    re_path(r'^matrix$',
+    path('matrix',
         MatrixCreateAPIView.as_view(), name='matrix_api_base'),
 ]

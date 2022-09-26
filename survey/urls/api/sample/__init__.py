@@ -22,10 +22,10 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ....compat import include, re_path
+from ....compat import include, path
 
 
 urlpatterns = [
-    re_path(r'^', include('survey.urls.api.sample.reset')),
-    re_path(r'^', include('survey.urls.api.sample.update')),
+    path('', include('survey.urls.api.sample.reset')),
+    path('', include('survey.urls.api.sample.update')),
 ]

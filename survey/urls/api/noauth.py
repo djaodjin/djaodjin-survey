@@ -22,14 +22,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ... import settings
 from ...api.units import UnitDetailAPIView, UnitListAPIView
-from ...compat import re_path
+from ...compat import path
 
 
 urlpatterns = [
-    re_path(r'^units/(?P<unit>%s)$' % settings.SLUG_RE,
+    path('units/<slug:unit>',
         UnitDetailAPIView.as_view(), name='survey_api_unit'),
-    re_path(r'^units$',
+    path('units',
         UnitListAPIView.as_view(), name='survey_api_units'),
 ]

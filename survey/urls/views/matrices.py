@@ -22,23 +22,22 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ... import settings
 from ...views.matrix import (MatrixListView, MatrixDetailView,
     AccountListView, QuestionListView)
-from ...compat import re_path
+from ...compat import path
 
 
 urlpatterns = [
-    re_path(r'^accounts/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
+    path('accounts/<slug:editable_filter>/',
         AccountListView.as_view(), name='accounts_list'),
-    re_path(r'^accounts/',
+    path('accounts/',
         AccountListView.as_view(), name='accounts_base'),
-    re_path(r'^questions/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
+    path('questions/<slug:editable_filter>/',
         QuestionListView.as_view(), name='questions_list'),
-    re_path(r'^questions/',
+    path('questions/',
         QuestionListView.as_view(), name='questions_base'),
-    re_path(r'^(?P<path>%s)/' % settings.SLUG_RE,
+    path('<path:path>/',
         MatrixDetailView.as_view(), name='matrix_chart'),
-    re_path(r'^$',
+    path('',
         MatrixListView.as_view(), name='matrix_base'),
 ]

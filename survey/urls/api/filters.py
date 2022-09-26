@@ -22,40 +22,37 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ... import settings
 from ...api.matrix import (AccountsFilterDetailAPIView,
     AccountsFilterListAPIView, AccountsFilterEnumeratedAPIView,
     EditableFilterListAPIView, QuestionsFilterDetailAPIView,
     QuestionsFilterListAPIView)
 from ...api.metrics import AccountsValuesAPIView, AccountsFilterValuesAPIView
-from ...compat import re_path
+from ...compat import path
 
 
 urlpatterns = [
-    re_path(r'^filters/accounts/values/?',
+    path('filters/accounts/values',
         AccountsValuesAPIView.as_view(),
         name='survey_api_accounts_values'),
-    re_path(r'^filters/accounts/(?P<editable_filter>%s)/values/?' %
-        settings.SLUG_RE,
+    path('filters/accounts/<slug:editable_filter>/values',
         AccountsFilterValuesAPIView.as_view(),
         name='survey_api_accounts_filter_values'),
-    re_path(r'^filters/accounts/(?P<editable_filter>%s)/(?P<rank>[0-9]+)/?' %
-        settings.SLUG_RE,
+    path(r'^filters/accounts/<slug:editable_filter>/<int:rank>',
         AccountsFilterEnumeratedAPIView.as_view(),
         name='survey_api_accounts_filter_enumerated'),
-    re_path(r'^filters/accounts/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
+    path('filters/accounts/<slug:editable_filter>',
         AccountsFilterDetailAPIView.as_view(),
         name='survey_api_accounts_filter'),
-    re_path(r'^filters/accounts/?',
+    path('filters/accounts',
         AccountsFilterListAPIView.as_view(),
         name='survey_api_accounts_filter_list'),
-    re_path(r'^filters/questions/(?P<editable_filter>%s)/?' % settings.SLUG_RE,
+    path('filters/questions/<slug:editable_filter>',
         QuestionsFilterDetailAPIView.as_view(),
         name='survey_api_questions_filter'),
-    re_path(r'^filters/questions/?',
+    path('filters/questions',
         QuestionsFilterListAPIView.as_view(),
         name='survey_api_questions_filter_list'),
-    re_path(r'^filters/?',
+    path('filters',
         EditableFilterListAPIView.as_view(),
         name='survey_api_filter_list'),
 ]

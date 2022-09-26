@@ -22,23 +22,19 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from .... import settings
 from ....api.sample import (SampleAPIView, SampleAnswersAPIView,
     SampleCandidatesAPIView, SampleRecentCreateAPIView, SampleFreezeAPIView)
-from ....compat import re_path
+from ....compat import path
 
 urlpatterns = [
-    re_path(r'^sample/(?P<sample>%s)/freeze/(?P<path>%s)$' % (
-        settings.SLUG_RE, settings.PATH_RE),
+    path('sample/<slug:sample>/freeze/<path:path>',
         SampleFreezeAPIView.as_view(), name='survey_api_sample_freeze'),
-    re_path(r'^sample/(?P<sample>%s)/candidates/(?P<path>%s)$' % (
-        settings.SLUG_RE, settings.PATH_RE),
+    path('sample/<slug:sample>/candidates/<path:path>',
         SampleCandidatesAPIView.as_view(), name='survey_api_sample_candidates'),
-    re_path(r'^sample/(?P<sample>%s)/answers/(?P<path>%s)$' % (
-        settings.SLUG_RE, settings.PATH_RE),
+    path('sample/<slug:sample>/answers/<path:path>',
         SampleAnswersAPIView.as_view(), name='survey_api_sample_answers'),
-    re_path(r'^sample/(?P<sample>%s)$' % settings.SLUG_RE,
+    path('sample/<slug:sample>',
         SampleAPIView.as_view(), name='survey_api_sample'),
-    re_path(r'^sample$',
+    path('sample',
         SampleRecentCreateAPIView.as_view(), name='survey_api_sample_new'),
 ]

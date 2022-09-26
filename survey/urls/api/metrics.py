@@ -24,15 +24,13 @@
 
 from rest_framework.views import APIView
 
-from ... import settings
 from ...api.metrics import AggregateMetricsAPIView
-from ...compat import re_path
+from ...compat import path
 
 
 urlpatterns = [
-    re_path(r'^metrics/aggregate/(?P<path>%s)' % settings.PATH_RE,
+    path('metrics/aggregate/<path:path>',
         AggregateMetricsAPIView.as_view(), name='survey_api_aggregate_metric'),
-    re_path(r'^metrics/aggregate/',
-        APIView.as_view(schema=None),
-        name='survey_api_aggregate_metric_base'),
+    path('metrics/aggregate/',
+        APIView.as_view(schema=None), name='survey_api_aggregate_metric_base'),
 ]

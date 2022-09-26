@@ -28,7 +28,7 @@ URLs for the djaodjin-survey django app testsite.
 
 import debug_toolbar
 from django.views.generic import RedirectView, TemplateView
-from rules.urldecorators import include, url
+from rules.urldecorators import include, re_path
 from survey.compat import reverse_lazy
 from survey.settings import SLUG_RE
 
@@ -36,28 +36,29 @@ from .api.auth import LoginAPIView
 from .api.accounts import AccountsAPIView
 
 urlpatterns = [
-    url(r'^__debug__/', include(debug_toolbar.urls)),
-    url(r'^$', TemplateView.as_view(template_name='index.html'), name='home'),
+    re_path(r'^__debug__/', include(debug_toolbar.urls)),
+    re_path(r'^$',
+        TemplateView.as_view(template_name='index.html'), name='home'),
     # survey.urls.api
-    url(r'^api/', include('survey.urls.api.noauth')),
-    url(r'^api/(?P<organization>%s)/' % SLUG_RE,
+    re_path(r'^api/', include('survey.urls.api.noauth')),
+    re_path(r'^api/(?P<organization>%s)/' % SLUG_RE,
         include('survey.urls.api.campaigns')),
-    url(r'^api/(?P<organization>%s)/' % SLUG_RE,
+    re_path(r'^api/(?P<organization>%s)/' % SLUG_RE,
         include('survey.urls.api.filters')),
-    url(r'^api/(?P<organization>%s)/' % SLUG_RE,
+    re_path(r'^api/(?P<organization>%s)/' % SLUG_RE,
         include('survey.urls.api.matrix')),
-    url(r'^api/(?P<organization>%s)/' % SLUG_RE,
+    re_path(r'^api/(?P<organization>%s)/' % SLUG_RE,
         include('survey.urls.api.sample')),
-    url(r'^api/(?P<organization>%s)/' % SLUG_RE,
+    re_path(r'^api/(?P<organization>%s)/' % SLUG_RE,
         include('survey.urls.api.portfolios')),
-    url(r'^api/accounts/grant-allowed', AccountsAPIView.as_view(),
+    re_path(r'^api/accounts/grant-allowed', AccountsAPIView.as_view(),
         name='api_grant_allowed_candidates'),
-    url(r'^api/accounts', AccountsAPIView.as_view(),
+    re_path(r'^api/accounts', AccountsAPIView.as_view(),
         name='api_account_candidates'),
-    url(r'api/auth/', LoginAPIView.as_view(), name='api_login'),
-    url(r'^app/', include('survey.urls.views')),
+    re_path(r'api/auth/', LoginAPIView.as_view(), name='api_login'),
+    re_path(r'^app/', include('survey.urls.views')),
 
-    url(r'^accounts/profile/',
+    re_path(r'^accounts/profile/',
         RedirectView.as_view(url=reverse_lazy('survey_campaign_list'))),
-    url(r'^', include('django.contrib.auth.urls')),
+    re_path(r'^', include('django.contrib.auth.urls')),
 ]

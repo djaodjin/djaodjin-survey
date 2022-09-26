@@ -74,5 +74,3 @@ QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
 SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')
 
 SLUG_RE = r'[a-zA-Z0-9_\-\+\.]+'
-PATH_RE = r'([a-zA-Z0-9\-]+/)*[a-zA-Z0-9\-]*'
-NON_EMPTY_PATH_RE = r'([a-zA-Z0-9\-]+/)*[a-zA-Z0-9\-]+'
