@@ -38,3 +38,10 @@ class Account(models.Model):
     full_name = models.CharField(max_length=150,
         help_text=_("Short description suitable for display"))
     extra = models.TextField(null=True)
+
+    def __str__(self):
+        return str(self.slug)
+
+    @property
+    def printable_name(self):
+        return self.full_name
