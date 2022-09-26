@@ -138,10 +138,10 @@ if logging.getLogger('gunicorn.error').handlers:
 
 MIDDLEWARE = (
     'debug_toolbar.middleware.DebugToolbarMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'testsite.authentication.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
@@ -237,3 +237,8 @@ DEBUG_TOOLBAR_CONFIG = {
 }
 
 INTERNAL_IPS = ('127.0.0.1', '::1')
+
+SURVEY = {
+    'ACCOUNT_LOOKUP_FIELD': 'slug',
+    'ACCOUNT_MODEL': 'testsite.Account'
+}

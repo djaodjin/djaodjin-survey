@@ -531,7 +531,7 @@ class Answer(models.Model):
     def __str__(self):
         if self.sample_id:
             return '%s-%d' % (self.sample.slug, self.rank)
-        return self.question.content.slug
+        return str(self.question.content)
 
     @property
     def as_text_value(self):

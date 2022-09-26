@@ -196,7 +196,8 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
     def get_queryset(self):
         queryset = Answer.objects.filter(
             question=self.editable_filter_question,
-            sample__account__filters__editable_filter=self.editable_filter)
+            sample__account__filters__editable_filter=self.editable_filter
+        ).order_by('created_at')
         return queryset
 
     def post(self, request, *args, **kwargs):
@@ -290,7 +291,6 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
                 unit=item.get('unit'),
                 measured=measured
             )]
-
         with transaction.atomic():
             for item in six.itervalues(by_accounts):
                 sample = item['sample']

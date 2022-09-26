@@ -31,7 +31,7 @@ from rest_framework import exceptions, serializers
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.settings import api_settings
 
-from survey.compat import is_authenticated
+from saas.compat import is_authenticated
 
 
 class JWTAuthentication(TokenAuthentication):

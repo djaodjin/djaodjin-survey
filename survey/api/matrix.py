@@ -25,11 +25,12 @@
 import logging, re
 from collections import OrderedDict
 
+from django.core.exceptions import FieldError
 from django.db import transaction
 from django.db.models import F, Max, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, response as http
+from rest_framework import generics, response as http, status
 from rest_framework.mixins import CreateModelMixin
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import PageNumberPagination
@@ -550,13 +551,19 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
         #pylint:disable=useless-super-delegation
         return self.create(request, *args, **kwargs)
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Create the `Account` (if necessary) and add it to the filter.
         with transaction.atomic():
             account_slug = serializer.validated_data.get('slug')
             extra = serializer.validated_data.get('extra')
             if account_slug:
-                account = get_object_or_404(get_account_model().objects.all(),
-                    slug=account_slug)
+                account_queryset = get_account_model().objects.all()
+                account_lookup_field = settings.ACCOUNT_LOOKUP_FIELD
+                filter_args = {account_lookup_field: account_slug}
+                account = get_object_or_404(account_queryset, **filter_args)
             else:
                 account = get_account_model().objects.create(
                     full_name=serializer.validated_data.get('full_name'),
@@ -566,10 +573,16 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
                 Max('rank')).get('rank__max')
             if not last_rank:
                 last_rank = 0
-            EditableFilterEnumeratedAccounts.objects.create(
+            enum_account = EditableFilterEnumeratedAccounts.objects.create(
                 account=account,
                 editable_filter=self.editable_filter,
                 rank=last_rank + 1)
+            account.rank = enum_account.rank
+
+        account_serializer = get_account_serializer()()
+        headers = self.get_success_headers(serializer.data)
+        return http.Response(account_serializer.to_representation(account),
+            status=status.HTTP_201_CREATED, headers=headers)
 
 
 class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -589,12 +602,12 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
     .. code-block:: json
 
          {
-           "title": "Main factory",
-           "predicates": []
+           "slug": "main-factory",
+           "full_name": "Main factory"
          }
     """
     lookup_field = 'rank'
-    serializer_class = EditableFilterSerializer
+    serializer_class = AccountsFilterAddSerializer
 
     def get_queryset(self):
         queryset = EditableFilterEnumeratedAccounts.objects.filter(
@@ -645,8 +658,7 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
         .. code-block:: json
 
             {
-                "title": "Main factory",
-                "predicates": []
+                "full_name": "Main factory"
             }
 
         responds
@@ -654,8 +666,8 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
         .. code-block:: json
 
             {
-                "title": "Main factory",
-                "predicates": []
+                "slug": "main-factory",
+                "full_name": "Main factory"
             }
         """
         #pylint:disable=useless-parent-delegation
@@ -689,15 +701,15 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
 
     .. code-block:: http
 
-         GET /api/energy-utility/filters/questions/suppliers HTTP/1.1
+         GET /api/energy-utility/filters/questions/governance HTTP/1.1
 
     responds
 
     .. code-block:: json
 
         {
-            "slug": "suppliers",
-            "title": "Energy utility suppliers",
+            "slug": "governance",
+            "title": "Governance questions",
             "predicates": [{
                 "rank": 1,
                 "operator": "contains",
@@ -718,13 +730,13 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
 
         .. code-block:: http
 
-             PUT /api/energy-utility/filters/questions/suppliers HTTP/1.1
+             PUT /api/energy-utility/filters/questions/governance HTTP/1.1
 
         .. code-block:: json
 
             {
-                "slug": "suppliers",
-                "title": "Energy utility suppliers",
+                "slug": "governance",
+                "title": "Governance questions",
                 "predicates": [{
                     "rank": 1,
                     "operator": "contains",
@@ -739,8 +751,8 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
         .. code-block:: json
 
             {
-                "slug": "suppliers",
-                "title": "Energy utility suppliers",
+                "slug": "governance",
+                "title": "Governance questions",
                 "predicates": [{
                     "rank": 1,
                     "operator": "contains",
@@ -764,7 +776,7 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
 
         .. code-block:: http
 
-             DELETE /api/energy-utility/filters/questions/suppliers HTTP/1.1
+             DELETE /api/energy-utility/filters/questions/governance HTTP/1.1
         """
         #pylint:disable=useless-super-delegation
         return super(QuestionsFilterDetailAPIView, self).delete(
@@ -884,7 +896,7 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
            }]
         }
     """
-    serializer_class = get_account_serializer()
+    serializer_class = EditableFilterSerializer
 
     def post(self, request, *args, **kwargs):
         """

@@ -55,7 +55,7 @@ urlpatterns = [
         name='api_grant_allowed_candidates'),
     re_path(r'^api/accounts', AccountsAPIView.as_view(),
         name='api_account_candidates'),
-    re_path(r'api/auth/', LoginAPIView.as_view(), name='api_login'),
+    re_path(r'api/auth', LoginAPIView.as_view(), name='api_login'),
     re_path(r'^app/', include('survey.urls.views')),
 
     re_path(r'^accounts/profile/',

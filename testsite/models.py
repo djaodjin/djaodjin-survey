@@ -22,27 +22,19 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import json
+from django.db import models
 
-from .compat import six
-
-def extra_as_internal(obj):
-    if not hasattr(obj, 'extra'):
-        return {}
-    if isinstance(obj.extra, six.string_types):
-        try:
-            obj.extra = json.loads(obj.extra)
-        except (TypeError, ValueError):
-            pass
-    return obj.extra
+from survey.compat import (gettext_lazy as _, import_string,
+    python_2_unicode_compatible)
 
 
-def get_extra(obj, attr_name, default=None):
-    if not hasattr(obj, 'extra'):
-        return default
-    if isinstance(obj.extra, six.string_types):
-        try:
-            obj.extra = json.loads(obj.extra)
-        except (TypeError, ValueError):
-            return default
-    return obj.extra.get(attr_name, default) if obj.extra else default
+@python_2_unicode_compatible
+class Account(models.Model):
+    """
+    Testsite Account model
+    """
+    slug = models.SlugField(max_length=150, unique=True, db_index=True,
+        help_text=_("Unique identifier that can be used in a URL"))
+    full_name = models.CharField(max_length=150,
+        help_text=_("Short description suitable for display"))
+    extra = models.TextField(null=True)

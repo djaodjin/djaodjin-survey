@@ -105,11 +105,19 @@ class AccountSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_printable_name(obj):
-        return obj.printable_name
+        try:
+            return obj.printable_name
+        except AttributeError:
+            pass
+        return obj.get_full_name()
 
     @staticmethod
     def get_picture(obj):
-        return obj.picture
+        try:
+            return obj.picture
+        except:
+            pass
+        return None
 
     @staticmethod
     def get_extra(obj):
@@ -320,6 +328,9 @@ class EditableFilterAnswerSerializer(AnswerSerializer):
     slug = serializers.SlugRelatedField(slug_field='slug',
         queryset=get_account_model().objects.all(),
         help_text=("Account this sample belongs to."))
+    unit = serializers.SlugRelatedField(
+        queryset=Unit.objects.all(), slug_field='slug',
+        help_text=_("Unit the measured field is in"))
 
     class Meta(object):
         model = AnswerSerializer.Meta.model
@@ -349,7 +360,7 @@ class EditableFilterSerializer(serializers.ModelSerializer):
 
     slug = serializers.CharField(required=False)
     likely_metric = serializers.SerializerMethodField()
-    predicates = EditablePredicateSerializer(many=True)
+    predicates = EditablePredicateSerializer(many=True, required=False)
     results = get_account_serializer()(many=True, required=False) # XXX do we still need this field?
 
     class Meta:
@@ -363,10 +374,10 @@ class EditableFilterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         editable_filter = EditableFilter(
-            title=validated_data['title'], extra=validated_data['extra'])
+            title=validated_data['title'], extra=validated_data.get('extra'))
         with transaction.atomic():
             editable_filter.save()
-            for predicate in validated_data['predicates']:
+            for predicate in validated_data.get('predicates', []):
                 predicate, _ = EditablePredicate.objects.get_or_create(
                     rank=predicate['rank'],
                     operator=predicate['operator'],
@@ -534,7 +545,8 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
 class AccountsFilterAddSerializer(serializers.ModelSerializer):
 
     slug = serializers.CharField(required=False)
-    full_name = serializers.CharField(required=False)
+    full_name = serializers.CharField()
+    extra = serializers.CharField(required=False)
 
     class Meta:
         model = get_account_model()

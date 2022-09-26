@@ -31,64 +31,68 @@
 },
 {
     "fields": {
-      "date_joined": "2022-01-01T00:00:00+00:00",
-      "email": "energy-utility@localhost.localdomain",
-      "first_name": "Donny",
-      "is_active": true,
-      "is_staff": true,
-      "is_superuser": true,
-      "last_login": "2022-01-01T00:00:00+00:00",
-      "last_name": "",
-      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
-      "username": "energy-utility"
+      "slug": "tspproject",
+      "full_name": "TSP"
     },
-    "model": "auth.User", "pk": 4
+    "model": "testsite.Account", "pk": 2
 },
 {
     "fields": {
-      "date_joined": "2022-01-01T00:00:00+00:00",
-      "email": "supplier-1@localhost.localdomain",
-      "first_name": "Steve",
-      "is_active": true,
-      "is_staff": true,
-      "is_superuser": true,
-      "last_login": "2022-01-01T00:00:00+00:00",
-      "last_name": "",
-      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
-      "username": "supplier-1"
+      "slug": "energy-utility",
+      "full_name": "Energy Utility"
     },
-    "model": "auth.User", "pk": 6
+    "model": "testsite.Account", "pk": 4
 },
 {
     "fields": {
-      "date_joined": "2022-01-01T00:00:00+00:00",
-      "email": "water-utility@localhost.localdomain",
-      "first_name": "Donny",
-      "is_active": true,
-      "is_staff": true,
-      "is_superuser": true,
-      "last_login": "2022-01-01T00:00:00+00:00",
-      "last_name": "",
-      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
-      "username": "water-utility"
+      "slug": "supplier-1",
+      "full_name": "Supplier 1"
     },
-    "model": "auth.User", "pk": 7
+    "model": "testsite.Account", "pk": 6
 },
 {
     "fields": {
-      "date_joined": "2022-01-01T00:00:00+00:00",
-      "email": "supplier-1@localhost.localdomain",
-      "first_name": "Donny",
-      "is_active": true,
-      "is_staff": true,
-      "is_superuser": true,
-      "last_login": "2022-01-01T00:00:00+00:00",
-      "last_name": "",
-      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
-      "username": "alliance"
+      "slug": "water-utility",
+      "full_name": "Water Utility"
     },
-    "model": "auth.User", "pk": 8
+    "model": "testsite.Account", "pk": 7
 },
+{
+  "fields": {
+    "slug": "alliance",
+    "full_name": "Alliance"
+  },
+  "model": "testsite.Account", "pk": 8
+},
+{
+  "fields" : {
+    "slug": "main-factory",
+    "full_name": "Main Factory"
+  },
+  "model" : "testsite.account", "pk" : 9
+},
+{
+    "fields": {
+      "slug": "dummy2",
+      "full_name": "Dummy2"
+    },
+    "model": "testsite.Account", "pk": 10
+},
+{
+    "fields": {
+      "slug": "dummy3",
+      "full_name": "Dummy3"
+    },
+    "model": "testsite.Account", "pk": 11
+},
+{
+    "fields": {
+      "slug": "dummy4",
+      "full_name": "Dummy4"
+    },
+    "model": "testsite.Account", "pk": 12
+},
+
 {
   "fields" : {
     "slug" : "survey-example",
@@ -177,6 +181,13 @@
   },
   "model" : "survey.unit", "pk" : 4
 },
+{ "fields": {
+    "slug": "tons",
+    "title": "Metric Tons",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 6
+},
 {
   "fields" : {
       "title": "Do you like the djaodjin-survey app...",
@@ -251,15 +262,15 @@
 },
 {
   "fields" : {
-      "title": "Additional Comments...",
-      "text" : "Additional Comments..."
+      "title": "GHG Emissions Scope1",
+      "text" : "GHG Emissions Scope1 ..."
   },
   "model" : "survey.content", "pk" : 4
 },
 {
   "fields" : {
-    "path": "/q4",
-    "ui_hint" : "text",
+    "path": "/sustainability/data-measured/ghg-emissions-measured/ghg-emissions-totals/ghg-emissions-scope1",
+    "ui_hint" : "number",
     "content": 4,
     "default_unit": 4
   },
@@ -307,4 +318,56 @@
     "ends_at": "2023-01-01T00:00:00+00:00"
   },
   "model": "survey.PortfolioDoubleOptIn", "pk": 3
+},
+{
+  "fields": {
+    "slug": "totals",
+    "title": "Total score",
+    "extra": "{\"tags\": [\"metric\"]}"
+  },
+  "model": "survey.editablefilter", "pk": 1
+},
+{
+  "fields": {
+    "slug": "boxes-and-enclosures",
+    "title": "Boxes & enclosures",
+    "extra": "{\"tags\": [\"cohort\"]}"
+  },
+  "model": "survey.editablefilter", "pk": 13
+},
+{
+  "fields": {
+    "rank": 0,
+    "editable_filter": 13,
+    "operator": "startswith",
+    "operand": "/metal/boxes-and-enclosures",
+    "field": "extra",
+    "selector": "keepmatching"
+  },
+  "model": "survey.editablepredicate", "pk": 13
+},
+{
+  "fields": {
+    "slug": "suppliers",
+    "title": "Energy utility suppliers",
+    "account": 4
+  },
+  "model": "survey.editablefilter", "pk": 14
+},
+{
+  "fields": {
+    "slug": "ghg-emissions",
+    "title": "GHG Emissions",
+    "account": 6,
+    "extra": "{\"path\":\"/sustainability/data-measured/ghg-emissions-measured/ghg-emissions-totals/ghg-emissions-scope1\"}"
+  },
+  "model": "survey.editablefilter", "pk": 15
+},
+{
+  "fields": {
+    "editable_filter": 15,
+    "account": 9,
+    "rank": 1
+  },
+  "model": "survey.EditableFilterEnumeratedAccounts", "pk": 1
 }]
