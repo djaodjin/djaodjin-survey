@@ -27,7 +27,7 @@ from ...compat import path
 
 
 urlpatterns = [
-    path(r'^matrix/<path:path>',
+    path('matrix/<path:path>',
         MatrixDetailAPIView.as_view(), name='matrix_api'),
     path('matrix',
         MatrixCreateAPIView.as_view(), name='matrix_api_base'),

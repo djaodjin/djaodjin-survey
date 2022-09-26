@@ -37,7 +37,7 @@ urlpatterns = [
     path('filters/accounts/<slug:editable_filter>/values',
         AccountsFilterValuesAPIView.as_view(),
         name='survey_api_accounts_filter_values'),
-    path(r'^filters/accounts/<slug:editable_filter>/<int:rank>',
+    path('filters/accounts/<slug:editable_filter>/<int:rank>',
         AccountsFilterEnumeratedAPIView.as_view(),
         name='survey_api_accounts_filter_enumerated'),
     path('filters/accounts/<slug:editable_filter>',
