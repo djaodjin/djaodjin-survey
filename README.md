@@ -29,10 +29,12 @@ Tested with
 - **Python:** 3.10, **Django:** 4.0 (latest), **Django Rest Framework:** 3.12
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
-0.7.0
+0.7.1
 
-  * filter portfolio double opt-in by creation date
-  * fixes missing timezone when parsing a date instead of a datetime
+  * accepts grant/request through redirects
+  * cleans up filters API
+  * handles Django and DRF request objects
+  * uses path() URL construct regularly
 
 [previous release notes](changelog)
 
