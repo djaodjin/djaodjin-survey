@@ -29,7 +29,7 @@ Tested with
 - **Python:** 3.10, **Django:** 4.0 (latest), **Django Rest Framework:** 3.12
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
-0.7.1
+0.7.2
 
   * accepts grant/request through redirects
   * cleans up filters API
