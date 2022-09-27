@@ -29,4 +29,6 @@ from ....compat import path
 urlpatterns = [
     path('sample/<slug:sample>/reset/<path:path>',
         SampleResetAPIView.as_view(), name='survey_api_sample_reset'),
+    path('sample/<slug:sample>/reset',
+        SampleResetAPIView.as_view(), name='survey_api_sample_reset_index'),
 ]
