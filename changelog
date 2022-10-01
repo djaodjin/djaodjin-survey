@@ -1,3 +1,9 @@
+0.7.3
+
+  * retires grant/request before they were accepted/denied
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sat,  1 Oct 2022 13:55:00 -0700
+
 0.7.2
 
   * fixes reset API with no path (regression)
