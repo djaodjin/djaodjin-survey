@@ -24,13 +24,16 @@
 
 import logging
 
+from dateutil.relativedelta import relativedelta
 from django.db import transaction
 from django.db.models import Q
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response as HttpResponse
 
 from .. import settings, signals
-from ..compat import six
+from ..compat import six, gettext_lazy as _
+from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..mixins import AccountMixin
 from ..models import PortfolioDoubleOptIn
 from .serializers import (NoModelSerializer, PortfolioOptInSerializer,
@@ -158,6 +161,14 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
             Q(account=self.account) &
             Q(state=PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED))
 
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return PortfolioGrantCreateSerializer
+        return super(PortfoliosGrantsAPIView, self).get_serializer_class()
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("Create successful", PortfolioOptInSerializer,
+        many=True)})
     def post(self, request, *args, **kwargs):
         """
         Initiates a grant
@@ -192,14 +203,9 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
                }
             }
         """
-        return self.create(request, *args, **kwargs)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-    def get_serializer_class(self):
-        if self.request.method.lower() == 'post':
-            return PortfolioGrantCreateSerializer
-        return super(PortfoliosGrantsAPIView, self).get_serializer_class()
-
-    def perform_create(self, serializer):
         #pylint:disable=too-many-locals
         created_at = datetime_or_now()
         # If we don't make a copy, we will get an exception "Got KeyError
@@ -225,27 +231,76 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
         grantee, unused_created = account_model.objects.get_or_create(
             defaults=grantee_data, **lookups)
 
-        accounts = serializer.validated_data.get('accounts', [])
+        accounts = []
+        # XXX assert self.account has access to each account in `accounts`.
+        # accounts = serializer.validated_data.get('accounts', [])
         if not accounts:
             accounts = [self.account]
-        defaults = {
-            'initiated_by': self.request.user,
-            'state': PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED,
-            'ends_at': created_at
-        }
+
+        # Attempting to grant access to itself is an error.
+        for account in accounts:
+            if account == grantee:
+                raise ValidationError({'grantee': _("The profile already has"\
+                    " access to the data you are trying to share.")})
+
+        status_code = status.HTTP_200_OK
+        ends_at = created_at + relativedelta(months=4)
+        portfolios = []
+        requests_accepted = []
         with transaction.atomic():
             for account in accounts:
-                # XXX assert self.account has access to `account`
-                portfolio, unused_created = \
-                    PortfolioDoubleOptIn.objects.exclude(
-                        state=PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED
-                    ).update_or_create(
-                        account=account,
-                        grantee=grantee,
-                        campaign=campaign,
-                        defaults=defaults)
-                signals.portfolio_grant_initiated.send(sender=__name__,
-                    portfolio=portfolio, request=self.request)
+                # If we have a pending grant initiated, we actualize it.
+                portfolio = PortfolioDoubleOptIn.objects.filter(
+                    Q(account=account) &
+                    Q(grantee=grantee) &
+                    Q(campaign=campaign) &
+                    Q(state=PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED)
+                ).first()
+                if portfolio:
+                    portfolio.initiated_by = self.request.user
+                    portfolio.created_at = created_at
+                    portfolio.ends_at = ends_at
+                    portfolio.save()
+                    portfolios += [portfolio]
+                else:
+                    # If we have a pending request initiated, we grant it.
+                    portfolio = PortfolioDoubleOptIn.objects.filter(
+                        Q(account=account) &
+                        Q(grantee=grantee) &
+                        Q(campaign=campaign) &
+                        Q(state=PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED)
+                    ).first()
+                    if portfolio:
+                        portfolio.request_accepted()
+                        requests_accepted += [portfolio]
+                    else:
+                        portfolio = PortfolioDoubleOptIn.objects.create(
+                            created_at=created_at,
+                            ends_at=ends_at,
+                            account=account,
+                            grantee=grantee,
+                            campaign=campaign,
+                            initiated_by=self.request.user,
+                            state=PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED,
+                            verification_key=PortfolioDoubleOptIn.generate_key(
+                                account))
+                        status_code = status.HTTP_201_CREATED
+                portfolios += [portfolio]
+
+        for portfolio in requests_accepted:
+            signals.portfolio_request_accepted.send(sender=__name__,
+                portfolio=portfolio, request=self.request)
+        signals.portfolios_grant_initiated.send(sender=__name__,
+            portfolios=portfolios, invitee=grantee_data, request=self.request)
+
+        results = []
+        serializer_class = PortfolioOptInSerializer
+        serializer_kwargs = {'context': self.get_serializer_context()}
+        serializer = serializer_class(**serializer_kwargs)
+        for portfolio in portfolios:
+            results += [serializer.to_representation(portfolio)]
+
+        return HttpResponse(results, status=status_code)
 
 
 class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
@@ -278,7 +333,6 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
         {}
     """
-#    lookup_url_kwarg = 'verification_key'
     lookup_field = 'verification_key'
     serializer_class = NoModelSerializer
 
@@ -293,7 +347,7 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         """
-        Denies a portfolio grant
+        Denies or removes a portfolio grant
 
         **Tags**: portfolios
 
@@ -304,17 +358,29 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
             DELETE /api/energy-utility/portfolios/grants/0123456789abcef\
  HTTP/1.1
         """
-        return self.destroy(request, *args, **kwargs)
+        filter_args = {self.lookup_field: self.kwargs.get(self.lookup_field)}
+        try:
+            instance = self.get_queryset().get(**filter_args)
+            instance.state = PortfolioDoubleOptIn.OPTIN_GRANT_DENIED
+            instance.save()
+            signals.portfolio_grant_denied.send(sender=__name__,
+                portfolio=instance, request=self.request)
+            return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+
+        except PortfolioDoubleOptIn.DoesNotExist:
+            pass
+
+        # We cannot find the grant to the grantee, so let's look
+        # if the grant was removed by any chance.
+        instance = generics.get_object_or_404(
+            PortfolioDoubleOptIn.objects.filter(account=self.account),
+            **filter_args)
+        instance.delete()
+        return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
     def perform_create(self, instance):
         instance.grant_accepted()
         signals.portfolio_grant_accepted.send(sender=__name__,
-            portfolio=instance, request=self.request)
-
-    def perform_destroy(self, instance):
-        instance.state = PortfolioDoubleOptIn.OPTIN_GRANT_DENIED
-        instance.save()
-        signals.portfolio_grant_denied.send(sender=__name__,
             portfolio=instance, request=self.request)
 
 
@@ -519,7 +585,7 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
         .. code-block:: http
 
-            DELETE /api/energy-utility/portfolios/requests/0123456789abcef\
+            DELETE /api/supplier-1/portfolios/requests/0123456789abcef\
  HTTP/1.1
         """
         return self.destroy(request, *args, **kwargs)

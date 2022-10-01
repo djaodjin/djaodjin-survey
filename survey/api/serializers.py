@@ -481,6 +481,11 @@ class InviteeSerializer(NoModelSerializer):
     slug = serializers.SlugField()
     full_name = serializers.CharField()
     email = serializers.EmailField(required=False)
+    printable_name = serializers.SerializerMethodField()
+
+    @staticmethod
+    def get_printable_name(obj):
+        return str(obj.full_name)
 
 
 class PortfolioGrantCreateSerializer(serializers.ModelSerializer):
@@ -524,22 +529,45 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
         queryset=Campaign.objects.all(), slug_field='slug')
     state = EnumField(choices=PortfolioDoubleOptIn.STATES)
     api_accept = serializers.SerializerMethodField()
+    api_remove = serializers.SerializerMethodField()
 
     class Meta:
         model = PortfolioDoubleOptIn
         fields = ('grantee', 'account', 'campaign', 'ends_at',
-            'state', 'api_accept')
-        read_only_fields = ('ends_at', 'state', 'api_accept')
+            'state', 'api_accept', 'api_remove')
+        read_only_fields = ('ends_at', 'state', 'api_accept', 'api_remove')
 
-    @staticmethod
-    def get_api_accept(obj):
-        if obj.state == PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED:
-            return reverse('api_portfolios_grant_accept',
+    def get_api_accept(self, obj):
+        api_endpoint = None
+        view = self.context.get('view')
+        if (obj.state == PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED and
+            view.account == obj.grantee):
+            api_endpoint = reverse('api_portfolios_grant_accept',
                 args=(obj.grantee, obj.verification_key,))
-        if obj.state == PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED:
-            return reverse('api_portfolios_request_accept',
+        elif (obj.state == PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED and
+            view.account == obj.account):
+            api_endpoint = reverse('api_portfolios_request_accept',
                 args=(obj.account, obj.verification_key,))
-        return None
+        request = self.context.get('request')
+        if request and api_endpoint:
+            return request.build_absolute_uri(api_endpoint)
+        return api_endpoint
+
+    def get_api_remove(self, obj):
+        api_endpoint = None
+        view = self.context.get('view')
+        if (obj.state == PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED and
+            view.account == obj.account):
+            api_endpoint = reverse('api_portfolios_grant_accept',
+                args=(obj.account, obj.verification_key,))
+        elif (obj.state == PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED and
+            view.account == obj.grantee):
+            api_endpoint = reverse('api_portfolios_request_accept',
+                args=(obj.grantee, obj.verification_key,))
+        request = self.context.get('request')
+        if request and api_endpoint:
+            return request.build_absolute_uri(api_endpoint)
+        return api_endpoint
 
 
 class AccountsFilterAddSerializer(serializers.ModelSerializer):

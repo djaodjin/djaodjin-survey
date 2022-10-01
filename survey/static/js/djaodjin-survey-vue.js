@@ -189,6 +189,13 @@ Vue.component('portfolios-grant-list', {
                 });
             }
         },
+        ignore: function(portfolio, idx) {
+            var vm = this;
+            vm.reqDelete(portfolio.api_remove,
+            function(resp) { // success
+                vm.items.results.splice(idx, 1);
+            });
+        },
     },
     computed: {
         showAccounts: function() {

@@ -1,3 +1,4 @@
 Django>=2.2
 djangorestframework>=3.9
 monotonic>=1.1
+python-dateutil>=2.2
