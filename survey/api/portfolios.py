@@ -290,8 +290,11 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
         for portfolio in requests_accepted:
             signals.portfolio_request_accepted.send(sender=__name__,
                 portfolio=portfolio, request=self.request)
+
+        message = serializer.validated_data.get('message')
         signals.portfolios_grant_initiated.send(sender=__name__,
-            portfolios=portfolios, invitee=grantee_data, request=self.request)
+            portfolios=portfolios, invitee=grantee_data, message=message,
+            request=self.request)
 
         results = []
         serializer_class = PortfolioOptInSerializer
@@ -525,11 +528,13 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                         **defaults)
                 requests_initiated += [(portfolio, account)]
 
+        message = serializer.validated_data.get('message')
         for request in requests_initiated:
             portfolio = request[0]
             account = request[1]
-            signals.portfolio_request_initiated.send(sender=__name__,
-                portfolio=portfolio, invitee=account, request=self.request)
+            signals.portfolios_request_initiated.send(sender=__name__,
+                portfolios=[portfolio], invitee=account, message=message,
+                request=self.request)
 
 
 class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):

@@ -26,7 +26,7 @@ from django.dispatch import Signal
 
 #pylint: disable=invalid-name
 portfolios_grant_initiated = Signal(
-#    providing_args=["portfolios", "invitee", "request"]
+#    providing_args=["portfolios", "invitee",  "message", "request"]
 )
 portfolio_grant_accepted = Signal(
 #    providing_args=["portfolio", "request"]
@@ -34,8 +34,8 @@ portfolio_grant_accepted = Signal(
 portfolio_grant_denied = Signal(
 #    providing_args=["portfolio", "request"]
 )
-portfolio_request_initiated = Signal(
-#    providing_args=["portfolio", "invitee", "request"]
+portfolios_request_initiated = Signal(
+#    providing_args=["portfolios", "invitee", "message", "request"]
 )
 portfolio_request_accepted = Signal(
 #    providing_args=["portfolio", "request"]

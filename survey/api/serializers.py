@@ -485,7 +485,11 @@ class InviteeSerializer(NoModelSerializer):
 
     @staticmethod
     def get_printable_name(obj):
-        return str(obj.full_name)
+        try:
+            return str(obj.full_name)
+        except AttributeError:
+            pass
+        return obj.get('full_name')
 
 
 class PortfolioGrantCreateSerializer(serializers.ModelSerializer):
