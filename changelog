@@ -1,3 +1,9 @@
+0.7.5
+
+  * fixes ORM returns multiple objects in presence of Portfolio
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri,  7 Oct 2022 07:50:00 -0700
+
 0.7.4
 
   * adds message in portfolio grants/requests
