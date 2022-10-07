@@ -337,7 +337,7 @@ class SampleMixin(AccountMixin, QuestionMixin):
                         (Q(account__portfolios__grantee=self.account) &
                          Q(account__portfolios__ends_at__gte=F('created_at'))),
                         slug=sample_slug)
-                sample = queryset.select_related('campaign').get()
+                sample = queryset.select_related('campaign').distinct().get()
             except Sample.DoesNotExist:
                 raise Http404("Cannot find Sample(slug='%s')" % sample_slug)
         else:
