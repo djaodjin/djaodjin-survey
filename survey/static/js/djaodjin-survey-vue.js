@@ -351,6 +351,7 @@ Vue.component('grantee-typeahead', AccountTypeAhead.extend({
       current: -1,
       loading: false,
       selectFirst: false,
+      minChars: 3,
       queryParamName: 'q',
       selectedItem: {
           email: "",

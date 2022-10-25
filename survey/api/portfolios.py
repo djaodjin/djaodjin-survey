@@ -567,7 +567,6 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
         {}
     """
-#    lookup_url_kwarg = 'verification_key'
     lookup_field = 'verification_key'
     serializer_class = NoModelSerializer
 
@@ -580,9 +579,14 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         self.perform_create(instance)
         return HttpResponse(status=status.HTTP_201_CREATED)
 
+    def perform_create(self, instance):
+        instance.request_accepted()
+        signals.portfolio_request_accepted.send(sender=__name__,
+            portfolio=instance, request=self.request)
+
     def delete(self, request, *args, **kwargs):
         """
-        Denies a portfolio request
+        Removes or denies a portfolio request
 
         **Tags**: portfolios
 
@@ -593,15 +597,21 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
             DELETE /api/supplier-1/portfolios/requests/0123456789abcef\
  HTTP/1.1
         """
-        return self.destroy(request, *args, **kwargs)
+        filter_args = {self.lookup_field: self.kwargs.get(self.lookup_field)}
+        try:
+            instance = self.get_queryset().get(**filter_args)
+            instance.state = PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED
+            instance.save()
+            signals.portfolio_request_denied.send(sender=__name__,
+                portfolio=instance, request=self.request)
+            return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+        except PortfolioDoubleOptIn.DoesNotExist:
+            pass
 
-    def perform_create(self, instance):
-        instance.request_accepted()
-        signals.portfolio_request_accepted.send(sender=__name__,
-            portfolio=instance, request=self.request)
-
-    def perform_destroy(self, instance):
-        instance.state = PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED
-        instance.save()
-        signals.portfolio_request_denied.send(sender=__name__,
-            portfolio=instance, request=self.request)
+        # We cannot find the grant to the grantee, so let's look
+        # if the grant was removed by any chance.
+        instance = generics.get_object_or_404(
+            PortfolioDoubleOptIn.objects.filter(grantee=self.account),
+            **filter_args)
+        instance.delete()
+        return HttpResponse(status=status.HTTP_204_NO_CONTENT)
