@@ -193,6 +193,14 @@ class CampaignMixin(object):
                 self._db_path = self.DB_PATH_SEP + self._db_path
         return self._db_path
 
+    def get_reverse_kwargs(self):
+        """
+        List of kwargs taken from the url that needs to be passed through
+        to ``get_success_url``.
+        """
+        return super(CampaignMixin, self).get_reverse_kwargs() + [
+            self.campaign_url_kwarg]
+
 
 class CampaignQuerysetMixin(BelongsMixin):
 

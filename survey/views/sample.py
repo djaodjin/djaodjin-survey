@@ -35,8 +35,8 @@ from rest_framework.exceptions import ValidationError
 from ..api.sample import update_or_create_answer
 from ..compat import is_authenticated, reverse
 from ..forms import AnswerForm, SampleCreateForm, SampleUpdateForm
-from ..mixins import AccountMixin, SampleMixin
-from ..models import Answer, Campaign, Choice, EnumeratedQuestions, Sample
+from ..mixins import AccountMixin, CampaignMixin, SampleMixin
+from ..models import Answer, Choice, EnumeratedQuestions, Sample
 from ..utils import datetime_or_now, get_question_model
 
 
@@ -194,7 +194,7 @@ class SampleResultView(SampleMixin, TemplateView):
         return self.get(request, *args, **kwargs)
 
 
-class SampleCreateView(AccountMixin, CreateView):
+class SampleCreateView(CampaignMixin, AccountMixin, CreateView):
     """
     Creates a ``Sample`` of a ``Account`` to a ``Campaign``
     """
@@ -204,15 +204,6 @@ class SampleCreateView(AccountMixin, CreateView):
     next_step_url = 'survey_answer_update'
     single_page_next_step_url = 'survey_sample_update'
     template_name = 'survey/sample_create.html'
-    campaign_url_kwarg = 'campaign'
-
-    @property
-    def campaign(self):
-        #pylint:disable=attribute-defined-outside-init
-        if not hasattr(self, '_campaign'):
-            self._campaign = get_object_or_404(Campaign.objects.all(),
-                slug=self.kwargs.get(self.campaign_url_kwarg))
-        return self._campaign
 
     def form_valid(self, form):
         # We are going to create all the Answer records for that Sample here,
@@ -230,7 +221,7 @@ class SampleCreateView(AccountMixin, CreateView):
             if answer_text:
                 kwargs.update({'text': answer_text})
             Answer.objects.create(
-                metric=enum_q.question.default_unit, **kwargs)
+                unit=enum_q.question.default_unit, **kwargs)
         return HttpResponseRedirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
@@ -248,7 +239,7 @@ class SampleCreateView(AccountMixin, CreateView):
         return kwargs
 
     def get_success_url(self):
-        kwargs = self.get_url_kwargs()
+        kwargs = self.get_url_kwargs(**self.kwargs)
         kwargs.update({SampleMixin.sample_url_kwarg: self.object.slug})
         if self.campaign and self.campaign.defaults_single_page:
             next_step_url = self.single_page_next_step_url

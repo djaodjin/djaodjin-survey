@@ -59,7 +59,7 @@ class CampaignListView(BelongsMixin, ListView):
         context = super(CampaignListView, self).get_context_data(**kwargs)
         update_context_urls(context, {
             'survey_api_campaign_list': reverse('survey_api_campaign_list',
-                kwargs=self.get_url_kwargs())})
+                kwargs=self.get_url_kwargs(**kwargs))})
         return context
 
 
@@ -211,3 +211,4 @@ class CampaignUpdateView(CampaignMixin, UpdateView):
     model = Campaign
     form_class = CampaignForm
     success_url = reverse_lazy('survey_campaign_list')
+    slug_url_kwarg = CampaignMixin.campaign_url_kwarg

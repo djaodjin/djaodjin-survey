@@ -25,7 +25,6 @@
 import logging, re
 from collections import OrderedDict
 
-from django.core.exceptions import FieldError
 from django.db import transaction
 from django.db.models import F, Max, Q
 from django.http import Http404
@@ -35,6 +34,7 @@ from rest_framework.mixins import CreateModelMixin
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import PageNumberPagination
 
+from .. import settings
 from ..compat import reverse
 from ..mixins import AccountMixin, MatrixMixin
 from ..models import (Answer, Matrix, EditableFilter,

@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2022, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,8 +27,8 @@ import logging
 from rest_framework import generics
 from rest_framework.filters import BaseFilterBackend
 
+from ..models import Unit
 from .serializers import UnitSerializer
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -118,10 +118,10 @@ class UnitDetailAPIView(generics.RetrieveAPIView):
             ]
         }
     """
+    queryset = Unit.objects.all()
     serializer_class = UnitSerializer
-
-    def get_object(self):
-        return self.unit
+    lookup_field = 'slug'
+    lookup_url_kwarg = 'unit'
 
 
 class UnitListAPIView(generics.ListAPIView):

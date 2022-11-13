@@ -481,7 +481,7 @@ class Sample(models.Model):
             sample=self,
             question__campaigns__in=[self.campaign.pk]).order_by(
             'question__enumeratedquestions__rank').annotate(
-                rank=models.F('question__enumeratedquestions__rank'))
+                _rank=models.F('question__enumeratedquestions__rank'))
         return queryset
 
 

@@ -17,8 +17,8 @@
 		<header>
 			<ul>
 			<li><a href="{% url 'survey_campaign_list' %}">campaigns</a>
-			<li><a href="{% url 'survey_portfolios' %}">portfolios</a>
 			{% if request.user.is_authenticated %}
+			<li><a href="{% url 'survey_portfolios' %}">portfolios</a>
 			<li><a href="{% url 'logout' %}">sign out</a>
 			{% else %}
 			<li><a href="{% url 'login' %}">sign in</a>

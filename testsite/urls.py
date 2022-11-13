@@ -41,8 +41,7 @@ urlpatterns = [
         TemplateView.as_view(template_name='index.html'), name='home'),
     # survey.urls.api
     re_path(r'^api/', include('survey.urls.api.noauth')),
-    re_path(r'^api/(?P<organization>%s)/' % SLUG_RE,
-        include('survey.urls.api.campaigns')),
+    re_path(r'^api/', include('survey.urls.api.campaigns')),
     re_path(r'^api/(?P<organization>%s)/' % SLUG_RE,
         include('survey.urls.api.filters')),
     re_path(r'^api/(?P<organization>%s)/' % SLUG_RE,
