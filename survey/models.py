@@ -686,13 +686,17 @@ class PortfolioDoubleOptInQuerySet(models.QuerySet):
     def by_invoice_keys(self, invoice_keys):
         return self.filter(invoice_key__in=invoice_keys)
 
-    def by_grantee(self, account, start_at=None, ends_at=None, until=None):
+    def by_grantee(self, account, campaign=None,
+                   start_at=None, ends_at=None, until=None):
         """
         Returns the portfolio grant/request for `account` that were
         created in the period [start_at, ends_at[ (when specified)
         and that extend beyond `until` (when specified).
         """
+        #pylint:disable=too-many-arguments
         kwargs = {}
+        if campaign:
+            kwargs.update({'campaign': campaign})
         if start_at:
             kwargs.update({'created_at__gte': start_at})
         if ends_at:
@@ -701,40 +705,46 @@ class PortfolioDoubleOptInQuerySet(models.QuerySet):
             kwargs.update({'ends_at__gte': until})
         return self.filter(grantee=account, **kwargs)
 
-    def requested(self, account, start_at=None, ends_at=None, until=None):
+    def requested(self, account, campaign=None,
+                  start_at=None, ends_at=None, until=None):
         """
         Returns the portfolio requests made by `account` that were
         created in the period [start_at, ends_at[ (when specified)
         and that extend beyond `ends_at` (when specified).
         """
-        return self.by_grantee(account,
+        #pylint:disable=too-many-arguments
+        return self.by_grantee(account, campaign=campaign,
             start_at=start_at, ends_at=ends_at, until=until).filter(state__in=(
             PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
             PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED,
             PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED))
 
 
-    def unsolicited(self, account, start_at=None, ends_at=None, until=None):
+    def unsolicited(self, account, campaign=None,
+                    start_at=None, ends_at=None, until=None):
         """
         Returns the portfolio grants where `account` is the benefiary that were
         created in the period [start_at, ends_at[ (when specified)
         and that extend beyond `ends_at` (when specified).
         """
-        return self.by_grantee(account,
+        #pylint:disable=too-many-arguments
+        return self.by_grantee(account, campaign=campaign,
             start_at=start_at, ends_at=ends_at, until=until).filter(state__in=(
             PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED,
             PortfolioDoubleOptIn.OPTIN_GRANT_ACCEPTED,
             PortfolioDoubleOptIn.OPTIN_GRANT_DENIED))
 
 
-    def accepted(self, account, start_at=None, ends_at=None, until=None):
+    def accepted(self, account, campaign=None,
+                 start_at=None, ends_at=None, until=None):
         """
         Returns the portfolio grant/request where `account` is the benefiary
         that were accepted and which had been created in the period
         [start_at, ends_at[ (when specified) and that extend beyond
         `ends_at` (when specified).
         """
-        return self.by_grantee(account,
+        #pylint:disable=too-many-arguments
+        return self.by_grantee(account, campaign=campaign,
             start_at=start_at, ends_at=ends_at, until=until).filter(state__in=(
             PortfolioDoubleOptIn.OPTIN_GRANT_ACCEPTED,
             PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED))
@@ -748,20 +758,28 @@ class PortfolioDoubleOptInManager(models.Manager):
     def by_invoice_keys(self, invoice_keys):
         return self.get_queryset().by_invoice_keys(invoice_keys)
 
-    def by_grantee(self, account, start_at=None, ends_at=None, until=None):
-        return self.get_queryset().by_grantee(account,
+    def by_grantee(self, account, campaign=None,
+                   start_at=None, ends_at=None, until=None):
+        #pylint:disable=too-many-arguments
+        return self.get_queryset().by_grantee(account, campaign=campaign,
             start_at=start_at, ends_at=ends_at, until=until)
 
-    def requested(self, account, start_at=None, ends_at=None, until=None):
-        return self.get_queryset().requested(account,
+    def requested(self, account, campaign=None,
+                  start_at=None, ends_at=None, until=None):
+        #pylint:disable=too-many-arguments
+        return self.get_queryset().requested(account, campaign=campaign,
             start_at=start_at, ends_at=ends_at, until=until)
 
-    def unsolicited(self, account, start_at=None, ends_at=None, until=None):
-        return self.get_queryset().unsolicited(account,
+    def unsolicited(self, account, campaign=None,
+                    start_at=None, ends_at=None, until=None):
+        #pylint:disable=too-many-arguments
+        return self.get_queryset().unsolicited(account, campaign=campaign,
             start_at=start_at, ends_at=ends_at, until=until)
 
-    def accepted(self, account, start_at=None, ends_at=None, until=None):
-        return self.get_queryset().accepted(account,
+    def accepted(self, account,  campaign=None,
+                 start_at=None, ends_at=None, until=None):
+        #pylint:disable=too-many-arguments
+        return self.get_queryset().accepted(account, campaign=campaign,
             start_at=start_at, ends_at=ends_at, until=until)
 
 
