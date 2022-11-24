@@ -525,6 +525,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                         grantee=self.account,
                         account=account,
                         campaign=campaign,
+                    verification_key=PortfolioDoubleOptIn.generate_key(account),
                         **defaults)
                 requests_initiated += [(portfolio, account)]
 
