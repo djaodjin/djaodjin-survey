@@ -14,7 +14,9 @@ The source code is bundled with a sample django project.
     $ cd *virtual_env_dir*
     $ source bin/activate
     $ pip install -r testsite/requirements.txt
-    $ make initdb
+    $ python manage.py migrate --run-syncdb --noinput
+    $ python manage.py loaddata testsite/fixtures/default-db.json
+
     $ python manage.py runserver
 
     # Visit url at http://localhost:8000/
@@ -29,14 +31,12 @@ Tested with
 - **Python:** 3.10, **Django:** 4.0 (latest), **Django Rest Framework:** 3.12
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
-0.7.5
+0.7.6
 
-  * adds message in portfolio grants/requests
-  * retires grant/request before they were accepted/denied
-  * accepts grant/request through redirects
-  * cleans up filters API
-  * handles Django and DRF request objects
-  * uses path() URL construct regularly
+  * fixes initiated requests must have a verification_key
+  * adds campaign filter to `PortfolioDoubleOptInQuerySet.by_grantee`
+  * removes a request that hasn't completed its lifecycle yet
+  * updates to testsite to reflect latest APIs
 
 [previous release notes](changelog)
 

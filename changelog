@@ -1,3 +1,12 @@
+0.7.6
+
+  * fixes initiated requests must have a verification_key
+  * adds campaign filter to `PortfolioDoubleOptInQuerySet.by_grantee`
+  * removes a request that hasn't completed its lifecycle yet
+  * updates to testsite to reflect latest APIs
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 25 Nov 2022 07:50:00 -0700
+
 0.7.5
 
   * fixes ORM returns multiple objects in presence of Portfolio
