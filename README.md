@@ -31,12 +31,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.0 (latest), **Django Rest Framework:** 3.12
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
-0.7.6
+0.7.7
 
-  * fixes initiated requests must have a verification_key
-  * adds campaign filter to `PortfolioDoubleOptInQuerySet.by_grantee`
-  * removes a request that hasn't completed its lifecycle yet
-  * updates to testsite to reflect latest APIs
+  * adds autoreload flag to decide how to handle change to query params
+  * removes verification_key on grant/request accepted
 
 [previous release notes](changelog)
 

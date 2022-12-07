@@ -1,3 +1,10 @@
+0.7.7
+
+  * adds autoreload flag to decide how to handle change to query params
+  * removes verification_key on grant/request accepted
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 6 Dec 2022 22:17:00 -0700
+
 0.7.6
 
   * fixes initiated requests must have a verification_key
