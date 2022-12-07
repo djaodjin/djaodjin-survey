@@ -876,10 +876,12 @@ class PortfolioDoubleOptIn(models.Model):
         with transaction.atomic():
             self.create_portfolios()
             self.state = PortfolioDoubleOptIn.OPTIN_GRANT_ACCEPTED
+            self.verification_key = None
             self.save()
 
     def request_accepted(self):
         with transaction.atomic():
             self.create_portfolios()
             self.state = PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED
+            self.verification_key = None
             self.save()
