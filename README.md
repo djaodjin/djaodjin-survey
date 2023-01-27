@@ -31,10 +31,9 @@ Tested with
 - **Python:** 3.10, **Django:** 4.0 (latest), **Django Rest Framework:** 3.12
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
-0.7.7
+0.7.8
 
-  * adds autoreload flag to decide how to handle change to query params
-  * removes verification_key on grant/request accepted
+  * fixes recording first relative measurement
 
 [previous release notes](changelog)
 

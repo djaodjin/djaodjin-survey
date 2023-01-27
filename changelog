@@ -1,3 +1,9 @@
+0.7.8
+
+  * fixes recording first relative measurement
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 27 Jan 2023 12:15:00 -0700
+
 0.7.7
 
   * adds autoreload flag to decide how to handle change to query params
