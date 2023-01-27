@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,6 @@ from ...compat import include, path
 urlpatterns = [
     path('campaigns/', include('survey.urls.views.campaigns')),
     path('matrix/', include('survey.urls.views.matrices')),
-    path('portfolios/', include('survey.urls.views.portfolios')),
     path('assess/', include('survey.urls.views.samples')),
+    path('', include('survey.urls.views.portfolios')),
 ]

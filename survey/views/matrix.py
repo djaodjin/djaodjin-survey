@@ -26,10 +26,32 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, DetailView, ListView
 
 from ..compat import csrf, reverse
-from ..mixins import (EditableFilterMixin, MatrixMixin, MatrixQuerysetMixin,
-    CampaignMixin)
+from ..mixins import (AccountMixin, CampaignMixin, EditableFilterMixin,
+    MatrixMixin, MatrixQuerysetMixin)
 from ..models import EditableFilter, Sample
 from ..utils import update_context_urls
+
+class CompareView(CampaignMixin, AccountMixin, TemplateView):
+    """
+    Compare samples side-by-side
+    """
+    template_name = "survey/matrix/compare.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(CompareView, self).get_context_data(**kwargs)
+        url_kwargs = self.get_url_kwargs()
+        if 'path' in self.kwargs:
+            url_kwargs.update({'path': self.kwargs.get('path')})
+            update_context_urls(context, {
+                'survey_api_compare_samples': reverse(
+                    'survey_api_compare_samples_path', kwargs=url_kwargs),
+            })
+        else:
+            update_context_urls(context, {
+                'survey_api_compare_samples': reverse(
+                    'survey_api_compare_samples', kwargs=url_kwargs),
+            })
+        return context
 
 
 class MatrixListView(MatrixQuerysetMixin, ListView):

@@ -42,10 +42,41 @@ from ..models import (Answer, Matrix, EditableFilter,
 from ..utils import (get_account_model, get_account_serializer,
     get_question_serializer)
 from .serializers import (AccountsFilterAddSerializer,
-    EditableFilterSerializer, MatrixSerializer)
+    EditableFilterSerializer, MatrixSerializer, SampleAnswerSerializer)
+
+from ..models import Unit
 
 
 LOGGER = logging.getLogger(__name__)
+
+class CompareAPIView(generics.ListAPIView):
+    """
+    Lists compared samples
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/reporting/sustainability/matrix/compare HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+    serializer_class = SampleAnswerSerializer
+
+    def get_queryset(self):
+        # XXX TODO implement!!!
+        return Answer.objects.none()
+
+    def get(self, request, *args, **kwargs):
+        return super(CompareAPIView, self).get(request, *args, **kwargs)
 
 
 class MatrixCreateAPIView(generics.ListCreateAPIView):

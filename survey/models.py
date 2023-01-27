@@ -601,7 +601,7 @@ class EditablePredicate(models.Model):
     selector = models.CharField(max_length=255)
 
     def __str__(self):
-        return '%s-%d' % (self.portfolio.slug, int(self.rank))
+        return '%s-%d' % (self.editable_filter.slug, int(self.rank))
 
     def as_kwargs(self):
         kwargs = {}

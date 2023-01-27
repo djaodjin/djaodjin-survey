@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...views.matrix import (MatrixListView, MatrixDetailView,
+from ...views.matrix import (CompareView, MatrixListView, MatrixDetailView,
     AccountListView, QuestionListView)
 from ...compat import path
 
@@ -36,6 +36,8 @@ urlpatterns = [
         QuestionListView.as_view(), name='questions_list'),
     path('questions/',
         QuestionListView.as_view(), name='questions_base'),
+    path('compare/',
+        CompareView.as_view(), name='matrix_compare'),
     path('<path:path>/',
         MatrixDetailView.as_view(), name='matrix_chart'),
     path('',

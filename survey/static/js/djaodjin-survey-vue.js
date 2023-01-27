@@ -31,6 +31,54 @@ Vue.component('campaign-list', {
     }
 });
 
+/** Component to list, add and remove profiles that are currently invited
+    to a campaign.
+ */
+Vue.component('engage-profiles', {
+    mixins: [
+        itemListMixin
+    ],
+    data: function() {
+        return {
+            url: this.$urls.api_portfolios_requests,
+            params: {
+                o: '-created_at'
+            },
+            newItem: {
+                title: ''
+            }
+        }
+    },
+    methods: {
+    },
+    mounted: function(){
+        this.get();
+    }
+});
+
+
+Vue.component('compare-samples', {
+    mixins: [
+        itemListMixin
+    ],
+    data: function() {
+        return {
+            url: this.$urls.survey_api_compare_samples,
+            params: {
+                o: '-created_at'
+            },
+            newItem: {
+                title: ''
+            }
+        }
+    },
+    methods: {
+    },
+    mounted: function(){
+        this.get();
+    }
+});
+
 
 Vue.component('portfolios-received-list', {
     mixins: [

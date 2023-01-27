@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,11 +27,13 @@ from ...views.portfolios import (PortfoliosView, PortfoliosGrantAcceptView,
     PortfoliosRequestAcceptView)
 
 urlpatterns = [
-    path('grants/<slug:verification_key>/accept/',
+    path('portfolios/grants/<slug:verification_key>/accept/',
         PortfoliosGrantAcceptView.as_view(),
         name='portfolios_grant_accept'),
-    path('requests/<slug:verification_key>/accept/',
+    path('portfolios/requests/<slug:verification_key>/accept/',
         PortfoliosRequestAcceptView.as_view(),
         name='portfolios_request_accept'),
-    path('', PortfoliosView.as_view(), name='survey_portfolios'),
+    path('portfolios/',
+        PortfoliosView.as_view(),
+        name='survey_portfolios'),
 ]
