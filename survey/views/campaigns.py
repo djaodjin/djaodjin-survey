@@ -102,16 +102,16 @@ class CampaignResultView(CampaignMixin, DetailView):
         #
         # The structure of the aggregated dataset returned to the client will
         # look like:
-        # [ { "key": ``slug for Question``,
+        # [ { "slug": ``slug for Question``,
         #     "values": [ ``Answer.measured`` ... ] },
         #   ... ]
         individuals = []
         for question in question_model.objects.filter(
             campaign=self.object, ui_hint=question_model.TEXT):
             individuals += [{
-                 'key': slugify("%d" % question.rank), # XXX rank
+                 'slug': slugify("%d" % question.rank), # XXX rank
 # XXX Might be better
-#                'key': slugify("%s-%d"
+#                'slug': slugify("%s-%d"
 #                    % (question.campaign.slug, question.rank)),
                 'values': Answer.objects.filter(
                     question=question).values('text')}]
@@ -153,9 +153,9 @@ class CampaignResultView(CampaignMixin, DetailView):
                 else:
                     values += [{"label": label, "value": value}]
             aggregates += [{
-                # XXX Might be better to use 'key': slugify("%s-%d"
+                # XXX Might be better to use 'slug': slugify("%s-%d"
                 #     % (question.campaign.slug, question.rank))
-                'key': slugify("%d" % question.rank),  # XXX rank
+                'slug': slugify("%d" % question.rank),  # XXX rank
                 'values': values}]
         if with_errors:
             LOGGER.error("Answers with an invalid choice\n%s",

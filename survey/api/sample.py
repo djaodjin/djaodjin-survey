@@ -1419,6 +1419,38 @@ class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
             headers=headers)
 
 
+class SampleResetIndexAPIView(SampleResetAPIView):
+    """
+    Clears all answers
+
+    The ``sample`` must belong to ``organization``.
+
+    ``path`` can be used to filter the tree of questions by a prefix.
+
+    **Tags**: assessments
+
+    **Examples**
+
+    .. code-block:: http
+
+        POST /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/reset\
+ HTTP/1.1
+
+    .. code-block:: json
+
+        {}
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
+            "created_at": "2018-01-24T17:03:34.926193Z",
+            "campaign": "sustainability"
+        }
+    """
+
 class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
     """
     Lists updatable samples

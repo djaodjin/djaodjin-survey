@@ -197,10 +197,16 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
         .. code-block:: json
 
             {
-               "grantee": {
-                 "slug": "energy-utility",
-                 "full_name": "Energy Utility"
-               }
+               "count": 1,
+               "results": [{
+                 "grantee": "water-utility",
+                 "account": "supplier-1",
+                 "campaign": "sustainability",
+                 "ends_at": "2022-01-01T00:00:00Z",
+                 "state": "grant-initiated",
+                 "api_accept": "/api/water-utility/portfolios/grants\
+/0000000000000000000000000000000000000003/"
+               }]
             }
         """
         serializer = self.get_serializer(data=request.data)

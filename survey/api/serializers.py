@@ -450,15 +450,18 @@ class MatrixSerializer(serializers.ModelSerializer):
 
 class KeyValueTuple(serializers.ListField):
 
-    child = serializers.CharField() # XXX (String, Integer)
+    child = serializers.CharField(allow_null=True) # XXX (String, Integer)
     min_length = 3
     max_length = 3
 
 
 class TableSerializer(NoModelSerializer):
 
-    key = serializers.CharField(
+    slug = serializers.SlugField(
         help_text=_("Unique key in the table for the data series"))
+    printable_name = serializers.CharField(
+        required=False, read_only=True,
+        help_text=_("Name that can be safely used for display in HTML pages"))
     values = serializers.ListField(
         child=KeyValueTuple(),
         help_text="Datapoints in the serie")
@@ -468,12 +471,13 @@ class MetricsSerializer(NoModelSerializer):
 
     scale = serializers.FloatField(required=False,
         help_text=_("The scale of the number reported in the tables (ex: 1000"\
-        " when numbers are reported in thousands of dollars)"))
-    unit = serializers.CharField(required=False,
-        help_text=_("Three-letter ISO 4217 code for currency unit (ex: usd)"))
+        " when numbers are reported in thousands)"))
+    unit = serializers.SlugRelatedField(required=False, allow_null=True,
+        queryset=Unit.objects.all(), slug_field='slug',
+        help_text=_("Unit the measured field is in"))
     title = serializers.CharField(
         help_text=_("Title for the table"))
-    table = TableSerializer(many=True)
+    results = TableSerializer(many=True)
 
 
 class InviteeSerializer(NoModelSerializer):
@@ -537,9 +541,10 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PortfolioDoubleOptIn
-        fields = ('grantee', 'account', 'campaign', 'ends_at',
+        fields = ('grantee', 'account', 'campaign', 'created_at', 'ends_at',
             'state', 'api_accept', 'api_remove')
-        read_only_fields = ('ends_at', 'state', 'api_accept', 'api_remove')
+        read_only_fields = ('created_at', 'ends_at',
+            'state', 'api_accept', 'api_remove')
 
     def get_api_accept(self, obj):
         api_endpoint = None

@@ -31,7 +31,7 @@ register = template.Library()
 def by_key(items, key):
     # Sometimes you have to wonder why ...
     for item in items:
-        if item['key'] == key:
+        if item['slug'] == key:
             return item['values']
     return []
 

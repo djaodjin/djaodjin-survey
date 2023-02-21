@@ -922,8 +922,11 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
             "results": [
             {
                "slug": "supplier-1",
-               "full_name": "Supplier 1",
-               "email": "supplier-1@localhost.localdomain"
+               "title": "Supplier 1",
+               "extra": null,
+               "predicates": [],
+               "likely_metric": [],
+               "results": []
            }]
         }
     """
@@ -944,6 +947,7 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
         .. code-block:: json
 
             {
+              "title": "Supplier 1"
             }
 
         responds
@@ -952,8 +956,11 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
 
             {
                "slug": "supplier-1",
-               "printable_name": "Supplier 1",
-               "extra": null
+               "title": "Supplier 1",
+               "extra": null,
+               "predicates": [],
+               "likely_metric": [],
+               "results": []
             }
         """
         #pylint:disable=useless-super-delegation

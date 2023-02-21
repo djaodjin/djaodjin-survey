@@ -1,3 +1,25 @@
+// components to enter survey data and display results.
+
+var percentToggleMixin = {
+    data: function() {
+        var data = {
+            percentToggle: 0
+        }
+        return data;
+    },
+    watch: {
+        percentToggle: function(newValue, oldValue) {
+            var vm = this;
+            if( parseInt(newValue) > 0 ) {
+                vm.params.unit = null;
+            } else {
+                vm.params.unit = 'percentage';
+            }
+        }
+    }
+};
+
+
 Vue.component('campaign-list', {
     mixins: [
         itemListMixin
@@ -36,7 +58,8 @@ Vue.component('campaign-list', {
  */
 Vue.component('engage-profiles', {
     mixins: [
-        itemListMixin
+        itemListMixin,
+        percentToggleMixin
     ],
     data: function() {
         return {

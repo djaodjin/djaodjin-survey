@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,13 +22,15 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ....api.sample import SampleResetAPIView
+from ....api.sample import SampleResetAPIView, SampleResetIndexAPIView
 from ....compat import path
 
 
 urlpatterns = [
     path('sample/<slug:sample>/reset/<path:path>',
-        SampleResetAPIView.as_view(), name='survey_api_sample_reset'),
+        SampleResetAPIView.as_view(),
+        name='survey_api_sample_reset'),
     path('sample/<slug:sample>/reset',
-        SampleResetAPIView.as_view(), name='survey_api_sample_reset_index'),
+        SampleResetIndexAPIView.as_view(),
+        name='survey_api_sample_reset_index'),
 ]

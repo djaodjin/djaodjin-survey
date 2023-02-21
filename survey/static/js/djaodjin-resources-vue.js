@@ -155,6 +155,120 @@ var messagesMixin = {
     }
 };
 
+
+/** compute outdated based on params.
+ */
+var paramsMixin = {
+    data: function(){
+        var data = {
+            autoreload: true,
+            lastGetParams: {},
+            params: {
+                // The following dates will be stored as `String` objects
+                // as oppossed to `moment` or `Date` objects because this
+                // is how form fields input="date" will update them.
+                start_at: null,
+                ends_at: null,
+                // The timezone for both start_at and ends_at.
+                timezone: 'local'
+            },
+        }
+        if( this.$dateRange ) {
+            if( this.$dateRange.start_at ) {
+                data.params['start_at'] = this.$dateRange.start_at;
+            }
+            if( this.$dateRange.ends_at ) {
+                data.params['ends_at'] = this.$dateRange.ends_at;
+            }
+            if( this.$dateRange.timezone ) {
+                data.params['timezone'] = this.$dateRange.timezone;
+            }
+        }
+        return data;
+    },
+    methods: {
+        asDateInputField: function(dateISOString) {
+            const dateValue = moment(dateISOString);
+            return dateValue.isValid() ? dateValue.format("YYYY-MM-DD") : null;
+        },
+        asDateISOString: function(dateInputField) {
+            const dateValue = moment(dateInputField, "YYYY-MM-DD");
+            return dateValue.isValid() ? dateValue.toISOString() : null;
+        },
+        getParams: function(excludes){
+            var vm = this;
+            var params = {};
+            for( var key in vm.params ) {
+                if( vm.params.hasOwnProperty(key) && vm.params[key] ) {
+                    if( excludes && key in excludes ) continue;
+                    params[key] = vm.params[key];
+                }
+            }
+            return params;
+        },
+    },
+    computed: {
+        _start_at: {
+            get: function() {
+                return this.asDateInputField(this.params.start_at);
+            },
+            set: function(newVal) {
+                if( newVal ) {
+                    // The setter might be call with `newVal === null`
+                    // when the date is incorrect (ex: 09/31/2022).
+                    this.$set(this.params, 'start_at',
+                        this.asDateISOString(newVal));
+                    if( this.autoreload && this.outdated ) this.get();
+                }
+            }
+        },
+        _ends_at: {
+            get: function() {
+                // form field input="date" will expect ends_at as a String
+                // but will literally cut the hour part regardless of timezone.
+                // We don't want an empty list as a result.
+                // If we use moment `endOfDay` we get 23:59:59 so we
+                // add a full day instead. It seemed clever to run the following
+                // code but that prevented entering the year part in the input
+                // field (as oppossed to use the widget).
+                //
+                // const dateValue = moment(this.params.ends_at).add(1,'days');
+                // return dateValue.isValid() ? dateValue.format("YYYY-MM-DD") : null;
+                return this.asDateInputField(this.params.ends_at);
+            },
+            set: function(newVal) {
+                if( newVal ) {
+                    // The setter might be call with `newVal === null`
+                    // when the date is incorrect (ex: 09/31/2022).
+                    this.$set(this.params, 'ends_at',
+                        this.asDateISOString(newVal));
+                    if( this.autoreload && this.outdated ) this.get();
+                }
+            }
+        },
+        outdated: function() {
+            var vm = this;
+            const params = vm.getParams();
+            for( var key in vm.lastGetParams ) {
+                if( vm.lastGetParams.hasOwnProperty(key) ) {
+                    if( vm.lastGetParams[key] !== params[key] ) {
+                        return true;
+                    }
+                }
+            }
+            for( var key in params ) {
+                if( params.hasOwnProperty(key) ) {
+                    if( params[key] !== vm.lastGetParams[key] ) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+    }
+};
+
+
 /** A wrapper around jQuery ajax functions that adds authentication
     parameters as necessary.
 
@@ -162,7 +276,8 @@ var messagesMixin = {
 */
 var httpRequestMixin = {
     mixins: [
-        messagesMixin
+        messagesMixin,
+        paramsMixin
     ],
 // XXX conflitcs when params defined as props
 //    data: function() {
@@ -227,17 +342,6 @@ var httpRequestMixin = {
             return base + '/' + path;
         },
 
-        getParams: function(excludes){
-            var vm = this;
-            var params = {};
-            for( var key in vm.params ) {
-                if( vm.params.hasOwnProperty(key) && vm.params[key] ) {
-                    if( excludes && key in excludes ) continue;
-                    params[key] = vm.params[key];
-                }
-            }
-            return params;
-        },
         getQueryString: function(excludes){
             var vm = this;
             var sep = "";
@@ -1051,31 +1155,9 @@ var itemListMixin = {
                     count: 0
                 },
                 mergeResults: false,
-                params: {
-                    // The following dates will be stored as `String` objects
-                    // as oppossed to `moment` or `Date` objects because this
-                    // is how form fields input="date" will update them.
-                    start_at: null,
-                    ends_at: null,
-                    // The timezone for both start_at and ends_at.
-                    timezone: 'local'
-                },
-                lastGetParams: {},
-                autoreload: true,
                 getCb: null,
                 getCompleteCb: null,
                 getBeforeCb: null,
-            }
-            if( this.$dateRange ) {
-                if( this.$dateRange.start_at ) {
-                    data.params['start_at'] = this.$dateRange.start_at;
-                }
-                if( this.$dateRange.ends_at ) {
-                    data.params['ends_at'] = this.$dateRange.ends_at;
-                }
-                if( this.$dateRange.timezone ) {
-                    data.params['timezone'] = this.$dateRange.timezone;
-                }
             }
             return data;
         },
@@ -1122,74 +1204,7 @@ var itemListMixin = {
             vm.lastGetParams = vm.getParams();
             vm.reqGet(vm.url, vm.lastGetParams, cb);
         },
-        asDateInputField: function(dateISOString) {
-            const dateValue = moment(dateISOString);
-            return dateValue.isValid() ? dateValue.format("YYYY-MM-DD") : null;
-        },
-        asDateISOString: function(dateInputField) {
-            const dateValue = moment(dateInputField, "YYYY-MM-DD");
-            return dateValue.isValid() ? dateValue.toISOString() : null;
-        }
     },
-    computed: {
-        _start_at: {
-            get: function() {
-                return this.asDateInputField(this.params.start_at);
-            },
-            set: function(newVal) {
-                if( newVal ) {
-                    // The setter might be call with `newVal === null`
-                    // when the date is incorrect (ex: 09/31/2022).
-                    this.$set(this.params, 'start_at',
-                        this.asDateISOString(newVal));
-                    if( this.autoreload && this.outdated ) this.get();
-                }
-            }
-        },
-        _ends_at: {
-            get: function() {
-                // form field input="date" will expect ends_at as a String
-                // but will literally cut the hour part regardless of timezone.
-                // We don't want an empty list as a result.
-                // If we use moment `endOfDay` we get 23:59:59 so we
-                // add a full day instead. It seemed clever to run the following
-                // code but that prevented entering the year part in the input
-                // field (as oppossed to use the widget).
-                //
-                // const dateValue = moment(this.params.ends_at).add(1,'days');
-                // return dateValue.isValid() ? dateValue.format("YYYY-MM-DD") : null;
-                return this.asDateInputField(this.params.ends_at);
-            },
-            set: function(newVal) {
-                if( newVal ) {
-                    // The setter might be call with `newVal === null`
-                    // when the date is incorrect (ex: 09/31/2022).
-                    this.$set(this.params, 'ends_at',
-                        this.asDateISOString(newVal));
-                    if( this.autoreload && this.outdated ) this.get();
-                }
-            }
-        },
-        outdated: function() {
-            var vm = this;
-            const params = vm.getParams();
-            for( var key in vm.lastGetParams ) {
-                if( vm.lastGetParams.hasOwnProperty(key) ) {
-                    if( vm.lastGetParams[key] !== params[key] ) {
-                        return true;
-                    }
-                }
-            }
-            for( var key in params ) {
-                if( params.hasOwnProperty(key) ) {
-                    if( params[key] !== vm.lastGetParams[key] ) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-    }
 };
 
 
@@ -1315,9 +1330,10 @@ var TypeAhead = Vue.extend({
 
     // attach properties to the exports object to define
     // the exported module properties.
-    exports.messagesMixin = messagesMixin;
     exports.httpRequestMixin = httpRequestMixin;
-    exports.itemMixin = itemMixin;
     exports.itemListMixin = itemListMixin;
+    exports.itemMixin = itemMixin;
+    exports.messagesMixin = messagesMixin;
+    exports.paramsMixin = paramsMixin;
     exports.TypeAhead = TypeAhead;
 }));
