@@ -270,9 +270,6 @@ class AbstractQuestion(SlugTitleMixin, models.Model):
 @python_2_unicode_compatible
 class Question(AbstractQuestion):
 
-# XXX Before migration:
-#    pass
-# XXX After migration
     class Meta(AbstractQuestion.Meta):
         swappable = 'QUESTION_MODEL'
 
@@ -673,6 +670,7 @@ class Portfolio(models.Model):
     campaign = models.ForeignKey('Campaign', null=True,
         on_delete=models.PROTECT, db_index=True,
         related_name='portfolios')
+    extra = get_extra_field_class()(null=True)
 
     class Meta:
         unique_together = (('grantee', 'account', 'campaign'),)
@@ -848,6 +846,7 @@ class PortfolioDoubleOptIn(models.Model):
     initiated_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE)
     verification_key = models.CharField(max_length=40, null=True, unique=True)
+    extra = get_extra_field_class()(null=True)
 
     # To connect with payment provider.
     invoice_key = models.CharField(max_length=40, null=True)
