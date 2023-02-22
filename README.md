@@ -28,12 +28,14 @@ Releases
 Tested with
 
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/)), **Django Rest Framework:** 3.12
-- **Python:** 3.10, **Django:** 4.0 (latest), **Django Rest Framework:** 3.12
+- **Python:** 3.10, **Django:** 4.1 (latest), **Django Rest Framework:** 3.12
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
-0.7.8
+0.8.0
 
-  * fixes recording first relative measurement
+  * adds extra field to portfolio and optins
+  * adds construct_*_periods helpers
+  * matches TableSerializer and ListSerializer results field (breaking API)
 
 [previous release notes](changelog)
 
