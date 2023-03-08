@@ -330,16 +330,33 @@ var httpRequestMixin = {
         _safeUrl: function(base, path) {
             if( !path ) return base;
 
-            if( base && base[base.length - 1] == '/') {
-                if( path && path[0] == '/') {
-                    return base + path.substring(1);
+            const parts = [base].concat(
+                ( typeof path === 'string' ) ? [path] : path);
+            var cleanParts = [];
+            var start, end;
+            for( var idx = 0; idx < parts.length; ++idx ) {
+                const part = parts[idx];
+                for( start = 0; start < part.length; ++start ) {
+                    if( part[start] !== '/') {
+                        break;
+                    }
                 }
-                return base + path;
+                for( end = part.length - 1; end >= 0; --end ) {
+                    if( part[end] !== '/') {
+                        break;
+                    }
+                }
+                if( start < end ) {
+                    cleanParts.push(part.slice(start, end + 1));
+                } else {
+                    cleanParts.push(part);
+                }
             }
-            if( path && path[0] == '/') {
-                return base + path;
+            var cleanUrl = cleanParts[0];
+            for( idx = 1; idx < cleanParts.length; ++idx ) {
+                cleanUrl += '/' + cleanParts[idx];
             }
-            return base + '/' + path;
+            return cleanUrl.startsWith('http') ? cleanUrl[0] : '/' + cleanUrl;
         },
 
         getQueryString: function(excludes){
@@ -815,30 +832,29 @@ var httpRequestMixin = {
                 failureCallback = vm.showErrorMessages;
             }
             for(var idx = 0; idx < queryArray.length; ++idx ) {
-                ajaxCalls.push(function () {
-                    return $.ajax({
-                        method: queryArray[idx].method,
-                        url: queryArray[idx].url,
-                        data: JSON.stringify(queryArray[idx].data),
-                        beforeSend: function(xhr, settings) {
-                            var authToken = vm._getAuthToken();
-                            if( authToken ) {
-                                xhr.setRequestHeader("Authorization",
-                                                     "Bearer " + authToken);
-                            } else {
-                                if( !vm._csrfSafeMethod(settings.type) ) {
-                                    var csrfToken = vm._getCSRFToken();
-                                    if( csrfToken ) {
-                                        xhr.setRequestHeader("X-CSRFToken", csrfToken);
-                                    }
+                ajaxCalls.push($.ajax({
+                    method: queryArray[idx].method,
+                    url: queryArray[idx].url,
+                    data: JSON.stringify(queryArray[idx].data),
+                    beforeSend: function(xhr, settings) {
+                        var authToken = vm._getAuthToken();
+                        if( authToken ) {
+                            xhr.setRequestHeader("Authorization",
+                                                 "Bearer " + authToken);
+                        } else {
+                            if( !vm._csrfSafeMethod(settings.type) ) {
+                                var csrfToken = vm._getCSRFToken();
+                                if( csrfToken ) {
+                                    xhr.setRequestHeader("X-CSRFToken", csrfToken);
                                 }
                             }
-                        },
-                        contentType: 'application/json',
-                    });
-                }());
+                        }
+                    },
+                    contentType: 'application/json',
+                }));
             }
-            jQuery.when(ajaxCalls).done(successCallback).fail(failureCallback);
+            jQuery.when.apply(jQuery, ajaxCalls).done(successCallback).fail(
+                failureCallback);
         },
     }
 }

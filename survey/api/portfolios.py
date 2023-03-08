@@ -209,10 +209,10 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
                }]
             }
         """
+        #pylint:disable=too-many-locals
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        #pylint:disable=too-many-locals
         created_at = datetime_or_now()
         # If we don't make a copy, we will get an exception "Got KeyError
         # when attempting to get a value for field `slug`" later on in
@@ -227,8 +227,9 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
         account_model = get_account_model()
         lookups = {self.lookup_field: grantee_data.pop('slug')}
         invalid_fields = []
-        model_fields = set([
-            field.name for field in account_model._meta.get_fields()])
+        # set comprehension py2.7+ syntax
+        model_fields = {
+            field.name for field in account_model._meta.get_fields()}
         for field_name in six.iterkeys(grantee_data):
             if field_name not in model_fields:
                 invalid_fields += [field_name]
@@ -622,3 +623,55 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
             **filter_args)
         instance.delete()
         return HttpResponse(status=status.HTTP_204_NO_CONTENT)
+
+
+class PortfoliosUpdateAPIView(AccountMixin, generics.UpdateAPIView):
+    """
+    Update extra information in a portfolio request/grant
+
+    The requestor/grantor uses this API call to add metadata about
+    the request/grant.
+
+    **Tags**: portfolios
+
+    **Examples**
+
+    .. code-block:: http
+
+        PUT /api/energy-utility/portfolios/requests/metadata/supplier-1 HTTP/1.1
+
+    .. code-block:: json
+
+        {
+          "extra": {"tags": "tier1"}
+        }
+
+    responds
+
+    .. code-block:: json
+
+        {
+          "grantee": "energy-utility",
+          "account": "supplier-1",
+          "campaign": "sustainability",
+          "ends_at": "2022-01-01T00:00:00Z",
+          "state": "request-denied",
+          "api_accept": null
+        }
+     """
+    target_url_kwarg = 'target'
+    serializer_class = PortfolioOptInSerializer
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        serializer = self.get_serializer(data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        optins = PortfolioDoubleOptIn.objects.requested(self.account).filter(
+            account__slug=self.kwargs.get(self.target_url_kwarg)
+        )
+
+        optins.update(extra=serializer.validated_data.get('extra'))
+
+        last_optin = optins.order_by('-created_at').first()
+        return HttpResponse(self.get_serializer(instance=last_optin).data)

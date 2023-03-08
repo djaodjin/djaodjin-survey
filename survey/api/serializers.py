@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -21,7 +21,9 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import json
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.template.defaultfilters import slugify
 from rest_framework import serializers
@@ -72,6 +74,21 @@ class EnumField(serializers.Field):
         return result
 
 
+class ExtraField(serializers.CharField):
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            return json.dumps(data)
+        return super(ExtraField, self).to_internal_value(data)
+
+    def to_representation(self, value):
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError):
+            pass
+        return super(ExtraField, self).to_representation(value)
+
+
 class NoModelSerializer(serializers.Serializer):
 
     def create(self, validated_data):
@@ -88,7 +105,7 @@ class AccountSerializer(serializers.ModelSerializer):
         help_text=_("Name that can be safely used for display in HTML pages"))
     picture = serializers.SerializerMethodField(read_only=True,
         help_text=_("URL location of the profile picture"))
-    extra = serializers.SerializerMethodField(read_only=True,
+    extra = ExtraField(read_only=True,
         help_text=_("Extra meta data (can be stringify JSON)"))
     rank = serializers.SerializerMethodField(read_only=True,
         help_text=_("rank in filter"))
@@ -99,8 +116,10 @@ class AccountSerializer(serializers.ModelSerializer):
 
     @staticmethod
     def get_slug(obj):
-        if hasattr(obj, 'slug'):
+        try:
             return obj.slug
+        except AttributeError:
+            pass
         return obj.username
 
     @staticmethod
@@ -115,14 +134,9 @@ class AccountSerializer(serializers.ModelSerializer):
     def get_picture(obj):
         try:
             return obj.picture
-        except:
+        except AttributeError:
             pass
         return None
-
-    @staticmethod
-    def get_extra(obj):
-        extra = extra_as_internal(obj)
-        return extra
 
     @staticmethod
     def get_rank(obj):
@@ -184,6 +198,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
     default_unit = serializers.SlugRelatedField(slug_field='slug',
         queryset=Unit.objects.all(),
         help_text=_("Default unit for measured field when none is specified"))
+    extra = ExtraField(required=False)
 
     class Meta:
         model = get_question_model()
@@ -362,6 +377,7 @@ class EditableFilterSerializer(serializers.ModelSerializer):
     likely_metric = serializers.SerializerMethodField()
     predicates = EditablePredicateSerializer(many=True, required=False)
     results = get_account_serializer()(many=True, required=False) # XXX do we still need this field?
+    extra = ExtraField(required=False)
 
     class Meta:
         model = EditableFilter
@@ -384,6 +400,8 @@ class EditableFilterSerializer(serializers.ModelSerializer):
                     operand=predicate['operand'],
                     field=predicate['field'],
                     selector=predicate['selector'])
+                # We have a reverse ORM relationship called 'predicates'
+                #pylint:disable=no-member
                 editable_filter.predicates.add(predicate)
         return editable_filter
 
@@ -392,8 +410,8 @@ class EditableFilterSerializer(serializers.ModelSerializer):
             instance.title = validated_data['title']
             instance.extra = validated_data['extra']
             instance.save()
-            absents = set([item['pk']
-                for item in instance.predicates.all().values('pk')])
+            absents = set(instance.predicates.all().values_list(
+                'pk', flat=True))
             for idx, predicate in enumerate(validated_data['predicates']):
                 predicate, _ = EditablePredicate.objects.get_or_create(
                     editable_filter=instance,
@@ -426,7 +444,7 @@ class MatrixSerializer(serializers.ModelSerializer):
             editable_filter_serializer = EditableFilterSerializer()
             for cohort in validated_data['cohorts']:
                 cohort = editable_filter_serializer.create(cohort)
-                matrix.predicates.add(cohort)
+                matrix.cohorts.add(cohort)
         return matrix
 
     def update(self, instance, validated_data):
@@ -437,8 +455,7 @@ class MatrixSerializer(serializers.ModelSerializer):
                     EditableFilter.objects.all(),
                     slug=validated_data['metric']['slug'])
             instance.save()
-            absents = set([item['pk']
-                for item in instance.cohorts.all().values('pk')])
+            absents = set(instance.cohorts.all().values_list('pk', flat=True))
             for cohort in validated_data['cohorts']:
                 cohort = get_object_or_404(
                     EditableFilter.objects.all(), slug=cohort['slug'])
@@ -538,11 +555,12 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
     state = EnumField(choices=PortfolioDoubleOptIn.STATES)
     api_accept = serializers.SerializerMethodField()
     api_remove = serializers.SerializerMethodField()
+    extra = ExtraField(required=False)
 
     class Meta:
         model = PortfolioDoubleOptIn
         fields = ('grantee', 'account', 'campaign', 'created_at', 'ends_at',
-            'state', 'api_accept', 'api_remove')
+            'state', 'api_accept', 'api_remove', 'extra')
         read_only_fields = ('created_at', 'ends_at',
             'state', 'api_accept', 'api_remove')
 
@@ -583,8 +601,15 @@ class AccountsFilterAddSerializer(serializers.ModelSerializer):
 
     slug = serializers.CharField(required=False)
     full_name = serializers.CharField()
-    extra = serializers.CharField(required=False)
+    extra = ExtraField(required=False)
 
     class Meta:
         model = get_account_model()
         fields = ('slug', 'full_name', 'extra')
+
+
+class RespondentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = get_user_model()
+        fields = ('username',)

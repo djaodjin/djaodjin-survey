@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import hashlib, random, uuid
+import datetime, hashlib, random, uuid
 
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
@@ -340,46 +340,67 @@ class SampleManager(models.Manager):
         return self.create(account=get_account_model().objects.get(
                 **account_lookup_kwargs), **kwargs)
 
-    def get_latest_frozen_by_accounts(self, campaign,
-                                      before=None, excludes=None):
+    def get_latest_frozen_by_accounts(self, campaign=None,
+                                      start_at=None, ends_at=None,
+                                      tags=None, pks_only=False):
         """
-        Returns the most recent frozen assessment before an optionally specified
-        date, indexed by account.
+        Returns the most recent frozen sample in an optionally specified
+        date range, indexed by account.
 
-        All accounts in ``excludes`` are not added to the index. This is
-        typically used to filter out 'testing' accounts
+        The returned queryset can be further filtered by a campaign and
+        a set of tags.
         """
-        if excludes:
-            if isinstance(excludes, list):
-                excludes = ','.join([
-                    str(account_id) for account_id in excludes])
-            filter_out_testing = (
-                "AND survey_sample.account_id NOT IN (%s)" % str(excludes))
+        #pylint:disable=too-many-arguments
+        campaign_clause = ""
+        if campaign:
+            campaign_clause = (
+                "AND survey_sample.campaign_id = %(campaign_id)d" % {
+                    'campaign_id': campaign.pk})
+        date_range_clause = ""
+        if start_at:
+            date_range_clause = (" AND survey_sample.created_at >= '%s'" %
+                start_at.isoformat())
+        if ends_at:
+            date_range_clause += (" AND survey_sample.created_at < '%s'" %
+                ends_at.isoformat())
+        extra_clause = ""
+        if tags is not None:
+            if tags:
+                extra_clause = "".join([
+                    "AND LOWER(survey_sample.extra) LIKE '%%%s%%'" %
+                    tag.lower() for tag in tags])
+            else:
+                extra_clause = "AND survey_sample.extra IS NULL"
+        if pks_only:
+            values = 'survey_sample.id'
         else:
-            filter_out_testing = ""
-        before_clause = ("AND created_at < '%s'" % before.isoformat()
-            if before else "")
+            values = 'survey_sample.*'
+
         sql_query = """SELECT
-    survey_sample.account_id AS account_id,
-    survey_sample.id AS id,
-    survey_sample.created_at AS created_at
+    %(values)s
 FROM survey_sample
 INNER JOIN (
     SELECT
         account_id,
+        campaign_id,
         MAX(created_at) AS last_updated_at
     FROM survey_sample
-    WHERE survey_sample.campaign_id = %(campaign_id)d AND
-          survey_sample.is_frozen
-          %(before_clause)s
-          %(filter_out_testing)s
-    GROUP BY account_id) AS last_updates
+    WHERE survey_sample.is_frozen
+          %(campaign_clause)s
+          %(date_range_clause)s
+          %(extra_clause)s
+    GROUP BY account_id, campaign_id) AS last_updates
 ON survey_sample.account_id = last_updates.account_id AND
+   survey_sample.campaign_id = last_updates.campaign_id AND
    survey_sample.created_at = last_updates.last_updated_at
 WHERE survey_sample.is_frozen
-""" % {'campaign_id': campaign.pk,
-       'before_clause': before_clause,
-       'filter_out_testing': filter_out_testing}
+      %(campaign_clause)s
+ORDER BY survey_sample.created_at DESC
+""" % {'values': values,
+       'campaign_clause': campaign_clause,
+       'date_range_clause': date_range_clause,
+       'extra_clause': extra_clause}
+        print("XXX sql_query=%s" % str(sql_query))
         return self.raw(sql_query)
 
     def get_score(self, sample):
@@ -420,6 +441,8 @@ class Sample(models.Model):
         help_text="Date/time of creation (in ISO format)")
     updated_at = models.DateTimeField(auto_now_add=True,
         help_text="Date/time of last update (in ISO format)")
+    time_spent = models.DurationField(default=datetime.timedelta,
+        help_text="Total recorded time to complete the survey")
     campaign = models.ForeignKey(Campaign, null=True, on_delete=models.PROTECT)
     account = models.ForeignKey(settings.ACCOUNT_MODEL,
         null=True, on_delete=models.PROTECT, related_name='samples')
@@ -429,10 +452,6 @@ class Sample(models.Model):
 
     def __str__(self):
         return str(self.slug)
-
-    @property
-    def time_spent(self):
-        return self.updated_at - self.created_at
 
     @property
     def nb_answers(self):

@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,20 +24,24 @@
 
 from ...api.portfolios import (PortfoliosAPIView,
     PortfoliosGrantsAPIView, PortfoliosGrantAcceptAPIView,
-    PortfoliosRequestsAPIView, PortfoliosRequestAcceptAPIView)
+    PortfoliosRequestsAPIView, PortfoliosRequestAcceptAPIView,
+    PortfoliosUpdateAPIView)
 from ...compat import path
 
 
 urlpatterns = [
-    path(r'portfolios/grants/<slug:verification_key>',
-        PortfoliosGrantAcceptAPIView.as_view(),
-        name='api_portfolios_grant_accept'),
+    path('portfolios/requests/metadata/<slug:target>',
+        PortfoliosUpdateAPIView.as_view(),
+        name='survey_api_portfolios_update'),
     path(r'portfolios/requests/<slug:verification_key>',
         PortfoliosRequestAcceptAPIView.as_view(),
         name='api_portfolios_request_accept'),
     path('portfolios/requests',
         PortfoliosRequestsAPIView.as_view(),
         name='survey_api_portfolios_requests'),
+    path(r'portfolios/grants/<slug:verification_key>',
+        PortfoliosGrantAcceptAPIView.as_view(),
+        name='api_portfolios_grant_accept'),
     path('portfolios/grants',
         PortfoliosGrantsAPIView.as_view(),
         name='survey_api_portfolios_grants'),

@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,7 @@
 import decimal, json, logging
 from collections import OrderedDict
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Max
 from django.db.utils import DataError
@@ -40,7 +41,8 @@ from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..mixins import AccountMixin, SampleMixin
 from ..models import Answer, Choice, Sample, Unit, UnitEquivalences
 from .serializers import (AnswerSerializer, NoModelSerializer,
-    SampleAnswerSerializer, SampleCreateSerializer, SampleSerializer)
+    RespondentSerializer, SampleAnswerSerializer, SampleCreateSerializer,
+    SampleSerializer)
 from ..utils import datetime_or_now, get_question_model, is_sqlite3
 
 
@@ -1527,3 +1529,81 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save(account=self.account)
+
+
+class SampleRespondentsAPIView(SampleMixin, generics.ListAPIView):
+    """
+    Lists unique respondents
+
+    The list returned contains the information about the users who answered
+    at least one question.
+
+    The {sample} must belong to {organization}.
+
+    {path} can be used to filter the tree of questions by a prefix.
+
+    **Tags**: assessments
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a\
+/respondents/construction HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+    {
+        "count": 1,
+        "previous": null,
+        "next": null,
+        "results": [
+            "steve"
+         ]
+    }
+    """
+    serializer_class = RespondentSerializer
+
+    def get_queryset(self):
+        kwargs = {}
+        if self.path:
+            kwargs = {'answer__question__path__startwith': self.path}
+        return get_user_model().objects.filter(
+            answer__sample=self.sample, **kwargs).distinct()
+
+
+class SampleRespondentsIndexAPIView(SampleRespondentsAPIView):
+    """
+    Lists unique respondents
+
+    The list returned contains the information about the users who answered
+    at least one question.
+
+    The {sample} must belong to {organization}.
+
+    {path} can be used to filter the tree of questions by a prefix.
+
+    **Tags**: assessments
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a\
+/respondents HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+    {
+        "count": 1,
+        "previous": null,
+        "next": null,
+        "results": [
+            "steve"
+         ]
+    }
+    """

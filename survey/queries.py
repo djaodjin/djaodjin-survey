@@ -23,11 +23,11 @@ def get_frozen_answers(campaign, samples, prefix=None, excludes=None):
     extra_question_clause = ""
     if prefix:
         extra_question_clause += (
-            "AND survey_question.path LIKE '%(prefix)s%%%%'\n" % {
+            "survey_question.path LIKE '%(prefix)s%%%%'\n" % {
                 'prefix': prefix})
     if excludes:
         extra_question_clause += (
-            "AND survey_question.id NOT IN (SELECT id FROM survey_question"\
+            "survey_question.id NOT IN (SELECT id FROM survey_question"\
             " WHERE extra LIKE '%%%%%(extra)s%%%%')\n" % {
             'extra': excludes})
 
@@ -40,6 +40,15 @@ def get_frozen_answers(campaign, samples, prefix=None, excludes=None):
             sample_sql = "SELECT id FROM (%s) AS frzsmps" % samples.query.sql
         sample_clause += (
             "sample_id IN (%s)" % sample_sql)
+
+    sep = ""
+    additional_filters = ""
+    if sample_clause:
+        additional_filters = sample_clause
+        sep = "AND "
+    if extra_question_clause:
+        additional_filters += sep + extra_question_clause
+        sep = "AND "
 
     query_text = """
 WITH answers AS (
@@ -60,8 +69,7 @@ WITH answers AS (
     LEFT OUTER JOIN survey_choice
       ON survey_choice.id = survey_answer.measured
       AND survey_choice.unit_id = survey_answer.unit_id
-    WHERE %(sample_clause)s
-      %(extra_question_clause)s
+    WHERE %(additional_filters)s
 ),
 -- The following brings all current questions in the campaign
 -- in an attempt to present a consistent display (i.e. order by rank).
@@ -73,7 +81,7 @@ campaign_questions AS (
     FROM survey_question
       INNER JOIN survey_enumeratedquestions
       ON survey_question.id = survey_enumeratedquestions.question_id
-    WHERE survey_enumeratedquestions.campaign_id = %(campaign)d
+    WHERE survey_enumeratedquestions.campaign_id = %(campaign)d AND
       %(extra_question_clause)s
 ),
 -- The following returns all answered questions only.
@@ -99,11 +107,16 @@ SELECT
     answers.measured_text AS measured_text
 FROM questions
 LEFT OUTER JOIN answers
-  ON questions.id = answers.question_id""" % {
+  ON questions.id = answers.question_id
+INNER JOIN survey_sample
+  ON answers.sample_id = survey_sample.id
+INNER JOIN saas_organization
+  ON survey_sample.account_id = saas_organization.id
+ORDER BY questions.id, saas_organization.full_name""" % {
       'campaign': campaign.pk,
       'convert_to_text': ("" if is_sqlite3() else "::text"),
       'extra_question_clause': extra_question_clause,
-      'sample_clause': sample_clause,
+      'additional_filters': additional_filters,
   }
     return Answer.objects.raw(query_text).prefetch_related(
         'unit', 'collected_by', 'question', 'question__content',
