@@ -1559,9 +1559,9 @@ class SampleRespondentsAPIView(SampleMixin, generics.ListAPIView):
         "count": 1,
         "previous": null,
         "next": null,
-        "results": [
-            "steve"
-         ]
+        "results": [{
+            "username": "steve"
+         }]
     }
     """
     serializer_class = RespondentSerializer
@@ -1602,8 +1602,8 @@ class SampleRespondentsIndexAPIView(SampleRespondentsAPIView):
         "count": 1,
         "previous": null,
         "next": null,
-        "results": [
-            "steve"
-         ]
+        "results": [{
+            "username": "steve"
+         }]
     }
     """

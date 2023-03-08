@@ -37,7 +37,8 @@ from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..mixins import AccountMixin
 from ..models import PortfolioDoubleOptIn
 from .serializers import (NoModelSerializer, PortfolioOptInSerializer,
-    PortfolioGrantCreateSerializer, PortfolioRequestCreateSerializer)
+    PortfolioOptInUpdateSerializer, PortfolioGrantCreateSerializer,
+    PortfolioRequestCreateSerializer)
 from ..filters import (DateRangeFilter, DoubleOptInStateFilter, OrderingFilter,
      SearchFilter)
 from ..utils import datetime_or_now, get_account_model
@@ -546,35 +547,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
 
 
 class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
-    """
-    Accepts a portfolio request
 
-    A `grantee` has made a request to *account*'s portfolio. The *account*
-    accepts the request, making the *account*'s answers up-to-date `ends_at`
-    available to `grantee`.
-
-    Note that *account* is the actual *account* we are looking to access data
-    from here, while the *account* parameter is the `grantee` when calling
-    `POST /api/{account}/requests`.
-
-    **Tags**: portfolios
-
-    **Examples**
-
-    .. code-block:: http
-
-        POST /api/supplier-1/portfolios/requests/0123456789abcef HTTP/1.1
-
-    .. code-block:: json
-
-        {}
-
-    responds
-
-    .. code-block:: json
-
-        {}
-    """
     lookup_field = 'verification_key'
     serializer_class = NoModelSerializer
 
@@ -582,6 +555,35 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         return PortfolioDoubleOptIn.objects.filter(account=self.account)
 
     def post(self, request, *args, **kwargs):
+        """
+        Accepts a portfolio request
+
+        A `grantee` has made a request to *account*'s portfolio. The *account*
+        accepts the request, making the *account*'s answers up-to-date `ends_at`
+        available to `grantee`.
+
+        Note that *account* is the actual *account* we are looking to access data
+        from here, while the *account* parameter is the `grantee` when calling
+        `POST /api/{account}/requests`.
+
+        **Tags**: portfolios
+
+        **Examples**
+
+        .. code-block:: http
+
+            POST /api/supplier-1/portfolios/requests/0123456789abcef HTTP/1.1
+
+        .. code-block:: json
+
+            {}
+
+        responds
+
+        .. code-block:: json
+
+            {}
+        """
         #pylint:disable=unused-argument
         instance = self.get_object()
         self.perform_create(instance)
@@ -656,11 +658,31 @@ class PortfoliosUpdateAPIView(AccountMixin, generics.UpdateAPIView):
           "campaign": "sustainability",
           "ends_at": "2022-01-01T00:00:00Z",
           "state": "request-denied",
-          "api_accept": null
+          "api_accept": null,
+          "extra": {"tags": "tier1"}
         }
-     """
+    """
     target_url_kwarg = 'target'
     serializer_class = PortfolioOptInSerializer
+
+    def get_serializer_class(self):
+        if self.request.method.lower() in ('put', 'patch'):
+            return PortfolioOptInUpdateSerializer
+        return super(PortfoliosUpdateAPIView, self).get_serializer_class()
+
+    @swagger_auto_schema(responses={
+      200: OpenAPIResponse("Update successful", PortfolioOptInSerializer,
+      many=False)})
+    def put(self, request, *args, **kwargs):
+        return super(PortfoliosUpdateAPIView, self).put(
+            request, *args, **kwargs)
+
+    @swagger_auto_schema(responses={
+      200: OpenAPIResponse("Update successful", PortfolioOptInSerializer,
+      many=False)})
+    def patch(self, request, *args, **kwargs):
+        return super(PortfoliosUpdateAPIView, self).patch(
+            request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)

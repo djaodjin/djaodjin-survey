@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -44,8 +44,6 @@ from ..utils import (get_account_model, get_account_serializer,
 from .serializers import (AccountsFilterAddSerializer,
     EditableFilterSerializer, MatrixSerializer, SampleAnswerSerializer)
 
-from ..models import Unit
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -74,9 +72,6 @@ class CompareAPIView(generics.ListAPIView):
     def get_queryset(self):
         # XXX TODO implement!!!
         return Answer.objects.none()
-
-    def get(self, request, *args, **kwargs):
-        return super(CompareAPIView, self).get(request, *args, **kwargs)
 
 
 class MatrixCreateAPIView(generics.ListCreateAPIView):

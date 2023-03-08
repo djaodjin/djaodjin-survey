@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,8 +24,7 @@
 
 from django.db import models
 
-from survey.compat import (gettext_lazy as _, import_string,
-    python_2_unicode_compatible)
+from survey.compat import gettext_lazy as _, python_2_unicode_compatible
 
 
 @python_2_unicode_compatible

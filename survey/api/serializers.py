@@ -32,7 +32,6 @@ from rest_framework.generics import get_object_or_404
 
 from .. import settings
 from ..compat import gettext_lazy as _, reverse, six
-from ..helpers import extra_as_internal
 from ..models import (Answer, Campaign, Choice,
     EditableFilter, EditablePredicate, Matrix, PortfolioDoubleOptIn,
     Sample, Unit)
@@ -194,11 +193,15 @@ class UnitSerializer(serializers.ModelSerializer):
 
 class QuestionCreateSerializer(serializers.ModelSerializer):
 
-    title = serializers.CharField(allow_blank=True)
+    title = serializers.CharField(allow_blank=True,
+        help_text=_("Title of the question as displayed in user interfaces"))
+    text = serializers.CharField(required=False, allow_blank=True,
+        help_text=_("Long form description about the question"))
     default_unit = serializers.SlugRelatedField(slug_field='slug',
         queryset=Unit.objects.all(),
         help_text=_("Default unit for measured field when none is specified"))
-    extra = ExtraField(required=False)
+    extra = ExtraField(required=False,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     class Meta:
         model = get_question_model()
@@ -377,7 +380,8 @@ class EditableFilterSerializer(serializers.ModelSerializer):
     likely_metric = serializers.SerializerMethodField()
     predicates = EditablePredicateSerializer(many=True, required=False)
     results = get_account_serializer()(many=True, required=False) # XXX do we still need this field?
-    extra = ExtraField(required=False)
+    extra = ExtraField(required=False, allow_null=True, allow_blank=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     class Meta:
         model = EditableFilter
@@ -535,11 +539,23 @@ class PortfolioRequestCreateSerializer(serializers.ModelSerializer):
     campaign = serializers.SlugRelatedField(required=False,
         queryset=Campaign.objects.all(), slug_field='slug')
     message = serializers.CharField(required=False, allow_null=True)
+    extra = ExtraField(required=False,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     class Meta:
         model = PortfolioDoubleOptIn
-        fields = ("accounts", "campaign", "message", "ends_at",)
-        read_only_fields = ("ends_at",)
+        fields = ('accounts', 'campaign', 'message', 'ends_at', 'extra')
+        read_only_fields = ('ends_at',)
+
+
+class PortfolioOptInUpdateSerializer(serializers.ModelSerializer):
+
+    extra = ExtraField(required=False,
+        help_text=_("Extra meta data (can be stringify JSON)"))
+
+    class Meta:
+        model = PortfolioDoubleOptIn
+        fields = ('extra',)
 
 
 class PortfolioOptInSerializer(serializers.ModelSerializer):
@@ -555,7 +571,8 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
     state = EnumField(choices=PortfolioDoubleOptIn.STATES)
     api_accept = serializers.SerializerMethodField()
     api_remove = serializers.SerializerMethodField()
-    extra = ExtraField(required=False)
+    extra = ExtraField(required=False,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     class Meta:
         model = PortfolioDoubleOptIn
@@ -601,7 +618,8 @@ class AccountsFilterAddSerializer(serializers.ModelSerializer):
 
     slug = serializers.CharField(required=False)
     full_name = serializers.CharField()
-    extra = ExtraField(required=False)
+    extra = ExtraField(required=False,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     class Meta:
         model = get_account_model()
@@ -613,3 +631,4 @@ class RespondentSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         fields = ('username',)
+        read_only_fields = ('username',)

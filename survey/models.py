@@ -158,8 +158,12 @@ class Choice(models.Model):
         on_delete=models.PROTECT, null=True)
     rank = models.IntegerField(
         help_text=_("used to order choice when presenting a question"))
-    text = models.TextField()
-    descr = models.TextField()
+    text = models.TextField(
+        help_text=_("short name for the enumerated value"\
+        " (as used in source code)"))
+    descr = models.TextField(
+        help_text=_("long form description of the enumerated value"\
+        " (for help tooltips)"))
 
     class Meta:
         unique_together = ('unit', 'question', 'rank')
@@ -213,7 +217,8 @@ class AbstractQuestion(SlugTitleMixin, models.Model):
     path = models.CharField(max_length=1024, unique=True, db_index=True,
         help_text=_("Unique identifier that can be used in URL"))
     content = models.ForeignKey(settings.CONTENT_MODEL,
-        on_delete=models.PROTECT, related_name='question')
+        on_delete=models.PROTECT, related_name='question',
+        help_text=_("Title, description and metadata about the question"))
     ui_hint = models.CharField(
         max_length=20, choices=UI_HINTS, default=RADIO,
         help_text=_("Choose the type of answser."))
@@ -284,11 +289,13 @@ class Campaign(SlugTitleMixin, models.Model):
         help_text=_("Unique identifier that can be used in a URL"))
     created_at = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=150,
-        help_text=_("Enter a campaign title."))
+        help_text=_("Title of the campaign as displayed in user interfaces"))
     description = models.TextField(null=True, blank=True,
-        help_text=_("This description will be displayed to interviewees."))
+        help_text=_("Long form description displayed to users responding"\
+        " to the campaign"))
     account = models.ForeignKey(settings.BELONGS_MODEL,
-        on_delete=models.PROTECT, null=True)
+        on_delete=models.PROTECT, null=True,
+        help_text=_("Acccount that can make edits to the campaign"))
     active = models.BooleanField(default=False,
         help_text=_("Whether the campaign is available or not"))
     quizz_mode = models.BooleanField(default=False,
@@ -301,7 +308,8 @@ class Campaign(SlugTitleMixin, models.Model):
     questions = models.ManyToManyField(settings.QUESTION_MODEL,
         through='survey.EnumeratedQuestions', related_name='campaigns',
         help_text=_("Questions which are part of the campaign"))
-    extra = get_extra_field_class()(null=True)
+    extra = get_extra_field_class()(null=True, blank=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     def __str__(self):
         return str(self.slug)
@@ -448,7 +456,8 @@ class Sample(models.Model):
         null=True, on_delete=models.PROTECT, related_name='samples')
     is_frozen = models.BooleanField(default=False,
         help_text="When True, answers to that sample cannot be updated.")
-    extra = get_extra_field_class()(null=True)
+    extra = get_extra_field_class()(null=True, blank=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     def __str__(self):
         return str(self.slug)
@@ -668,7 +677,8 @@ class Matrix(SlugTitleMixin, models.Model):
     cohorts = models.ManyToManyField(EditableFilter, related_name='matrices')
     cut = models.ForeignKey(EditableFilter,
         null=True, on_delete=models.SET_NULL, related_name='cuts')
-    extra = get_extra_field_class()(null=True)
+    extra = get_extra_field_class()(null=True, blank=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     def __str__(self):
         return str(self.slug)
@@ -689,7 +699,8 @@ class Portfolio(models.Model):
     campaign = models.ForeignKey('Campaign', null=True,
         on_delete=models.PROTECT, db_index=True,
         related_name='portfolios')
-    extra = get_extra_field_class()(null=True)
+    extra = get_extra_field_class()(null=True, blank=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     class Meta:
         unique_together = (('grantee', 'account', 'campaign'),)
@@ -865,7 +876,8 @@ class PortfolioDoubleOptIn(models.Model):
     initiated_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE)
     verification_key = models.CharField(max_length=40, null=True, unique=True)
-    extra = get_extra_field_class()(null=True)
+    extra = get_extra_field_class()(null=True, blank=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     # To connect with payment provider.
     invoice_key = models.CharField(max_length=40, null=True)
