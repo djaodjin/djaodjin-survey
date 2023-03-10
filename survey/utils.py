@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,7 @@ from pytz import timezone, UnknownTimeZoneError
 from pytz.tzinfo import DstTzInfo
 
 from . import settings
-from .compat import six, urlparse, urlunparse
+from .compat import import_string, six, urlparse, urlunparse
 
 
 LOGGER = logging.getLogger(__name__)
@@ -181,6 +181,20 @@ def get_question_serializer():
         raise ImproperlyConfigured('Module "%s" does not define a "%s"'\
 ' check the value of QUESTION_SERIALIZER' % (module, attr))
     return cls
+
+
+def get_user_serializer():
+    """
+    Returns the user serializer model that is active in this project.
+    """
+    return import_string(settings.USER_SERIALIZER)
+
+
+def get_user_detail_serializer():
+    """
+    Returns the user serializer model that is active in this project.
+    """
+    return import_string(settings.USER_DETAIL_SERIALIZER)
 
 
 def validate_redirect(request):

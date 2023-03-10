@@ -48,6 +48,8 @@ _SETTINGS = {
     'QUESTION_MODEL': 'survey.Question',
     'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionDetailSerializer',
     'SEARCH_FIELDS_PARAM': 'q_f',
+    'USER_SERIALIZER': 'survey.api.serializers_overrides.UserSerializer',
+    'USER_DETAIL_SERIALIZER': 'survey.api.serializers_overrides.UserSerializer',
 }
 _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 
@@ -72,5 +74,7 @@ EXTRA_FIELD = _SETTINGS.get('EXTRA_FIELD')
 QUESTION_MODEL = _SETTINGS.get('QUESTION_MODEL')
 QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
 SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')
+USER_SERIALIZER = _SETTINGS.get('USER_SERIALIZER')
+USER_DETAIL_SERIALIZER = _SETTINGS.get('USER_DETAIL_SERIALIZER')
 
 SLUG_RE = r'[a-zA-Z0-9_\-\+\.]+'

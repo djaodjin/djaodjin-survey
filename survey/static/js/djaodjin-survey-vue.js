@@ -240,21 +240,21 @@ Vue.component('engage-profiles', {
                 vm.reqGet(api_roles_url, function(resp) {
                     entry.respondents = resp.results;
                     entry.respondents.sort(function(a, b) {
-                        if( a.user.last_login ) {
-                            if( b.user.last_login ) {
-                                if( a.user.last_login
-                                    > b.user.last_login ) {
+                        if( a.last_login ) {
+                            if( b.last_login ) {
+                                if( a.last_login
+                                    > b.last_login ) {
                                     return -1;
                                 }
-                                if( a.user.last_login
-                                    < b.user.last_login ) {
+                                if( a.last_login
+                                    < b.last_login ) {
                                     return 1;
                                 }
                             } else {
                                 return -1;
                             }
                         } else {
-                            if( b.user.last_login ) {
+                            if( b.last_login ) {
                                 return 1;
                             } else {
                             }

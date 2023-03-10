@@ -23,7 +23,6 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import json
 
-from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.template.defaultfilters import slugify
 from rest_framework import serializers
@@ -624,11 +623,3 @@ class AccountsFilterAddSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_account_model()
         fields = ('slug', 'full_name', 'extra')
-
-
-class RespondentSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = get_user_model()
-        fields = ('username',)
-        read_only_fields = ('username',)

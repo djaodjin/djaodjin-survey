@@ -571,6 +571,7 @@ class Answer(models.Model):
 
     @property
     def measured_text(self):
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_measured_text'):
             if self.unit.system in Unit.NUMERICAL_SYSTEMS:
                 self._measured_text = str(self.measured)
@@ -585,6 +586,7 @@ class Answer(models.Model):
         Returns True if the answer unit is equivalent
         to the question default unit.
         """
+        #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_is_equiv_default_unit'):
             if self.unit == self.question.default_unit:
                 self._is_equiv_default_unit = True

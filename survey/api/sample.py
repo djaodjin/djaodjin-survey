@@ -41,9 +41,9 @@ from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..mixins import AccountMixin, SampleMixin
 from ..models import Answer, Choice, Sample, Unit, UnitEquivalences
 from .serializers import (AnswerSerializer, NoModelSerializer,
-    RespondentSerializer, SampleAnswerSerializer, SampleCreateSerializer,
-    SampleSerializer)
-from ..utils import datetime_or_now, get_question_model, is_sqlite3
+    SampleAnswerSerializer, SampleCreateSerializer, SampleSerializer)
+from ..utils import (datetime_or_now, get_question_model, get_user_serializer,
+    is_sqlite3)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -1560,11 +1560,12 @@ class SampleRespondentsAPIView(SampleMixin, generics.ListAPIView):
         "previous": null,
         "next": null,
         "results": [{
-            "username": "steve"
+            "slug": "steve",
+            "full_name": "Steve"
          }]
     }
     """
-    serializer_class = RespondentSerializer
+    serializer_class = get_user_serializer()
 
     def get_queryset(self):
         kwargs = {}
@@ -1603,7 +1604,8 @@ class SampleRespondentsIndexAPIView(SampleRespondentsAPIView):
         "previous": null,
         "next": null,
         "results": [{
-            "username": "steve"
+            "slug": "steve",
+            "full_name": "Steve"
          }]
     }
     """
