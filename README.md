@@ -31,11 +31,11 @@ Tested with
 - **Python:** 3.10, **Django:** 4.1 (latest), **Django Rest Framework:** 3.12
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
-0.8.0
+0.8.1
 
-  * adds extra field to portfolio and optins
-  * adds construct_*_periods helpers
-  * matches TableSerializer and ListSerializer results field (breaking API)
+  * adds respondents API
+  * adds portfolio requests metadata API
+  * adds time_spent model field to Sample
 
 [previous release notes](changelog)
 
