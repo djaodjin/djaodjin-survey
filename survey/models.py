@@ -129,11 +129,22 @@ class Unit(models.Model):
         return str(self.slug)
 
 
+class UnitEquivalencesMaganger(models.Manager):
+
+    def are_equiv(self, left, right):
+        return self.filter(
+            (models.Q(source=left) & models.Q(target=right)) |
+            (models.Q(source=right) & models.Q(target=left))
+        ).exists()
+
+
 @python_2_unicode_compatible
 class UnitEquivalences(models.Model):
     """
     Pairs of units that can be translated one to the other.
     """
+    objects = UnitEquivalencesMaganger()
+
     source = models.ForeignKey(Unit, on_delete=models.CASCADE,
         related_name='source_equivalences',
         help_text=_("Source unit in the equivalence"))
@@ -559,10 +570,29 @@ class Answer(models.Model):
         return str(self.question.content)
 
     @property
-    def as_text_value(self):
-        if self.unit.system in Unit.NUMERICAL_SYSTEMS:
-            return self.measured
-        return Choice.objects.get(pk=self.measured).text
+    def measured_text(self):
+        if not hasattr(self, '_measured_text'):
+            if self.unit.system in Unit.NUMERICAL_SYSTEMS:
+                self._measured_text = str(self.measured)
+            else:
+                self._measured_text = Choice.objects.get(
+                    pk=self.measured, unit=self.unit).text
+        return self._measured_text
+
+    @property
+    def is_equiv_default_unit(self):
+        """
+        Returns True if the answer unit is equivalent
+        to the question default unit.
+        """
+        if not hasattr(self, '_is_equiv_default_unit'):
+            if self.unit == self.question.default_unit:
+                self._is_equiv_default_unit = True
+            else:
+                self._is_equiv_default_unit = \
+                    UnitEquivalences.objects.are_equiv(
+                        self.unit, self.question.default_unit)
+        return self._is_equiv_default_unit
 
     @property
     def rank(self):

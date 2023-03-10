@@ -86,6 +86,11 @@ def construct_weekly_periods(first_date, last_date, years=0, tzone=None):
 
 
 def construct_yearly_periods(first_date, last_date, tzone=None):
+    """
+    Attention! This function will create yearly periods centered around
+    `first_date` - i.e. if first_date in Aug 31st, all dates within
+    the returned periods will land on Aug 31st.
+    """
     at_time = first_date
     tzinfo = parse_tz(tzone)
     if not tzinfo:

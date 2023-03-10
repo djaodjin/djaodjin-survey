@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.db.models.query import RawQuerySet
 
 from .models import Answer, Campaign
-from .utils import is_sqlite3
+from .utils import get_account_model, is_sqlite3
 
 
 def get_frozen_answers(campaign, samples, prefix=None, excludes=None):
@@ -62,7 +62,7 @@ WITH answers AS (
       survey_answer.collected_by_id AS collected_by_id,
       survey_answer.sample_id AS sample_id,
       COALESCE(survey_choice.text,
-        survey_answer.measured%(convert_to_text)s) AS measured_text
+        survey_answer.measured%(convert_to_text)s) AS _measured_text
     FROM survey_answer
     INNER JOIN survey_question
       ON survey_answer.question_id = survey_question.id
@@ -104,19 +104,20 @@ SELECT
     answers.sample_id AS sample_id,
     questions.rank AS _rank,
     questions.required AS required,
-    answers.measured_text AS measured_text
+    answers._measured_text AS _measured_text
 FROM questions
 LEFT OUTER JOIN answers
   ON questions.id = answers.question_id
 INNER JOIN survey_sample
   ON answers.sample_id = survey_sample.id
-INNER JOIN saas_organization
-  ON survey_sample.account_id = saas_organization.id
-ORDER BY questions.id, saas_organization.full_name""" % {
+INNER JOIN %(accounts_table)s
+  ON survey_sample.account_id = %(accounts_table)s.id
+ORDER BY questions.id, %(accounts_table)s.full_name""" % {
       'campaign': campaign.pk,
       'convert_to_text': ("" if is_sqlite3() else "::text"),
       'extra_question_clause': extra_question_clause,
       'additional_filters': additional_filters,
+      'accounts_table': get_account_model()._meta.db_table,
   }
     return Answer.objects.raw(query_text).prefetch_related(
         'unit', 'collected_by', 'question', 'question__content',

@@ -201,7 +201,7 @@ Vue.component('engage-profiles', {
             vm.showContacts = vm.showContacts === toggledIdx ? -1 : toggledIdx;
             if( vm.showContacts >= 0 ) {
                 const api_roles_url = vm._safeUrl(vm.api_profiles_base_url,
-                    [entry.account, 'roles']);
+                    [entry.slug, 'roles']);
                 vm.reqGet(api_roles_url, function(resp) {
                     entry.contacts = resp.results;
                     entry.contacts.sort(function(a, b) {
@@ -271,7 +271,7 @@ Vue.component('engage-profiles', {
             vm.showRecipients = vm.showRecipients === toggledIdx ? -1 : toggledIdx;
             if( vm.showRecipients >= 0 ) {
                 const api_roles_url = vm._safeUrl(vm.$urls.api_activities_base,
-                    [entry.account, 'recipients']);
+                    [entry.slug, 'recipients']);
                 vm.reqGet(api_roles_url, function(resp) {
                     entry.recipients = resp.results;
                     entry.recipients.sort(function(a, b) {
@@ -307,7 +307,7 @@ Vue.component('engage-profiles', {
             }
             item.extra.tags = item.tagsAsText.split(',');
             vm.reqPatch(vm._safeUrl(vm.$urls.api_accessibles, [
-                'metadata', item.account]), {extra: {tags: item.extra.tags}});
+                'metadata', item.slug]), {extra: {tags: item.extra.tags}});
             vm.showEditTags = -1;
         },
         toggleEditTags: function(toggledIdx) {

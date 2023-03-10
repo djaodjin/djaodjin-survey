@@ -362,7 +362,7 @@ WITH answers AS (
       survey_answer.collected_by_id AS collected_by_id,
       survey_answer.sample_id AS sample_id,
       COALESCE(survey_choice.text,
-        survey_answer.measured%(convert_to_text)s) AS measured_text
+        survey_answer.measured%(convert_to_text)s) AS _measured_text
     FROM survey_answer
     INNER JOIN survey_question
       ON survey_answer.question_id = survey_question.id
@@ -425,7 +425,7 @@ SELECT
     answers.sample_id AS sample_id,
     questions.rank AS _rank,
     questions.required AS required,
-    answers.measured_text AS measured_text
+    answers._measured_text AS _measured_text
 FROM questions
 LEFT OUTER JOIN answers
   ON questions.id = answers.question_id""" % {
@@ -448,7 +448,7 @@ WITH answers AS (
       survey_answer.collected_by_id AS collected_by_id,
       survey_answer.sample_id AS sample_id,
       COALESCE(survey_choice.text,
-        survey_answer.measured%(convert_to_text)s) AS measured_text
+        survey_answer.measured%(convert_to_text)s) AS _measured_text
     FROM survey_answer
     LEFT OUTER JOIN survey_choice
       ON survey_choice.id = survey_answer.measured
@@ -478,7 +478,7 @@ SELECT
     answers.sample_id AS sample_id,
     campaign_questions.rank AS _rank,
     campaign_questions.required AS required,
-    answers.measured_text AS measured_text
+    answers._measured_text AS _measured_text
 FROM campaign_questions
 LEFT OUTER JOIN answers
   ON campaign_questions.id = answers.question_id""" % {
@@ -852,7 +852,7 @@ class SampleCandidatesMixin(SampleMixin):
             content_answers.collected_by_id AS collected_by_id,
             content_answers.sample_id AS sample_id,
             COALESCE(survey_choice.text,
-              content_answers.measured%(convert_to_text)s) AS measured_text
+              content_answers.measured%(convert_to_text)s) AS _measured_text
           FROM content_answers INNER JOIN latest_answers
             ON (content_answers.content_id = latest_answers.content_id
             AND content_answers.unit_id = latest_answers.unit_id
@@ -873,7 +873,7 @@ class SampleCandidatesMixin(SampleMixin):
           candidate_answers.sample_id AS sample_id,
           survey_enumeratedquestions.rank AS _rank,
           survey_enumeratedquestions.required AS required,
-          candidate_answers.measured_text AS measured_text
+          candidate_answers._measured_text AS _measured_text
         FROM survey_question
         INNER JOIN survey_enumeratedquestions
           ON survey_enumeratedquestions.question_id = survey_question.id
