@@ -1,3 +1,16 @@
+0.9.0
+
+  * adds compare API
+  * adds ACCESSIBLE_ACCOUNTS_CALLABLE
+  * uses comma to separate multiple terms in search
+  * moves update_context_urls from survey.utils to survey.helpers
+  * defines URL_PATH_SEP and DB_PATH_SEP in settings.py instead of mixins
+  * moves get_collected_by from survey.queries to survey.models
+  * replaces queries.get_frozen_answers by Answer.objects.get_frozen_answers
+  * replaces queries.get_completed_assessments_at_by by Sample.objects.get_completed_assessments_at_by
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 22 Mar 2023 14:45:00 -0700
+
 0.8.1
 
   * adds respondents API
