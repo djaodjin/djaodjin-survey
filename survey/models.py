@@ -34,6 +34,7 @@ underlying ``Sample`` accessible to an account/user.
 """
 import datetime, hashlib, random, uuid
 
+from django import VERSION as DJANGO_VERSION
 from django.contrib.auth import get_user_model
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
@@ -524,11 +525,14 @@ class AnswerManager(models.Manager):
 
 
     def get_frozen_answers(self, campaign, samples, prefix=None, excludes=None):
-        return self.raw(sql_frozen_answers(
-            campaign, samples,
-            prefix=prefix, excludes=excludes)).prefetch_related(
-            'unit', 'collected_by', 'question', 'question__content',
-            'question__default_unit')
+        queryset = self.raw(sql_frozen_answers(
+            campaign, samples, prefix=prefix, excludes=excludes))
+        if DJANGO_VERSION[0] >= 3:
+            return queryset.prefetch_related(
+                'unit', 'collected_by', 'question', 'question__content',
+                'question__default_unit')
+        # Py27/Django11 does not support `prefetch_related` on raw queryset.
+        return queryset
 
 
     def populate(self, sample):
