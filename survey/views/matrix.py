@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,11 @@ from django.shortcuts import get_object_or_404
 from django.views.generic import TemplateView, DetailView, ListView
 
 from ..compat import csrf, reverse
+from ..helpers import update_context_urls
 from ..mixins import (AccountMixin, CampaignMixin, EditableFilterMixin,
     MatrixMixin, MatrixQuerysetMixin)
 from ..models import EditableFilter, Sample
-from ..utils import update_context_urls
+
 
 class CompareView(CampaignMixin, AccountMixin, TemplateView):
     """
@@ -40,8 +41,9 @@ class CompareView(CampaignMixin, AccountMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super(CompareView, self).get_context_data(**kwargs)
         url_kwargs = self.get_url_kwargs()
-        if 'path' in self.kwargs:
-            url_kwargs.update({'path': self.kwargs.get('path')})
+        if self.path_url_kwarg in self.kwargs:
+            url_kwargs.update({
+                self.path_url_kwarg: self.kwargs.get(self.path_url_kwarg)})
             update_context_urls(context, {
                 'survey_api_compare_samples': reverse(
                     'survey_api_compare_samples_path', kwargs=url_kwargs),
@@ -134,7 +136,7 @@ class RespondentListView(CampaignMixin, ListView):
         return context
 
 
-class EditableFilterView(EditableFilterMixin, TemplateView):
+class EditableFilterView(EditableFilterMixin, AccountMixin, TemplateView):
 
     api_url = None
     template_name = "survey/categorize.html"

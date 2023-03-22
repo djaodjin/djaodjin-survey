@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,10 +31,11 @@ from django.template.defaultfilters import slugify
 
 from .. import settings
 from ..compat import six, reverse, reverse_lazy
+from ..helpers import update_context_urls
 from ..mixins import BelongsMixin, CampaignMixin
 from ..models import Answer, Campaign, Sample
 from ..forms import CampaignForm, SendCampaignForm
-from ..utils import get_question_model, update_context_urls
+from ..utils import get_question_model
 
 
 LOGGER = logging.getLogger(__name__)

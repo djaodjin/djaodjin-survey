@@ -35,19 +35,275 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import PageNumberPagination
 
 from .. import settings
-from ..compat import reverse
-from ..mixins import AccountMixin, MatrixMixin
+from ..compat import reverse, six
+from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
+    MatrixMixin)
 from ..models import (Answer, Matrix, EditableFilter,
-    EditableFilterEnumeratedAccounts)
-from ..utils import (get_account_model, get_account_serializer,
-    get_question_serializer)
+    EditableFilterEnumeratedAccounts, Sample, UnitEquivalences)
+from ..utils import (get_accessible_accounts, get_account_model,
+    get_account_serializer, get_question_serializer)
 from .serializers import (AccountsFilterAddSerializer,
-    EditableFilterSerializer, MatrixSerializer, SampleAnswerSerializer)
+    CompareQuestionSerializer, EditableFilterSerializer, MatrixSerializer)
 
 
 LOGGER = logging.getLogger(__name__)
 
-class CompareAPIView(generics.ListAPIView):
+class CompareAPIView(CampaignMixin, AccountMixin, DateRangeContextMixin,
+                     generics.ListAPIView):
+    """
+    Lists compared samples
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/reporting/sustainability/matrix/compare\
+/sustainability HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+    serializer_class = CompareQuestionSerializer
+
+    @property
+    def samples(self):
+        """
+        Samples to compare
+
+        One per column
+        """
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_samples'):
+            accessible_accounts = get_accessible_accounts(
+                [self.account], campaign=self.campaign)
+            if accessible_accounts:
+                # Calling `get_completed_assessments_at_by` with an `accounts`
+                # arguments evaluating to `False` will return all the latest
+                # frozen samples.
+                self._samples = Sample.objects.get_completed_assessments_at_by(
+                    self.campaign,
+                    start_at=self.start_at, ends_at=self.ends_at,
+                    accounts=accessible_accounts)
+            else:
+                self._samples = Sample.objects.none()
+        return self._samples
+
+    @property
+    def labels(self):
+        """
+        Labels for columns
+        """
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_labels'):
+            self._labels = sorted([
+                sample.account.printable_name for sample in self.samples])
+        return self._labels
+
+    @staticmethod
+    def next_answer(answers_iterator, questions_by_key, extra_fields):
+        answer = next(answers_iterator)
+        question_pk = answer.question_id
+        value = questions_by_key.get(question_pk)
+        if not value:
+            question = answer.question
+            default_unit = question.default_unit
+            value = {
+                'path': question.path,
+                'title': question.title,
+                'rank': answer.rank,
+                'required': answer.required,
+                'default_unit': default_unit,
+                'ui_hint': question.ui_hint,
+            }
+            for field_name in extra_fields:
+                value.update({field_name: getattr(question, field_name)})
+            questions_by_key.update({question_pk: value})
+        else:
+            default_unit = value.get('default_unit')
+
+        if( answer.unit == default_unit or
+            UnitEquivalences.objects.filter(
+                source=default_unit, target=answer.unit).exists() or
+            UnitEquivalences.objects.filter(
+                source=answer.unit, target=default_unit).exists() ):
+            # we have the answer we are looking for.
+            nb_respondents = value.get('nb_respondents', 0) + 1
+            value.update({'nb_respondents': nb_respondents})
+        return answer
+
+    def as_answer(self, key):
+        return key
+
+    @staticmethod
+    def equiv_default_unit(values):
+        results = []
+        for val in values:
+            found = False
+            for resp in val:
+                try:
+                    if resp.is_equiv_default_unit:
+                        found = {
+                            'measured': resp.measured_text,
+                            'unit': resp.unit,
+                            'created_at': resp.created_at,
+                            'collected_by': resp.collected_by,
+                        }
+                        break
+                except AttributeError:
+                    pass
+            results += [[found]]
+        return results
+
+    def attach_results(self, questions_by_key, answers,
+                       extra_fields=None):
+        if extra_fields is None:
+            extra_fields = []
+
+        question = None
+        values = []
+        key = None
+        answer = None
+        keys_iterator = iter(self.labels)
+        answers_iterator = iter(answers)
+        try:
+            answer = self.next_answer(answers_iterator,
+                questions_by_key, extra_fields=extra_fields)
+            question = answer.question
+        except StopIteration:
+            pass
+        try:
+            key = self.as_answer(next(keys_iterator))
+        except StopIteration:
+            pass
+        # `answers` will be populated even when there is no `Answer` model
+        # just so we can get the list of questions.
+        # On the other hand self.labels will be an empty list if there are
+        # no samples to compare.
+        try:
+            while answer:
+                if answer.question != question:
+                    try:
+                        while key:
+                            values += [[{}]]
+                            key = self.as_answer(next(keys_iterator))
+                    except StopIteration:
+                        keys_iterator = iter(self.labels)
+                        try:
+                            key = self.as_answer(next(keys_iterator))
+                        except StopIteration:
+                            key = None
+                    questions_by_key[question.pk].update({
+                        'values': self.equiv_default_unit(values)})
+                    values = []
+                    question = answer.question
+
+                if key and answer.sample.account.printable_name > key:
+                    while answer.sample.account.printable_name > key:
+                        values += [[{}]]
+                        key = self.as_answer(next(keys_iterator))
+                elif key and answer.sample.account.printable_name < key:
+                    try:
+                        try:
+                            sample = values[-1][0].sample
+                        except AttributeError:
+                            sample = values[-1][0].get('sample')
+                        if answer.sample != sample:
+                            values += [[answer]]
+                        else:
+                            values[-1] += [answer]
+                    except IndexError:
+                        values += [[answer]]
+                    try:
+                        answer = self.next_answer(answers_iterator,
+                            questions_by_key, extra_fields=extra_fields)
+                    except StopIteration:
+                        answer = None
+                else:
+                    try:
+                        try:
+                            sample = values[-1][0].sample
+                        except AttributeError:
+                            sample = values[-1][0].get('sample')
+                        if answer.sample != sample:
+                            values += [[answer]]
+                        else:
+                            values[-1] += [answer]
+                    except IndexError:
+                        values += [[answer]]
+                    try:
+                        answer = self.next_answer(answers_iterator,
+                            questions_by_key, extra_fields=extra_fields)
+                    except StopIteration:
+                        answer = None
+                    try:
+                        key = self.as_answer(next(keys_iterator))
+                    except StopIteration:
+                        key = None
+            while key:
+                values += [[{}]]
+                key = self.as_answer(next(keys_iterator))
+        except StopIteration:
+            pass
+        if question:
+            questions_by_key[question.pk].update({
+                'values': self.equiv_default_unit(values)})
+
+
+    def get_questions(self, prefix):
+        """
+        Overrides CampaignContentMixin.get_questions to return a list
+        of questions based on the answers available in the compared samples.
+        """
+        if not prefix.endswith(settings.DB_PATH_SEP):
+            prefix = prefix + settings.DB_PATH_SEP
+
+        questions_by_key = {}
+        if self.samples:
+            self.attach_results(
+                questions_by_key,
+                Answer.objects.get_frozen_answers(
+                    self.campaign, self.samples, prefix=prefix))
+
+        return list(six.itervalues(questions_by_key))
+
+
+    def get_serializer_context(self):
+        context = super(CompareAPIView, self).get_serializer_context()
+        context.update({
+            'prefix': self.db_path if self.db_path else settings.DB_PATH_SEP,
+        })
+        return context
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Ready to serialize
+        serializer = self.get_serializer_class()(
+            queryset, many=True, context=self.get_serializer_context())
+
+        return self.get_paginated_response(serializer.data)
+
+
+    def get_paginated_response(self, data):
+        return http.Response(OrderedDict([
+            ('count', len(data)),
+            ('results', data),
+            ('units', {}),
+            ('labels', self.labels),
+        ]))
+
+    def get_queryset(self):
+        return self.get_questions(self.db_path)
+
+
+class CompareIndexAPIView(CompareAPIView):
     """
     Lists compared samples
 
@@ -67,11 +323,6 @@ class CompareAPIView(generics.ListAPIView):
           "results": []
         }
     """
-    serializer_class = SampleAnswerSerializer
-
-    def get_queryset(self):
-        # XXX TODO implement!!!
-        return Answer.objects.none()
 
 
 class MatrixCreateAPIView(generics.ListCreateAPIView):
@@ -812,6 +1063,7 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
 class EditableFilterPagination(PageNumberPagination):
 
     def paginate_queryset(self, queryset, request, view=None):
+        #pylint:disable=attribute-defined-outside-init
         self.editable_filter = view.editable_filter
         return super(EditableFilterPagination, self).paginate_queryset(
             queryset, request, view=view)

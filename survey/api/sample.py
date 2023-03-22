@@ -79,11 +79,9 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                     # We cannot convert to integer (ex: "12.8kW/h")
                     # or the value exceeds 32-bit representation.
                     # XXX We store as a text value so it is not lost.
-                    LOGGER.warning(
-                        "\"%(measured)s\": %(err)s for '%(unit)s'" % {
-                        'measured': measured.replace('"', '\\"'),
-                        'err': str(err).strip(),
-                        'unit': unit.title})
+                    LOGGER.warning("\"%s\": %s for '%s'",
+                        measured.replace('"', '\\"'), str(err).strip(),
+                        unit.title)
                     unit = Unit.objects.get(slug='freetext')
 
             if unit.system not in Unit.NUMERICAL_SYSTEMS:

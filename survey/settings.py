@@ -30,6 +30,7 @@ the appropriate settings.
 from django.conf import settings
 
 _SETTINGS = {
+    'ACCESSIBLE_ACCOUNTS_CALLABLE': None,
     'ACCOUNT_LOOKUP_FIELD': 'username',
     'ACCOUNT_MODEL': getattr(
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
@@ -53,6 +54,9 @@ _SETTINGS = {
 }
 _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 
+#: overrides the implementation of `survey.utils.get_accessible_accounts`
+#: This function must return an iterable over a set of unique ``ACCOUNT_MODEL``.
+ACCESSIBLE_ACCOUNTS_CALLABLE = _SETTINGS.get('ACCESSIBLE_ACCOUNTS_CALLABLE')
 ACCOUNT_LOOKUP_FIELD = _SETTINGS.get('ACCOUNT_LOOKUP_FIELD')
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
 ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')
@@ -66,6 +70,10 @@ BELONGS_MODEL = (_SETTINGS.get('BELONGS_MODEL')
 BELONGS_SERIALIZER = (_SETTINGS.get('BELONGS_SERIALIZER')
     if _SETTINGS.get('BELONGS_SERIALIZER')
     else _SETTINGS.get('ACCOUNT_SERIALIZER'))
+#: When set to `True` the application will bypass access control and an http
+#: request user will have access to all samples.
+#: Outside very simple projects, this flag will most likely be used only
+#: for debugging purposes.
 BYPASS_SAMPLE_AVAILABLE = _SETTINGS.get('BYPASS_SAMPLE_AVAILABLE')
 CONTENT_MODEL = _SETTINGS.get('CONTENT_MODEL')
 CORRECT_MARKER = _SETTINGS.get('CORRECT_MARKER')
@@ -77,4 +85,6 @@ SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')
 USER_SERIALIZER = _SETTINGS.get('USER_SERIALIZER')
 USER_DETAIL_SERIALIZER = _SETTINGS.get('USER_DETAIL_SERIALIZER')
 
+DB_PATH_SEP = '/'
+URL_PATH_SEP = '/'
 SLUG_RE = r'[a-zA-Z0-9_\-\+\.]+'

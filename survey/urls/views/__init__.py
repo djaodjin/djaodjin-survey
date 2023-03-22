@@ -30,8 +30,8 @@ from ...compat import include, path
 
 
 urlpatterns = [
+    path('matrix/<slug:campaign>/', include('survey.urls.views.matrices')),
     path('campaigns/', include('survey.urls.views.campaigns')),
-    path('matrix/', include('survey.urls.views.matrices')),
     path('assess/', include('survey.urls.views.samples')),
     path('', include('survey.urls.views.portfolios')),
 ]

@@ -1,4 +1,4 @@
-# Copyright (c) 2020, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,10 @@ class AnswerUpdateView(SampleMixin, UpdateView):
     lookup_rank_kwarg = 'rank'
     next_step_url = 'survey_answer_update'
     complete_url = 'survey_sample_results'
+
+    def __init__(self, **kwargs):
+        super(AnswerUpdateView, self).__init__(**kwargs)
+        self.object = None
 
     @property
     def rank(self):
@@ -204,6 +208,10 @@ class SampleCreateView(CampaignMixin, AccountMixin, CreateView):
     next_step_url = 'survey_answer_update'
     single_page_next_step_url = 'survey_sample_update'
     template_name = 'survey/sample_create.html'
+
+    def __init__(self, **kwargs):
+        super(SampleCreateView, self).__init__(**kwargs)
+        self.object = None
 
     def form_valid(self, form):
         # We are going to create all the Answer records for that Sample here,

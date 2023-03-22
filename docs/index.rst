@@ -15,10 +15,13 @@ Contents:
 .. toctree::
    :maxdepth: 1
 
+   getting-started
+   models
    encoding
+   portfolios
+   extensions
 
 Indices and tables
 ==================
 
 * :ref:`search`
-

@@ -156,33 +156,16 @@ var messagesMixin = {
 };
 
 
-/** compute outdated based on params.
+/** compute outdated based on `params`.
+
+    `params = {start_at, ends_at}` must exist in either the `props` or `data`
+    of the component.
  */
 var paramsMixin = {
     data: function(){
         var data = {
             autoreload: true,
             lastGetParams: {},
-            params: {
-                // The following dates will be stored as `String` objects
-                // as oppossed to `moment` or `Date` objects because this
-                // is how form fields input="date" will update them.
-                start_at: null,
-                ends_at: null,
-                // The timezone for both start_at and ends_at.
-                timezone: 'local'
-            },
-        }
-        if( this.$dateRange ) {
-            if( this.$dateRange.start_at ) {
-                data.params['start_at'] = this.$dateRange.start_at;
-            }
-            if( this.$dateRange.ends_at ) {
-                data.params['ends_at'] = this.$dateRange.ends_at;
-            }
-            if( this.$dateRange.timezone ) {
-                data.params['timezone'] = this.$dateRange.timezone;
-            }
         }
         return data;
     },
@@ -1165,6 +1148,15 @@ var itemListMixin = {
         getInitData: function(){
             var data = {
                 url: null,
+                params: {
+                    // The following dates will be stored as `String` objects
+                    // as oppossed to `moment` or `Date` objects because this
+                    // is how form fields input="date" will update them.
+                    start_at: null,
+                    ends_at: null,
+                    // The timezone for both start_at and ends_at.
+                    timezone: 'local'
+                },
                 itemsLoaded: false,
                 items: {
                     results: [],
@@ -1174,6 +1166,17 @@ var itemListMixin = {
                 getCb: null,
                 getCompleteCb: null,
                 getBeforeCb: null,
+            }
+            if( this.$dateRange ) {
+                if( this.$dateRange.start_at ) {
+                    data.params['start_at'] = this.$dateRange.start_at;
+                }
+                if( this.$dateRange.ends_at ) {
+                    data.params['ends_at'] = this.$dateRange.ends_at;
+                }
+                if( this.$dateRange.timezone ) {
+                    data.params['timezone'] = this.$dateRange.timezone;
+                }
             }
             return data;
         },
@@ -1224,7 +1227,7 @@ var itemListMixin = {
 };
 
 
-var TypeAhead = Vue.extend({
+var TypeAhead = Vue.component({
     mixins: [
         httpRequestMixin
     ],
@@ -1275,9 +1278,8 @@ var TypeAhead = Vue.extend({
 
         reset: function() {
             var vm = this;
-            vm.items = [];
+            vm.clear();
             vm.query = '';
-            vm.loading = false;
         },
 
         setActive: function(index) {
@@ -1340,7 +1342,9 @@ var TypeAhead = Vue.extend({
         }
     },
     mounted: function(){
-        // do nothing.
+        if( this.$el.dataset && this.$el.dataset.url ) {
+            this.url = this.$el.dataset.url;
+        }
     }
 });
 

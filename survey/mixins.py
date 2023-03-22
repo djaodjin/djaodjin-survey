@@ -172,25 +172,27 @@ class CampaignMixin(object):
     """
     Returns a ``Campaign`` object associated with the request URL.
     """
-    URL_PATH_SEP = '/'
-    DB_PATH_SEP = '/'
     campaign_url_kwarg = 'campaign'
     path_url_kwarg = 'path'
 
     @property
     def campaign(self):
         if not hasattr(self, '_campaign'):
-            self._campaign = get_object_or_404(Campaign.objects.all(),
-                slug=self.kwargs.get(self.campaign_url_kwarg))
+            campaign_slug = self.kwargs.get(self.campaign_url_kwarg)
+            if campaign_slug:
+                self._campaign = get_object_or_404(
+                    Campaign.objects.all(), slug=campaign_slug)
+            else:
+                self._campaign = None
         return self._campaign
 
     @property
     def db_path(self):
         if not hasattr(self, '_db_path'):
             self._db_path = self.kwargs.get(self.path_url_kwarg, '').replace(
-                self.URL_PATH_SEP, self.DB_PATH_SEP)
-            if not self._db_path.startswith(self.DB_PATH_SEP):
-                self._db_path = self.DB_PATH_SEP + self._db_path
+                settings.URL_PATH_SEP, settings.DB_PATH_SEP)
+            if not self._db_path.startswith(settings.DB_PATH_SEP):
+                self._db_path = settings.DB_PATH_SEP + self._db_path
         return self._db_path
 
     def get_reverse_kwargs(self):
@@ -268,19 +270,15 @@ class QuestionMixin(object):
     Mixin when a ``path`` identifying a question is passed as a query
     parameter.
     """
-
-    URL_PATH_SEP = '/'
-    DB_PATH_SEP = '/'
-
     path_url_kwarg = 'path'
 
     @property
     def db_path(self):
         if not hasattr(self, '_db_path'):
             self._db_path = self.kwargs.get(self.path_url_kwarg, '').replace(
-                self.URL_PATH_SEP, self.DB_PATH_SEP)
-            if not self._db_path.startswith(self.DB_PATH_SEP):
-                self._db_path = self.DB_PATH_SEP + self._db_path
+                settings.URL_PATH_SEP, settings.DB_PATH_SEP)
+            if not self._db_path.startswith(settings.DB_PATH_SEP):
+                self._db_path = settings.DB_PATH_SEP + self._db_path
         return self._db_path
 
     @property

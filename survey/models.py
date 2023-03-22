@@ -21,9 +21,20 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+The models implement a
+`star schema database <https://en.wikipedia.org/wiki/Star_schema>`_ centered
+around ``Answer`` to store measurements.
 
+``Matrix`` and ``EditablePredicate`` implement views and dashboards typically
+used for reporting analytics.
+
+``Portfolio`` and ``PortfolioDoubleOptin`` implement access control to the
+underlying ``Sample`` accessible to an account/user.
+"""
 import datetime, hashlib, random, uuid
 
+from django.contrib.auth import get_user_model
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
 from rest_framework.exceptions import ValidationError
@@ -32,6 +43,8 @@ from . import settings
 from .compat import (gettext_lazy as _, import_string,
     python_2_unicode_compatible)
 from .utils import datetime_or_now, get_account_model, get_question_model
+from .queries import (sql_completed_at_by, sql_latest_frozen_by_accounts,
+    sql_frozen_answers)
 
 
 def get_extra_field_class():
@@ -309,6 +322,8 @@ class Campaign(SlugTitleMixin, models.Model):
         help_text=_("Acccount that can make edits to the campaign"))
     active = models.BooleanField(default=False,
         help_text=_("Whether the campaign is available or not"))
+    # quizz_mode, defaults_single_page, one_response_only are managing workflow
+    # and layout.
     quizz_mode = models.BooleanField(default=False,
         help_text=_("If checked, correct answser are required"))
     defaults_single_page = models.BooleanField(default=False,
@@ -359,6 +374,27 @@ class SampleManager(models.Manager):
         return self.create(account=get_account_model().objects.get(
                 **account_lookup_kwargs), **kwargs)
 
+    def get_completed_assessments_at_by(self, campaign,
+                                        start_at=None, ends_at=None,
+                                        prefix=None, title="",
+                                        accounts=None, exclude_accounts=None,
+                                        extra=None):
+        """
+        Returns the most recent frozen assessment before an optionally specified
+        date, indexed by account. Furthermore the query can be restricted
+        to answers on a specific segment using `prefix` and matching text
+        in the `extra` field.
+
+        All accounts in ``excludes`` are not added to the index. This is
+        typically used to filter out 'testing' accounts
+        """
+        #pylint:disable=too-many-arguments
+        return self.raw(sql_completed_at_by(
+            campaign, start_at=start_at, ends_at=ends_at,
+            prefix=prefix, title=title,
+            accounts=accounts, exclude_accounts=exclude_accounts, extra=extra))
+
+
     def get_latest_frozen_by_accounts(self, campaign=None,
                                       start_at=None, ends_at=None,
                                       tags=None, pks_only=False):
@@ -370,57 +406,10 @@ class SampleManager(models.Manager):
         a set of tags.
         """
         #pylint:disable=too-many-arguments
-        campaign_clause = ""
-        if campaign:
-            campaign_clause = (
-                "AND survey_sample.campaign_id = %(campaign_id)d" % {
-                    'campaign_id': campaign.pk})
-        date_range_clause = ""
-        if start_at:
-            date_range_clause = (" AND survey_sample.created_at >= '%s'" %
-                start_at.isoformat())
-        if ends_at:
-            date_range_clause += (" AND survey_sample.created_at < '%s'" %
-                ends_at.isoformat())
-        extra_clause = ""
-        if tags is not None:
-            if tags:
-                extra_clause = "".join([
-                    "AND LOWER(survey_sample.extra) LIKE '%%%s%%'" %
-                    tag.lower() for tag in tags])
-            else:
-                extra_clause = "AND survey_sample.extra IS NULL"
-        if pks_only:
-            values = 'survey_sample.id'
-        else:
-            values = 'survey_sample.*'
+        return self.raw(sql_latest_frozen_by_accounts(campaign,
+            start_at=start_at, ends_at=ends_at,
+            tags=tags, pks_only=pks_only))
 
-        sql_query = """SELECT
-    %(values)s
-FROM survey_sample
-INNER JOIN (
-    SELECT
-        account_id,
-        campaign_id,
-        MAX(created_at) AS last_updated_at
-    FROM survey_sample
-    WHERE survey_sample.is_frozen
-          %(campaign_clause)s
-          %(date_range_clause)s
-          %(extra_clause)s
-    GROUP BY account_id, campaign_id) AS last_updates
-ON survey_sample.account_id = last_updates.account_id AND
-   survey_sample.campaign_id = last_updates.campaign_id AND
-   survey_sample.created_at = last_updates.last_updated_at
-WHERE survey_sample.is_frozen
-      %(campaign_clause)s
-ORDER BY survey_sample.created_at DESC
-""" % {'values': values,
-       'campaign_clause': campaign_clause,
-       'date_range_clause': date_range_clause,
-       'extra_clause': extra_clause}
-        print("XXX sql_query=%s" % str(sql_query))
-        return self.raw(sql_query)
 
     def get_score(self, sample):
         answers = Answer.objects.populate(sample)
@@ -522,6 +511,25 @@ class Sample(models.Model):
 
 
 class AnswerManager(models.Manager):
+
+    @staticmethod
+    def as_sql_campaign_clause(campaign):
+        kwargs = {}
+        if campaign:
+            if isinstance(campaign, Campaign):
+                kwargs.update({'answer__sample__campaign': campaign})
+            else:
+                kwargs.update({'answer__sample__campaign__slug': campaign})
+        return kwargs
+
+
+    def get_frozen_answers(self, campaign, samples, prefix=None, excludes=None):
+        return self.raw(sql_frozen_answers(
+            campaign, samples,
+            prefix=prefix, excludes=excludes)).prefetch_related(
+            'unit', 'collected_by', 'question', 'question__content',
+            'question__default_unit')
+
 
     def populate(self, sample):
         """
@@ -848,23 +856,44 @@ class PortfolioDoubleOptIn(models.Model):
     """
     Intermidiary object to implement double opt-in through requests and grants.
 
-    When ``grantee`` is null, we must have a valid e-mail address to send
-    the grant to.
+    A double opt-in can be initiated by an account to share their answers with
+    a grantee (grant), or by a account to request answers from another account.
+
+    The non-initiating account for the double opt-in will have to accept the
+    request/grant before the workflow is completed, a ``Portfolio`` is created
+    and answers are shared. The non-initiating account can also deny
+    the request/grant. In which case no data is shared and the double opt-in
+    workflow is also considered complete.
+
+    In case the non-initiating account does not accept or deny the request/grant
+    within a specific time period (i.e. before ``ends_at``), the double opt-in
+    workflow is marked expired and also considered complete.
 
     ``invoice_key`` is used as a identity token that will be passed back
     by the payment processor when a charge was successfully created.
     When we see ``invoice_key`` back, we create the ``Portfolio`` records.
 
     State definition (bits)
-                         request/grant | expired | accept/denied | completed
-    grant initiated                  1         0               0           0
-    grant accepted                   1         0               1           1
-    grant denied                     1         0               0           1
-    grant expired                    1         1               0           1
-    request initiated                0         0               0           0
-    request accepted                 0         0               1           1
-    request denied                   0         0               0           1
-    request expired                  0         1               0           1
+
+    +--------------------+--------------+---------+---------------+----------+
+    |                    |request/grant | expired | accept/denied | completed|
+    +====================+==============+=========+===============+==========+
+    |grant initiated     |            1 |       0 |             0 |        0 |
+    +--------------------+--------------+---------+---------------+----------+
+    |grant accepted      |            1 |       0 |             1 |        1 |
+    +--------------------+--------------+---------+---------------+----------+
+    |grant denied        |            1 |       0 |             0 |        1 |
+    +--------------------+--------------+---------+---------------+----------+
+    |grant expired       |            1 |       1 |             0 |        1 |
+    +--------------------+--------------+---------+---------------+----------+
+    |request initiated   |            0 |       0 |             0 |        0 |
+    +--------------------+--------------+---------+---------------+----------+
+    |request accepted    |            0 |       0 |             1 |        1 |
+    +--------------------+--------------+---------+---------------+----------+
+    |request denied      |            0 |       0 |             0 |        1 |
+    +--------------------+--------------+---------+---------------+----------+
+    |request expired     |            0 |       1 |             0 |        1 |
+    +--------------------+--------------+---------+---------------+----------+
     """
     OPTIN_GRANT_INITIATED = 8
     OPTIN_GRANT_ACCEPTED = 11
@@ -947,3 +976,32 @@ class PortfolioDoubleOptIn(models.Model):
             self.state = PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED
             self.verification_key = None
             self.save()
+
+
+def get_collected_by(campaign, start_at=None, ends_at=None,
+                     prefix=None, excludes=None):
+    """
+    Returns users that have actually responded to a campaign, i.e. updated
+    at least one answer in a sample completed in the date range
+    [created_at, ends_at[.
+    """
+    #pylint:disable=too-many-arguments
+    kwargs = {}
+    kwargs.update(Answer.objects.as_sql_campaign_clause(campaign))
+    if start_at:
+        kwargs.update({
+            'answer__created_at__gte': start_at,
+            'last_login__gte': start_at,
+        })
+    if ends_at:
+        kwargs.update({'answer__created_at__lt': ends_at})
+    if prefix:
+        kwargs.update({'answer__question__path__startswith': prefix})
+    queryset = get_user_model().objects.filter(
+        answer__sample__is_frozen=True,
+        **kwargs)
+
+    if excludes:
+        queryset = queryset.exclude(answer__question__in=excludes)
+
+    return queryset.distinct()

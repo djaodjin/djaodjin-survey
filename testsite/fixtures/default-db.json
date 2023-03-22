@@ -20,14 +20,29 @@
       "email": "steve@localhost.localdomain",
       "first_name": "Steve",
       "is_active": true,
-      "is_staff": true,
-      "is_superuser": true,
+      "is_staff": false,
+      "is_superuser": false,
       "last_login": "2022-01-01T00:00:00+00:00",
       "last_name": "",
       "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
       "username": "steve"
     },
     "model": "auth.User", "pk": 3
+},
+{
+    "fields": {
+      "date_joined": "2022-01-01T00:00:00+00:00",
+      "email": "alice@localhost.localdomain",
+      "first_name": "Alice",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "last_login": "2022-01-01T00:00:00+00:00",
+      "last_name": "",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "alice"
+    },
+    "model": "auth.User", "pk": 4
 },
 {
     "fields": {
@@ -95,7 +110,7 @@
 
 {
   "fields" : {
-    "slug" : "survey-example",
+    "slug" : "sustainability",
     "title" : "Test Campaign",
     "description" : "This is an example survey to test the app",
     "created_at": "2022-01-01T00:00:00+00:00",
@@ -283,6 +298,79 @@
     "rank": 4
   },
   "model": "survey.EnumeratedQuestions", "pk": 4
+},
+
+{
+  "fields": {
+    "slug": "dda134c8b4da487da9169e771794deed",
+    "created_at": "2022-12-31T00:00:00+00:00",
+    "updated_at": "2022-12-31T00:00:00+00:00",
+    "campaign": 1,
+    "account": 6,
+    "is_frozen": true
+  },
+  "model": "survey.sample", "pk": 1
+},
+{
+  "fields": {
+    "created_at": "2022-12-31T00:00:00+00:00",
+    "sample": 1,
+    "question": 1,
+    "collected_by": 3,
+    "unit": 1,
+    "measured": 2
+  },
+  "model": "survey.answer", "pk": 1
+},
+{
+  "fields": {
+    "created_at": "2022-12-31T00:00:00+00:00",
+    "sample": 1,
+    "question": 2,
+    "collected_by": 3,
+    "unit": 2,
+    "measured": 4
+  },
+  "model": "survey.answer", "pk": 2
+},
+{
+  "fields": {
+    "created_at": "2022-12-31T00:00:00+00:00",
+    "sample": 1,
+    "question": 3,
+    "collected_by": 3,
+    "unit": 3,
+    "measured": 1
+  },
+  "model": "survey.answer", "pk": 3
+},
+{ "fields": {
+    "unit": 4,
+    "rank": 0,
+    "text": "some text comment."
+  },
+  "model" : "survey.choice", "pk" : 8
+},
+{
+  "fields": {
+    "created_at": "2022-12-31T00:00:00+00:00",
+    "sample": 1,
+    "question": 4,
+    "collected_by": 3,
+    "unit": 4,
+    "measured": 8
+  },
+  "model": "survey.answer", "pk": 4
+},
+
+{
+  "fields": {
+    "grantee": 4,
+    "account": 6,
+    "campaign": 1,
+    "ends_at": "2023-01-01T00:00:00+00:00"
+  },
+  "model": "survey.Portfolio", "pk": 1
 },
 {
   "fields": {

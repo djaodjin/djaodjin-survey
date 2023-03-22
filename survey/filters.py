@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -35,8 +35,9 @@ from rest_framework.compat import distinct
 
 from . import settings
 from .compat import force_str, six
+from .helpers import parse_tz
 from .models import PortfolioDoubleOptIn
-from .utils import datetime_or_now, parse_tz
+from .utils import datetime_or_now
 
 LOGGER = logging.getLogger(__name__)
 
@@ -82,8 +83,8 @@ class SearchFilter(BaseSearchFilter):
     @staticmethod
     def filter_valid_fields(queryset, fields, view):
         #pylint:disable=protected-access
-        model_fields = set([
-            field.name for field in queryset.model._meta.get_fields()])
+        model_fields = {
+            field.name for field in queryset.model._meta.get_fields()}
         # We add all the fields that could be aliases then filter out the ones
         # which are not present in the model.
         alternate_fields = getattr(view, 'alternate_fields', {})
@@ -110,7 +111,12 @@ class SearchFilter(BaseSearchFilter):
                 except FieldDoesNotExist:
                     pass
             elif field in model_fields:
-                valid_fields.append(field)
+                rel = queryset.model._meta.get_field(field).remote_field
+                if not rel:
+                    # if it is a relation fields (as a result valid),
+                    # we don't want to end-up with a problem later on
+                    # when we are trying `field__icontains=`.
+                    valid_fields.append(field)
 
         return tuple(valid_fields)
 
@@ -121,12 +127,12 @@ class SearchFilter(BaseSearchFilter):
 
     def get_search_terms(self, request):
         """
-        Search terms are set by a ?search=... query parameter,
-        and may be comma and/or whitespace delimited.
+        Search terms are set by a ?q=... query parameter.
+        When multiple search terms must be matched, they can be delimited
+        by a comma.
         """
         params = request.query_params.get(self.search_param, '')
         params = params.replace('\x00', '')  # strip null characters
-        params = params.replace(',', ' ')
         results = []
         inside = False
         first = 0
@@ -138,7 +144,7 @@ class SearchFilter(BaseSearchFilter):
                     first = last + 1
                     inside = False
             else:
-                if letter in (' ', '\t'):
+                if letter in (',',):
                     if first < last:
                         results += [params[first:last]]
                     first = last + 1
@@ -211,8 +217,8 @@ class OrderingFilter(BaseOrderingFilter):
         if context is None:
             context = {}
 
-        model_fields = set([
-            field.name for field in queryset.model._meta.get_fields()])
+        model_fields = {
+            field.name for field in queryset.model._meta.get_fields()}
         # XXX base
         base_fields = super(OrderingFilter, self).get_valid_fields(
             queryset, view, context=context)
@@ -332,8 +338,9 @@ class DateRangeFilter(BaseFilterBackend):
         tz_ob = parse_tz(request.GET.get('timezone'))
         if not tz_ob:
             tz_ob = utc
-
-        ends_at = request.GET.get(self.ends_at_param)
+        ends_at = None
+        if self.ends_at_param:
+            ends_at = request.GET.get(self.ends_at_param)
         start_at = request.GET.get(self.start_at_param)
         forced_date_range = getattr(view, 'forced_date_range',
             self.forced_date_range)
@@ -349,8 +356,8 @@ class DateRangeFilter(BaseFilterBackend):
 
     def get_date_field(self, model):
         #pylint:disable=protected-access
-        model_fields = set([
-            field.name for field in model._meta.get_fields()])
+        model_fields = {
+            field.name for field in model._meta.get_fields()}
         if self.date_field in model_fields:
             return self.date_field
         if self.alternate_date_field in model_fields:
@@ -372,28 +379,25 @@ class DateRangeFilter(BaseFilterBackend):
     def get_schema_operation_parameters(self, view):
         fields = super(DateRangeFilter, self).get_schema_operation_parameters(
             view)
-        fields += [
-            {
-                'name': 'start_at',
-                'required': False,
-                'in': 'query',
-                'description': force_str("date/time in ISO format"\
-                        " after which records were created."),
-                'schema': {
-                    'type': 'string',
-                },
+        fields += [{
+            'name': self.start_at_param,
+            'required': False,
+            'in': 'query',
+            'description': force_str("date/time in ISO format"),
+            'schema': {
+                'type': 'string',
             },
-            {
-                'name': 'ends_at',
+        }]
+        if self.ends_at_param:
+            fields += [{
+                'name': self.ends_at_param,
                 'required': False,
                 'in': 'query',
-                'description': force_str("date/time in ISO format"\
-                        " before which records were created."),
+                'description': force_str("date/time in ISO format"),
                 'schema': {
                     'type': 'string',
                 },
-            }
-        ]
+            }]
         return fields
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,9 +30,10 @@ from django.views.generic.detail import SingleObjectMixin
 
 from .. import signals
 from ..compat import reverse, NoReverseMatch
+from ..helpers import update_context_urls
 from ..mixins import AccountMixin
 from ..models import PortfolioDoubleOptIn
-from ..utils import validate_redirect, update_context_urls
+from ..utils import validate_redirect
 
 LOGGER = logging.getLogger(__name__)
 

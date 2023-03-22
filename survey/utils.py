@@ -34,14 +34,18 @@ from django.db.utils import DEFAULT_DB_ALIAS
 from django.http.request import split_domain_port, validate_host
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.timezone import utc
-from pytz import timezone, UnknownTimeZoneError
-from pytz.tzinfo import DstTzInfo
 
 from . import settings
 from .compat import import_string, six, urlparse, urlunparse
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def as_sql_date_trunc_year(field_name, db_key=None):
+    if is_sqlite3(db_key):
+        return "strftime('%%Y', %s)" % field_name
+    return "date_trunc('year', %s)" % field_name
 
 
 def as_timestamp(dtime_at=None):
@@ -67,21 +71,30 @@ def datetime_or_now(dtime_at=None):
     return as_datetime
 
 
-def is_sqlite3(db_key=None):
-    if db_key is None:
-        db_key = DEFAULT_DB_ALIAS
-    return connections.databases[db_key]['ENGINE'].endswith('sqlite3')
+def get_accessible_accounts(grantees,
+                            campaign=None, start_at=None, ends_at=None):
+    """
+    All accounts which have elected to share samples with at least one
+    account in grantees.
+    """
+    queryset = None
+    if (hasattr(settings, 'ACCESSIBLE_ACCOUNTS_CALLABLE') and
+        settings.ACCESSIBLE_ACCOUNTS_CALLABLE):
+        queryset = import_string(settings.ACCESSIBLE_ACCOUNTS_CALLABLE)(
+            grantees, campaign=campaign, start_at=start_at, ends_at=ends_at)
 
+    if queryset is None:
+        filter_params = {}
+        if start_at:
+            filter_params.update({
+                'portfolio_double_optin_accounts__created_at__gte': start_at})
+        if campaign:
+            filter_params.update({'portfolios__campaign': campaign})
+        queryset = get_account_model().objects.filter(
+            portfolios__grantee__in=grantees,
+            **filter_params).distinct()
 
-def parse_tz(tzone):
-    if issubclass(type(tzone), DstTzInfo):
-        return tzone
-    if tzone:
-        try:
-            return timezone(tzone)
-        except UnknownTimeZoneError:
-            pass
-    return None
+    return queryset
 
 
 def get_account_model():
@@ -197,6 +210,12 @@ def get_user_detail_serializer():
     return import_string(settings.USER_DETAIL_SERIALIZER)
 
 
+def is_sqlite3(db_key=None):
+    if db_key is None:
+        db_key = DEFAULT_DB_ALIAS
+    return connections.databases[db_key]['ENGINE'].endswith('sqlite3')
+
+
 def validate_redirect(request):
     """
     Get the REDIRECT_FIELD_NAME and validates it is a URL on allowed hosts.
@@ -219,20 +238,3 @@ def validate_redirect_url(next_url):
             return None
     return urlunparse(("", "", parts.path,
         parts.params, parts.query, parts.fragment))
-
-
-def update_context_urls(context, urls):
-    if 'urls' in context:
-        for key, val in six.iteritems(urls):
-            if key in context['urls']:
-                if isinstance(val, dict):
-                    context['urls'][key].update(val)
-                else:
-                    # Because organization_create url is added in this mixin
-                    # and in ``OrganizationRedirectView``.
-                    context['urls'][key] = val
-            else:
-                context['urls'].update({key: val})
-    else:
-        context.update({'urls': urls})
-    return context

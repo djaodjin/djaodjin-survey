@@ -29,7 +29,7 @@ urlpatterns = [
     path('', include('survey.urls.api.noauth')),
     path('', include('survey.urls.api.campaigns')),
     path('', include('survey.urls.api.filters')),
-    path('', include('survey.urls.api.matrix')),
     path('', include('survey.urls.api.sample')),
     path('', include('survey.urls.api.portfolios')),
+    path('<slug:campaign>/', include('survey.urls.api.matrix')),
 ]

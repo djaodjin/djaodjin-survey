@@ -204,8 +204,7 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_question_model()
-        fields = ('title', 'text', 'default_unit', 'correct_answer',
-            'extra')
+        fields = ('title', 'text', 'default_unit', 'extra')
 
 
 class QuestionDetailSerializer(QuestionCreateSerializer):
@@ -498,6 +497,18 @@ class MetricsSerializer(NoModelSerializer):
     title = serializers.CharField(
         help_text=_("Title for the table"))
     results = TableSerializer(many=True)
+
+
+class CompareQuestionSerializer(CampaignQuestionSerializer):
+    """
+    Serializer for a question in the `results` field of a Compare API call.
+    """
+    values = serializers.ListField(
+        child=serializers.ListField(child=AnswerSerializer()), required=False)
+
+    class Meta(CampaignQuestionSerializer.Meta):
+        fields = CampaignQuestionSerializer.Meta.fields + ('values',)
+
 
 
 class InviteeSerializer(NoModelSerializer):

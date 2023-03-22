@@ -22,8 +22,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...api.matrix import (CompareAPIView, MatrixCreateAPIView,
-    MatrixDetailAPIView)
+from ...api.matrix import (CompareAPIView, CompareIndexAPIView,
+    MatrixCreateAPIView, MatrixDetailAPIView)
 from ...compat import path
 
 
@@ -31,7 +31,7 @@ urlpatterns = [
     path('compare/<path:path>',
         CompareAPIView.as_view(), name='survey_api_compare_samples_path'),
     path('compare',
-        CompareAPIView.as_view(), name='survey_api_compare_samples'),
+        CompareIndexAPIView.as_view(), name='survey_api_compare_samples'),
     path('matrix/<path:path>',
         MatrixDetailAPIView.as_view(), name='matrix_api'),
     path('matrix',
