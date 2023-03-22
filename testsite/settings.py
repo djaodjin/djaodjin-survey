@@ -83,21 +83,6 @@ LOGGING = {
             'format': 'X X %(levelname)s [%(asctime)s] %(message)s',
             'datefmt': '%d/%b/%Y:%H:%M:%S %z'
         },
-        'json': {
-            '()': 'deployutils.apps.django.logging.JSONFormatter',
-            'format':
-            'gunicorn.' + APP_NAME + '.app: [%(process)d] '\
-                '%(log_level)s %(remote_addr)s %(http_host)s %(username)s'\
-                ' [%(asctime)s] %(message)s',
-            'datefmt': '%d/%b/%Y:%H:%M:%S %z',
-            'replace': False,
-            'whitelists': {
-                'record': [
-                    'nb_queries', 'queries_duration',
-                    'charge', 'amount', 'unit', 'modified',
-                    'customer', 'organization', 'provider'],
-            }
-        },
     },
     'handlers': {
         'db_log': {
