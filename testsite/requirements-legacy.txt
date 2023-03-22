@@ -7,7 +7,6 @@ python-dateutil==2.8.1
 coverage==4.0.3
 django-debug-toolbar==1.11.1 # This version works with Py2, Django>=1.11 (incl. 2.2)
 django-extensions==2.2.5
-djaodjin-rules==0.3.0
 PyJWT==1.7.1                 # Last version that supports Py2
 gunicorn==19.7.1
 
