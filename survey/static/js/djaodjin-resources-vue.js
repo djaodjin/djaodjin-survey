@@ -1220,6 +1220,10 @@ var itemListMixin = {
             if(vm[vm.getBeforeCb]){
                 vm[vm.getBeforeCb]();
             }
+            vm.fetch(cb);
+        },
+        fetch: function(cb) {
+            let vm = this;
             vm.lastGetParams = vm.getParams();
             vm.reqGet(vm.url, vm.lastGetParams, cb);
         },
@@ -1227,7 +1231,7 @@ var itemListMixin = {
 };
 
 
-var TypeAhead = Vue.component({
+var TypeAhead = Vue.component('typeahead', {
     mixins: [
         httpRequestMixin
     ],
