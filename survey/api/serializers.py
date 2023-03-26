@@ -481,6 +481,8 @@ class TableSerializer(NoModelSerializer):
     printable_name = serializers.CharField(
         required=False, read_only=True,
         help_text=_("Name that can be safely used for display in HTML pages"))
+    extra = ExtraField(required=False,
+        help_text=_("Extra meta data (can be stringify JSON)"))
     values = serializers.ListField(
         child=KeyValueTuple(),
         help_text="Datapoints in the serie")
