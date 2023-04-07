@@ -22,16 +22,21 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...api.matrix import (CompareAPIView, CompareIndexAPIView,
+from ...api.matrix import (BenchmarkAPIView, BenchmarkIndexAPIView,
+    CompareAPIView, CompareIndexAPIView,
     MatrixCreateAPIView, MatrixDetailAPIView)
 from ...compat import path
 
 
 urlpatterns = [
+    path('benchmarks/<path:path>',
+        BenchmarkAPIView.as_view(), name='survey_api_benchmarks'),
+    path('benchmarks',
+        BenchmarkIndexAPIView.as_view(), name='survey_api_benchmarks_index'),
     path('compare/<path:path>',
-        CompareAPIView.as_view(), name='survey_api_compare_samples_path'),
+        CompareAPIView.as_view(), name='survey_api_compare_samples'),
     path('compare',
-        CompareIndexAPIView.as_view(), name='survey_api_compare_samples'),
+        CompareIndexAPIView.as_view(), name='survey_api_compare_samples_index'),
     path('matrix/<path:path>',
         MatrixDetailAPIView.as_view(), name='matrix_api'),
     path('matrix',

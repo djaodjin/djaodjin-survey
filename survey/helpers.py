@@ -21,7 +21,13 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+This file contains functions useful throughout the whole project which do
+not require to import `django` modules.
 
+See utils.py for functions useful throughout the whole project which depend
+on importing Django models.
+"""
 import datetime, json
 
 from dateutil.relativedelta import relativedelta, SU

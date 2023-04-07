@@ -401,35 +401,58 @@ class DateRangeFilter(BaseFilterBackend):
         return fields
 
 
-class DoubleOptInStateFilter(BaseFilterBackend):
+class StateFilter(BaseFilterBackend):
+
+    state_param = 'state'
+    state_field = 'state'
+    state_candidates = []
 
     def filter_queryset(self, request, queryset, view):
-        state = request.query_params.get('state', '')
+        state = request.query_params.get(self.state_param, '')
         flt = None
         for val in state.split(','):
-            for candidate in PortfolioDoubleOptIn.STATES:
+            for candidate in self.state_candidates:
                 if val == candidate[1]:
                     if flt:
-                        flt |= models.Q(state=candidate[0])
+                        flt |= models.Q(**{self.state_field: candidate[0]})
                     else:
-                        flt = models.Q(state=candidate[0])
+                        flt = models.Q(**{self.state_field: candidate[0]})
                     break
         if flt is not None:
             queryset = queryset.filter(flt)
         return queryset
 
     def get_schema_operation_parameters(self, view):
-        fields = super(DoubleOptInStateFilter,
-            self).get_schema_operation_parameters(view)
+        fields = super(StateFilter, self).get_schema_operation_parameters(view)
         fields += [
             {
-                'name': 'state',
+                'name': self.state_param,
                 'required': False,
                 'in': 'query',
-                'description': force_str("filter by state"),
+                'description': force_str("filter by state (%(choices)s)" % {
+                    'choices': ", ".join([
+                        candidate[1] for candidate in self.state_candidates])
+                }),
                 'schema': {
                     'type': 'string',
                 },
             },
         ]
         return fields
+
+
+class DoubleOptInStateFilter(StateFilter):
+
+    state_param = 'state'
+    state_field = 'state'
+    state_candidates = PortfolioDoubleOptIn.STATES
+
+
+class SampleStateFilter(StateFilter):
+
+    state_param = 'state'
+    state_field = 'is_frozen'
+    state_candidates = [
+        (False, 'active'),
+        (True, 'completed')
+    ]

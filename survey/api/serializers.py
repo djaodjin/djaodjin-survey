@@ -214,7 +214,7 @@ class QuestionDetailSerializer(QuestionCreateSerializer):
         fields = QuestionCreateSerializer.Meta.fields + ('path',)
 
 
-class CampaignQuestionSerializer(serializers.ModelSerializer):
+class QuestionSerializer(serializers.ModelSerializer):
     """
     Serializer of ``Question`` when used in a list of answers
     """
@@ -234,7 +234,7 @@ class SampleAnswerSerializer(AnswerSerializer):
     """
     Serializer of ``Answer`` when used in list.
     """
-    question = CampaignQuestionSerializer(
+    question = QuestionSerializer(
         help_text=_("Question the answer refers to"))
     required = serializers.BooleanField(required=False,
         help_text=_("Whether an answer is required or not."))
@@ -244,6 +244,48 @@ class SampleAnswerSerializer(AnswerSerializer):
         fields = AnswerSerializer.Meta.fields + ('question', 'required')
         read_only_fields = AnswerSerializer.Meta.read_only_fields + (
             'required',)
+
+
+class CampaignSerializer(serializers.ModelSerializer):
+    """
+    Short description of the campaign.
+    """
+
+    account = serializers.SlugRelatedField(
+        slug_field=settings.BELONGS_LOOKUP_FIELD,
+        queryset=get_belongs_model().objects.all(),
+        help_text=("Account this sample belongs to."))
+
+    class Meta(object):
+        model = Campaign
+        fields = ('slug', 'account', 'title', 'description', 'created_at',
+            'active')
+        read_only_fields = ('slug', 'account', 'created_at')
+
+
+class CampaignCreateSerializer(serializers.ModelSerializer):
+
+    questions = QuestionCreateSerializer(many=True, required=False)
+
+    class Meta(object):
+        model = Campaign
+        fields = ('slug', 'title', 'description', 'quizz_mode', 'questions')
+        read_only_fields = ('slug',)
+
+
+class CampaignDetailSerializer(serializers.ModelSerializer):
+
+    account = serializers.SlugRelatedField(
+        slug_field=settings.BELONGS_LOOKUP_FIELD,
+        queryset=get_belongs_model().objects.all(),
+        help_text=("Account this sample belongs to."))
+    questions = QuestionSerializer(many=True)
+
+    class Meta(object):
+        model = Campaign
+        fields = ('slug', 'account', 'title', 'description', 'active',
+            'quizz_mode', 'questions')
+        read_only_fields = ('slug',)
 
 
 class SampleCreateSerializer(serializers.ModelSerializer):
@@ -259,7 +301,7 @@ class SampleCreateSerializer(serializers.ModelSerializer):
 
 class SampleSerializer(SampleCreateSerializer):
 
-    campaign = serializers.SlugRelatedField(slug_field='slug',
+    campaign = CampaignSerializer(
         read_only=True, allow_null=True,
         help_text=("Campaign this sample is part of."))
     account = serializers.SlugRelatedField(slug_field='slug',
@@ -278,47 +320,6 @@ class SampleSerializer(SampleCreateSerializer):
     @staticmethod
     def get_location(obj):
         return getattr(obj, 'location', None)
-
-
-class CampaignSerializer(serializers.ModelSerializer):
-    """
-    Short description of the campaign.
-    """
-
-    account = serializers.SlugRelatedField(
-        slug_field=settings.BELONGS_LOOKUP_FIELD,
-        queryset=get_belongs_model().objects.all(),
-        help_text=("Account this sample belongs to."))
-
-    class Meta(object):
-        model = Campaign
-        fields = ('slug', 'account', 'title', 'description', 'active',)
-        read_only_fields = ('slug',)
-
-
-class CampaignDetailSerializer(serializers.ModelSerializer):
-
-    account = serializers.SlugRelatedField(
-        slug_field=settings.BELONGS_LOOKUP_FIELD,
-        queryset=get_belongs_model().objects.all(),
-        help_text=("Account this sample belongs to."))
-    questions = CampaignQuestionSerializer(many=True)
-
-    class Meta(object):
-        model = Campaign
-        fields = ('slug', 'account', 'title', 'description', 'active',
-            'quizz_mode', 'questions')
-        read_only_fields = ('slug',)
-
-
-class CampaignCreateSerializer(serializers.ModelSerializer):
-
-    questions = QuestionCreateSerializer(many=True, required=False)
-
-    class Meta(object):
-        model = Campaign
-        fields = ('slug', 'title', 'description', 'quizz_mode', 'questions')
-        read_only_fields = ('slug',)
 
 
 class DatapointSerializer(AnswerSerializer):
@@ -488,6 +489,16 @@ class TableSerializer(NoModelSerializer):
         help_text="Datapoints in the serie")
 
 
+class SampleBenchmarksSerializer(QuestionSerializer):
+    """
+    Benchmarks for one question when used in a list of `Question`.
+    """
+    benchmarks = serializers.ListField(child=TableSerializer())
+
+    class Meta(QuestionSerializer.Meta):
+        fields = QuestionSerializer.Meta.fields + ('benchmarks',)
+
+
 class MetricsSerializer(NoModelSerializer):
 
     scale = serializers.FloatField(required=False,
@@ -501,15 +512,15 @@ class MetricsSerializer(NoModelSerializer):
     results = TableSerializer(many=True)
 
 
-class CompareQuestionSerializer(CampaignQuestionSerializer):
+class CompareQuestionSerializer(QuestionSerializer):
     """
     Serializer for a question in the `results` field of a Compare API call.
     """
     values = serializers.ListField(
         child=serializers.ListField(child=AnswerSerializer()), required=False)
 
-    class Meta(CampaignQuestionSerializer.Meta):
-        fields = CampaignQuestionSerializer.Meta.fields + ('values',)
+    class Meta(QuestionSerializer.Meta):
+        fields = QuestionSerializer.Meta.fields + ('values',)
 
 
 

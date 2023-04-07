@@ -25,6 +25,7 @@
 from ....api.sample import (SampleAPIView, SampleAnswersAPIView,
     SampleCandidatesAPIView, SampleFreezeAPIView, SampleRecentCreateAPIView,
     SampleRespondentsAPIView, SampleRespondentsIndexAPIView)
+from ....api.matrix import SampleBenchmarksAPIView, SampleBenchmarksIndexAPIView
 from ....compat import path
 
 urlpatterns = [
@@ -34,6 +35,11 @@ urlpatterns = [
         SampleCandidatesAPIView.as_view(), name='survey_api_sample_candidates'),
     path('sample/<slug:sample>/answers/<path:path>',
         SampleAnswersAPIView.as_view(), name='survey_api_sample_answers'),
+    path('sample/<slug:sample>/benchmarks/<path:path>',
+        SampleBenchmarksAPIView.as_view(), name='survey_api_sample_benchmarks'),
+    path('sample/<slug:sample>/benchmarks',
+        SampleBenchmarksIndexAPIView.as_view(),
+        name='survey_api_sample_benchmarks_index'),
     path('sample/<slug:sample>/respondents/<path:path>',
         SampleRespondentsAPIView.as_view(),
         name='survey_api_sample_respondents'),
@@ -43,5 +49,5 @@ urlpatterns = [
     path('sample/<slug:sample>',
         SampleAPIView.as_view(), name='survey_api_sample'),
     path('sample',
-        SampleRecentCreateAPIView.as_view(), name='survey_api_sample_new'),
+        SampleRecentCreateAPIView.as_view(), name='survey_api_sample_list'),
 ]

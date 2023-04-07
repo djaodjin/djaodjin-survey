@@ -46,12 +46,12 @@ class CompareView(CampaignMixin, AccountMixin, TemplateView):
                 self.path_url_kwarg: self.kwargs.get(self.path_url_kwarg)})
             update_context_urls(context, {
                 'survey_api_compare_samples': reverse(
-                    'survey_api_compare_samples_path', kwargs=url_kwargs),
+                    'survey_api_compare_samples', kwargs=url_kwargs),
             })
         else:
             update_context_urls(context, {
                 'survey_api_compare_samples': reverse(
-                    'survey_api_compare_samples', kwargs=url_kwargs),
+                    'survey_api_compare_samples_index', kwargs=url_kwargs),
             })
         return context
 

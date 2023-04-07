@@ -4,10 +4,74 @@
 This file contains SQL statements as building blocks for benchmarking
 results in APIs, downloads, etc.
 """
-from django.db.models.query import QuerySet, RawQuerySet
+import datetime
 
-#from .models import Campaign
-from .utils import get_account_model, is_sqlite3
+from django.apps import apps as django_apps
+from django.core.exceptions import ImproperlyConfigured
+from django.db import connections
+from django.db.utils import DEFAULT_DB_ALIAS
+from django.db.models.query import QuerySet, RawQuerySet
+from django.utils.dateparse import parse_date, parse_datetime
+from django.utils.timezone import utc
+
+from . import settings
+from .compat import six
+
+
+def as_sql_date_trunc_year(field_name, db_key=None):
+    if is_sqlite3(db_key):
+        return "strftime('%%Y', %s)" % field_name
+    return "date_trunc('year', %s)" % field_name
+
+
+def datetime_or_now(dtime_at=None):
+    as_datetime = dtime_at
+    if isinstance(dtime_at, six.string_types):
+        as_datetime = parse_datetime(dtime_at)
+        if not as_datetime:
+            as_date = parse_date(dtime_at)
+            if as_date:
+                as_datetime = datetime.datetime.combine(
+                    as_date, datetime.time.min)
+    if not as_datetime:
+        as_datetime = datetime.datetime.utcnow().replace(tzinfo=utc)
+    if as_datetime.tzinfo is None:
+        as_datetime = as_datetime.replace(tzinfo=utc)
+    return as_datetime
+
+
+def is_sqlite3(db_key=None):
+    if db_key is None:
+        db_key = DEFAULT_DB_ALIAS
+    return connections.databases[db_key]['ENGINE'].endswith('sqlite3')
+
+
+def get_account_model():
+    """
+    Returns the ``Account`` model that is active in this project.
+    """
+    try:
+        return django_apps.get_model(settings.ACCOUNT_MODEL)
+    except ValueError:
+        raise ImproperlyConfigured(
+            "ACCOUNT_MODEL must be of the form 'app_label.model_name'")
+    except LookupError:
+        raise ImproperlyConfigured("ACCOUNT_MODEL refers to model '%s'"\
+" that has not been installed" % settings.ACCOUNT_MODEL)
+
+
+def get_question_model():
+    """
+    Returns the ``Question`` model that is active in this project.
+    """
+    try:
+        return django_apps.get_model(settings.QUESTION_MODEL)
+    except ValueError:
+        raise ImproperlyConfigured(
+            "QUESTION_MODEL must be of the form 'app_label.model_name'")
+    except LookupError:
+        raise ImproperlyConfigured("QUESTION_MODEL refers to model '%s'"\
+" that has not been installed" % settings.QUESTION_MODEL)
 
 
 def sql_latest_frozen_by_accounts(campaign=None,

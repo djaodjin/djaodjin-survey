@@ -37,16 +37,221 @@ from rest_framework.pagination import PageNumberPagination
 from .. import settings
 from ..compat import reverse, six
 from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
-    MatrixMixin)
+    MatrixMixin, QuestionMixin, SampleMixin)
 from ..models import (Answer, Matrix, EditableFilter,
-    EditableFilterEnumeratedAccounts, Sample, UnitEquivalences)
-from ..utils import (get_accessible_accounts, get_account_model,
+    EditableFilterEnumeratedAccounts, Sample, Unit, UnitEquivalences)
+from ..pagination import MetricsPagination
+from ..utils import (get_accessible_accounts, get_benchmarks_enumerated,
+    get_account_model, get_question_model,
     get_account_serializer, get_question_serializer)
 from .serializers import (AccountsFilterAddSerializer,
-    CompareQuestionSerializer, EditableFilterSerializer, MatrixSerializer)
+    CompareQuestionSerializer, EditableFilterSerializer, MatrixSerializer,
+    SampleBenchmarksSerializer)
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+class BenchmarkAPIView(QuestionMixin, CampaignMixin, AccountMixin,
+                       DateRangeContextMixin, generics.ListAPIView):
+    """
+    Aggregated benchmark for requested accounts
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/reporting/sustainability/benchmarks\
+/sustainability HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+    scale = 1
+    default_unit = 'profiles'
+    valid_units = ('percentage',)
+    title = "Benchmarks"
+    serializer_class = SampleBenchmarksSerializer
+    pagination_class = MetricsPagination
+
+    @property
+    def unit(self):
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_unit'):
+            self._unit = self.default_unit
+            param_unit = self.get_query_param('unit')
+            if param_unit is not None and param_unit in self.valid_units:
+                self._unit = param_unit
+        return self._unit
+
+    def get_query_param(self, key):
+        try:
+            return self.request.query_params.get(key, None)
+        except AttributeError:
+            pass
+        return self.request.GET.get(key, None)
+
+    def get_accessible_accounts(self, grantees):
+        return get_accessible_accounts(grantees, campaign=self.campaign)
+
+    def get_questions(self, prefix):
+        """
+        Overrides CampaignContentMixin.get_questions to return a list
+        of questions based on the answers available in the benchmarkd samples.
+        """
+        if not prefix.endswith(settings.DB_PATH_SEP):
+            prefix = prefix + settings.DB_PATH_SEP
+
+        questions_queryset = get_question_model().objects.filter(
+            path__startswith=self.db_path).values(
+            'pk', 'path', 'ui_hint', 'content__title',
+            'default_unit__slug', 'default_unit__title')
+        questions_by_key = {question['pk']: {
+            'path': question['path'],
+            'title': question['content__title'],
+            'ui_hint': question['ui_hint'],
+            'default_unit': Unit(
+                slug=question['default_unit__slug'],
+                title=question['default_unit__title']),
+        } for question in questions_queryset}
+
+        self.attach_results(questions_by_key)
+
+        return list(six.itervalues(questions_by_key))
+
+
+    def attach_results(self, questions_by_key, account=None):
+        if not account:
+            account = self.account
+
+        # samples that will be counted in the benchmark
+        samples = []
+        accessible_accounts = self.get_accessible_accounts([account])
+        if accessible_accounts:
+            # Calling `get_completed_assessments_at_by` with an `accounts`
+            # arguments evaluating to `False` will return all the latest
+            # frozen samples.
+            samples = Sample.objects.get_completed_assessments_at_by(
+                self.campaign,
+                start_at=self.start_at, ends_at=self.ends_at,
+                accounts=accessible_accounts)
+
+        if samples:
+            questions_by_key = get_benchmarks_enumerated(
+                samples, questions_by_key.keys(), questions_by_key)
+            for question in six.itervalues(questions_by_key):
+                if not 'benchmarks' in question:
+                    question['benchmarks'] = []
+                account_benchmark = {
+                    'slug': account.slug,
+                    'printable_name': account.printable_name,
+                    'values': []
+                }
+                for key, val in six.iteritems(question['rate']):
+                    account_benchmark['values'] += [(key, int(val))]
+                question['benchmarks'] += [account_benchmark]
+
+    def get_serializer_context(self):
+        context = super(BenchmarkAPIView, self).get_serializer_context()
+        context.update({
+            'prefix': self.db_path if self.db_path else settings.DB_PATH_SEP,
+        })
+        return context
+
+    def get_queryset(self):
+        return self.get_questions(self.db_path)
+
+
+class BenchmarkIndexAPIView(BenchmarkAPIView):
+    """
+    Aggregated benchmark for requested accounts
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/reporting/sustainability/benchmarks HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+
+
+class SampleBenchmarksAPIView(SampleMixin, BenchmarkAPIView):
+    """
+    Benchmark a sub-tree of questions against peers
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/benchmarks\
+/sustainability HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+    @property
+    def campaign(self):
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_campaign'):
+            self._campaign = self.sample.campaign
+        return self._campaign
+
+    @property
+    def ends_at(self):
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_ends_at'):
+            self._ends_at = self.sample.created_at
+        return self._ends_at
+
+    def get_accessible_accounts(self, grantees):
+        return get_account_model().objects.all()
+
+
+class SampleBenchmarksIndexAPIView(SampleBenchmarksAPIView):
+    """
+    Benchmark against peers
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/benchmarks\
+ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+
 
 class CompareAPIView(CampaignMixin, AccountMixin, DateRangeContextMixin,
                      generics.ListAPIView):

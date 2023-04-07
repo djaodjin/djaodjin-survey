@@ -290,7 +290,7 @@ class QuestionMixin(object):
         return self._question
 
 
-class SampleMixin(AccountMixin, QuestionMixin):
+class SampleMixin(QuestionMixin, AccountMixin):
     """
     Returns a ``Sample`` to a ``Campaign``.
     """

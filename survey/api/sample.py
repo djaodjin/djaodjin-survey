@@ -38,12 +38,13 @@ from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
 from ..compat import six, is_authenticated
 from ..docs import OpenAPIResponse, swagger_auto_schema
+from ..filters import DateRangeFilter, OrderingFilter, SampleStateFilter
 from ..mixins import AccountMixin, SampleMixin
 from ..models import Answer, Choice, Sample, Unit, UnitEquivalences
+from ..queries import is_sqlite3
+from ..utils import datetime_or_now, get_question_model, get_user_serializer
 from .serializers import (AnswerSerializer, NoModelSerializer,
     SampleAnswerSerializer, SampleCreateSerializer, SampleSerializer)
-from ..utils import (datetime_or_now, get_question_model, get_user_serializer,
-    is_sqlite3)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -1485,11 +1486,30 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
             ]
         }
     """
+    search_fields = (
+        'is_frozen',
+        'campaign',
+    )
+    alternate_fields = {
+        'campaign': 'campaign__slug',
+    }
+    ordering_fields = (
+        ('created_at', 'created_at'),
+        ('campaign__title', 'campaign__title'),
+        ('is_frozen', 'is_frozen'),
+    )
+
+    ordering = ('-created_at',)
+
+    filter_backends = (DateRangeFilter, SampleStateFilter, OrderingFilter)
+
     serializer_class = SampleSerializer
 
     def get_queryset(self):
         return Sample.objects.filter(
-            account=self.account, is_frozen=False).order_by('-created_at')
+            account=self.account,
+            extra__isnull=True         # XXX convinience
+        ).select_related('campaign')
 
     @swagger_auto_schema(request_body=SampleCreateSerializer)
     def post(self, request, *args, **kwargs):
@@ -1569,8 +1589,9 @@ class SampleRespondentsAPIView(SampleMixin, generics.ListAPIView):
         kwargs = {}
         if self.path:
             kwargs = {'answer__question__path__startwith': self.path}
-        return get_user_model().objects.filter(
+        queryset = get_user_model().objects.filter(
             answer__sample=self.sample, **kwargs).distinct()
+        return queryset
 
 
 class SampleRespondentsIndexAPIView(SampleRespondentsAPIView):

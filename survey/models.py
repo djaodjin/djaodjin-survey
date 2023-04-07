@@ -43,9 +43,8 @@ from rest_framework.exceptions import ValidationError
 from . import settings
 from .compat import (gettext_lazy as _, import_string,
     python_2_unicode_compatible)
-from .utils import datetime_or_now, get_account_model, get_question_model
-from .queries import (sql_completed_at_by, sql_latest_frozen_by_accounts,
-    sql_frozen_answers)
+from .queries import (datetime_or_now, get_account_model, get_question_model,
+    sql_completed_at_by, sql_latest_frozen_by_accounts, sql_frozen_answers)
 
 
 def get_extra_field_class():

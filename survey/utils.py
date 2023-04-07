@@ -21,7 +21,13 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+"""
+This file contains functions useful throughout the whole project which depend
+on importing Django models.
 
+See helpers.py for functions useful throughout the whole project which do
+not require to import `django` modules.
+"""
 import datetime, logging
 from importlib import import_module
 
@@ -29,23 +35,17 @@ from django.apps import apps as django_apps
 from django.conf import settings as django_settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import ImproperlyConfigured
-from django.db import connections
-from django.db.utils import DEFAULT_DB_ALIAS
+from django.db.models import Count, F
 from django.http.request import split_domain_port, validate_host
-from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.timezone import utc
 
 from . import settings
-from .compat import import_string, six, urlparse, urlunparse
-
+from .compat import import_string, urlparse, urlunparse
+from .models import Answer, Unit
+#pylint:disable=unused-import
+from .queries import datetime_or_now, get_account_model, get_question_model
 
 LOGGER = logging.getLogger(__name__)
-
-
-def as_sql_date_trunc_year(field_name, db_key=None):
-    if is_sqlite3(db_key):
-        return "strftime('%%Y', %s)" % field_name
-    return "date_trunc('year', %s)" % field_name
 
 
 def as_timestamp(dtime_at=None):
@@ -55,28 +55,17 @@ def as_timestamp(dtime_at=None):
         dtime_at - datetime.datetime(1970, 1, 1, tzinfo=utc)).total_seconds())
 
 
-def datetime_or_now(dtime_at=None):
-    as_datetime = dtime_at
-    if isinstance(dtime_at, six.string_types):
-        as_datetime = parse_datetime(dtime_at)
-        if not as_datetime:
-            as_date = parse_date(dtime_at)
-            if as_date:
-                as_datetime = datetime.datetime.combine(
-                    as_date, datetime.time.min)
-    if not as_datetime:
-        as_datetime = datetime.datetime.utcnow().replace(tzinfo=utc)
-    if as_datetime.tzinfo is None:
-        as_datetime = as_datetime.replace(tzinfo=utc)
-    return as_datetime
-
-
 def get_accessible_accounts(grantees,
                             campaign=None, start_at=None, ends_at=None):
     """
     All accounts which have elected to share samples with at least one
     account in grantees.
     """
+    try:
+        iter(grantees)
+    except TypeError:
+        grantees = [grantees]
+
     queryset = None
     if (hasattr(settings, 'ACCESSIBLE_ACCOUNTS_CALLABLE') and
         settings.ACCESSIBLE_ACCOUNTS_CALLABLE):
@@ -92,23 +81,72 @@ def get_accessible_accounts(grantees,
             filter_params.update({'portfolios__campaign': campaign})
         queryset = get_account_model().objects.filter(
             portfolios__grantee__in=grantees,
-            **filter_params).distinct()
+            **filter_params).annotate(
+                _extra=F('portfolio_double_optin_accounts__extra')).distinct()
 
     return queryset
 
 
-def get_account_model():
+def get_benchmarks_enumerated(samples, questions, questions_by_key=None):
     """
-    Returns the ``Account`` model that is active in this project.
+    Returns a dictionnary indexed by a question's primary key where
+    each question in `questions` is associated a a dictionnary that contains:
+      - the total number of samples in `samples` with an anwer to the question
+      - a dictionnary of the number of samples in `samples` for each choice
+        available when the question's unit is an enum.
+
+    Example:
+
+    {
+        12: {
+            "path": "/sustainability/governance/formalized-esg-strategy",
+            "nb_respondents": 10,
+            "rate": {
+                "Yes": 5,
+                "No": 5
+            }
+        }
+    }
     """
-    try:
-        return django_apps.get_model(settings.ACCOUNT_MODEL)
-    except ValueError:
-        raise ImproperlyConfigured(
-            "ACCOUNT_MODEL must be of the form 'app_label.model_name'")
-    except LookupError:
-        raise ImproperlyConfigured("ACCOUNT_MODEL refers to model '%s'"\
-" that has not been installed" % settings.ACCOUNT_MODEL)
+    if not questions_by_key:
+        questions_by_key = {}
+
+    # total number of answers
+    for row in Answer.objects.filter(
+            question__in=questions,
+            unit_id=F('question__default_unit_id'),
+            sample_id__in=samples).values('question__id',
+                'question__path').annotate(Count('sample_id')):
+        question_pk = row['question__id']
+        count = row['sample_id__count']
+        path = row['question__path']
+        value = questions_by_key.get(question_pk, {'path': path})
+        value.update({'nb_respondents': count})
+        if question_pk not in questions_by_key:
+            questions_by_key.update({question_pk: value})
+
+    # per-choice number of answers
+    for row in Answer.objects.filter(
+            question__in=questions,
+            unit_id=F('question__default_unit_id'),
+            sample_id__in=samples,
+            question__default_unit__system=Unit.SYSTEM_ENUMERATED,
+            unit__enums__id=F('measured')).values('question__id',
+                'measured', 'unit__enums__text').annotate(Count('sample_id')):
+        question_pk = row['question__id']
+        count = row['sample_id__count']
+        measured = row['unit__enums__text']
+        value = questions_by_key.get(question_pk)
+        total = value.get('nb_respondents', None)
+        rate = value.get('rate', {})
+        rate.update({
+            measured: (int(count * 100 // total) if total else 0)})
+        if 'rate' not in value:
+            value.update({'rate': rate})
+        if question_pk not in questions_by_key:
+            questions_by_key.update({question_pk: value})
+
+    return questions_by_key
 
 
 def get_account_serializer():
@@ -160,20 +198,6 @@ def get_content_model():
 " that has not been installed" % settings.CONTENT_MODEL)
 
 
-def get_question_model():
-    """
-    Returns the ``Question`` model that is active in this project.
-    """
-    try:
-        return django_apps.get_model(settings.QUESTION_MODEL)
-    except ValueError:
-        raise ImproperlyConfigured(
-            "QUESTION_MODEL must be of the form 'app_label.model_name'")
-    except LookupError:
-        raise ImproperlyConfigured("QUESTION_MODEL refers to model '%s'"\
-" that has not been installed" % settings.QUESTION_MODEL)
-
-
 def get_question_serializer():
     """
     Returns the ``QuestionDetailSerializer`` model that is active
@@ -208,12 +232,6 @@ def get_user_detail_serializer():
     Returns the user serializer model that is active in this project.
     """
     return import_string(settings.USER_DETAIL_SERIALIZER)
-
-
-def is_sqlite3(db_key=None):
-    if db_key is None:
-        db_key = DEFAULT_DB_ALIAS
-    return connections.databases[db_key]['ENGINE'].endswith('sqlite3')
 
 
 def validate_redirect(request):
