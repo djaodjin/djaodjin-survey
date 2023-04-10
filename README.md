@@ -33,16 +33,11 @@ Tested with
 - **Python:** 3.10, **Django:** 4.1 (latest), **Django Rest Framework:** 3.12
 - **Python:** 2.7, **Django:** 1.11 (legacy), **Django Rest Framework:** 3.9.4
 
-0.9.0
+0.9.3
 
-  * adds compare API
-  * adds ACCESSIBLE_ACCOUNTS_CALLABLE
-  * uses comma to separate multiple terms in search
-  * moves update_context_urls from survey.utils to survey.helpers
-  * defines URL_PATH_SEP and DB_PATH_SEP in settings.py instead of mixins
-  * moves get_collected_by from survey.queries to survey.models
-  * replaces queries.get_frozen_answers by Answer.objects.get_frozen_answers
-  * replaces queries.get_completed_assessments_at_by by Sample.objects.get_completed_assessments_at_by
+  * adds benchmarks APIs
+  * lists all samples for an account, filtered by active or is_frozen
+  * prevents import loops between queries.py, models.py and utils.py
 
 [previous release notes](changelog)
 

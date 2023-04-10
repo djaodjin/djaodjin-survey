@@ -1,3 +1,11 @@
+0.9.3
+
+  * adds benchmarks APIs
+  * lists all samples for an account, filtered by active or is_frozen
+  * prevents import loops between queries.py, models.py and utils.py
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Mon, 10 Apr 2023 15:55:00 -0700
+
 0.9.2
 
   * returns extra field in APIs with results formatted as tables
