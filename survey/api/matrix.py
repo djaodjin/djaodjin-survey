@@ -154,7 +154,7 @@ class BenchmarkAPIView(QuestionMixin, CampaignMixin, AccountMixin,
                     'printable_name': account.printable_name,
                     'values': []
                 }
-                for key, val in six.iteritems(question['rate']):
+                for key, val in six.iteritems(question.get('rate', {})):
                     account_benchmark['values'] += [(key, int(val))]
                 question['benchmarks'] += [account_benchmark]
 

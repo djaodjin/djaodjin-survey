@@ -136,7 +136,7 @@ class DateRangeContextMixin(object):
     @property
     def start_at(self):
         if not hasattr(self, '_start_at'):
-            self._start_at = self.request.GET.get('start_at', None)
+            self._start_at = self.get_query_param('start_at')
             if self._start_at:
                 self._start_at = datetime_or_now(self._start_at.strip('"'))
         return self._start_at
@@ -144,7 +144,7 @@ class DateRangeContextMixin(object):
     @property
     def ends_at(self):
         if not hasattr(self, '_ends_at'):
-            self._ends_at = self.request.GET.get('ends_at', None)
+            self._ends_at = self.get_query_param('ends_at')
             if self.forced_date_range or self._ends_at:
                 if self._ends_at is not None:
                     self._ends_at = self._ends_at.strip('"')
@@ -156,8 +156,15 @@ class DateRangeContextMixin(object):
     @property
     def timezone(self):
         if not hasattr(self, '_timezone'):
-            self._timezone = self.request.GET.get('timezone', None)
+            self._timezone = self.get_query_param('timezone')
         return self._timezone
+
+    def get_query_param(self, key):
+        try:
+            return self.request.query_params.get(key, None)
+        except AttributeError:
+            pass
+        return self.request.GET.get(key, None)
 
     def get_context_data(self, **kwargs):
         context = super(DateRangeContextMixin, self).get_context_data(**kwargs)

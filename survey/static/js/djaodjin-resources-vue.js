@@ -189,6 +189,23 @@ var paramsMixin = {
             }
             return params;
         },
+        getQueryString: function(excludes){
+            var vm = this;
+            var sep = "";
+            var result = "";
+            var params = vm.getParams(excludes);
+            for( var key in params ) {
+                if( params.hasOwnProperty(key) ) {
+                    result += sep + key + '=' + encodeURIComponent(
+                        params[key].toString());
+                    sep = "&";
+                }
+            }
+            if( result ) {
+                result = '?' + result;
+            }
+            return result;
+        },
     },
     computed: {
         _start_at: {
@@ -340,23 +357,6 @@ var httpRequestMixin = {
                 cleanUrl += '/' + cleanParts[idx];
             }
             return cleanUrl.startsWith('http') ? cleanUrl[0] : '/' + cleanUrl;
-        },
-
-        getQueryString: function(excludes){
-            var vm = this;
-            var sep = "";
-            var result = "";
-            var params = vm.getParams(excludes);
-            for( var key in params ) {
-                if( params.hasOwnProperty(key) ) {
-                    result += sep + key + '=' + params[key].toString();
-                    sep = "&";
-                }
-            }
-            if( result ) {
-                result = '?' + result;
-            }
-            return result;
         },
 
         /** This method generates a GET HTTP request to `url` with a query
