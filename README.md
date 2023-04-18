@@ -32,7 +32,7 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest)
 - **Python:** 2.7, **Django:** 1.11 (legacy) (see testsite/requirements-legacy.txt)
 
-0.9.4
+0.9.5
 
   * publishes distribution using pyproject.toml
   * edits a question default unit

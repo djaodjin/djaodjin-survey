@@ -1,7 +1,8 @@
-0.9.4
+0.9.5
 
   * publishes distribution using pyproject.toml
   * edits a question default unit
+  * (0.9.4 did not include js files)
 
  -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 18 Apr 2023 12:35:00 -0700
 

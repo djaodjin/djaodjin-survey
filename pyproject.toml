@@ -39,5 +39,14 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["survey*"]
 
+[tool.setuptools.package-data]
+survey = [
+    'static/css/*',
+    'static/js/*',
+    'templates/survey/*',
+    'templates/survey/campaigns/*',
+    'templates/survey/matrix/*'
+]
+
 [tool.setuptools.dynamic]
 version = {attr = "survey.__version__"}
