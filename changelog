@@ -1,3 +1,10 @@
+0.9.4
+
+  * publishes distribution using pyproject.toml
+  * edits a question default unit
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 18 Apr 2023 12:35:00 -0700
+
 0.9.3
 
   * adds benchmarks APIs
