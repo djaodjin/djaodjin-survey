@@ -46,6 +46,21 @@
 },
 {
     "fields": {
+      "date_joined": "2022-01-01T00:00:00+00:00",
+      "email": "andy@localhost.localdomain",
+      "first_name": "Andy",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "last_login": "2022-01-01T00:00:00+00:00",
+      "last_name": "",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "andy"
+    },
+    "model": "auth.User", "pk": 5
+},
+{
+    "fields": {
       "slug": "tspproject",
       "full_name": "TSP"
     },
@@ -106,6 +121,20 @@
       "full_name": "Dummy4"
     },
     "model": "testsite.Account", "pk": 12
+},
+{
+    "fields": {
+      "slug": "demo-utility",
+      "full_name": "Utility (Demo)"
+    },
+    "model": "testsite.Account", "pk": 18
+},
+{
+    "fields": {
+      "slug": "andy-shop",
+      "full_name": "Andy Shop"
+    },
+    "model": "testsite.Account", "pk": 19
 },
 
 {
@@ -365,6 +394,30 @@
 
 {
   "fields": {
+    "slug": "f1e2e916eb494b90f9ff0a36982342",
+    "created_at": "2022-12-31T00:00:00+00:00",
+    "updated_at": "2022-12-31T00:00:00+00:00",
+    "campaign": 1,
+    "account": 19,
+    "is_frozen": true
+  },
+  "model": "survey.sample", "pk": 2
+},
+{
+  "fields": {
+    "created_at": "2022-12-31T00:00:00+00:00",
+    "sample": 2,
+    "question": 4,
+    "collected_by": 5,
+    "unit": 4,
+    "measured": 8
+  },
+  "model": "survey.answer", "pk": 5
+},
+
+
+{
+  "fields": {
     "grantee": 4,
     "account": 6,
     "campaign": 1,
@@ -406,6 +459,18 @@
     "ends_at": "2023-01-01T00:00:00+00:00"
   },
   "model": "survey.PortfolioDoubleOptIn", "pk": 3
+},
+{
+  "fields": {
+    "grantee": 18,
+    "account": 6,
+    "state": 0,
+    "initiated_by": 2,
+    "verification_key": "0000000000000000000000000000000000000003",
+    "created_at": "2022-01-01T00:00:00+00:00",
+    "ends_at": "2023-01-01T00:00:00+00:00"
+  },
+  "model": "survey.PortfolioDoubleOptIn", "pk": 4
 },
 {
   "fields": {

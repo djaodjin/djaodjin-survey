@@ -55,8 +55,8 @@ def as_timestamp(dtime_at=None):
         dtime_at - datetime.datetime(1970, 1, 1, tzinfo=utc)).total_seconds())
 
 
-def get_accessible_accounts(grantees,
-                            campaign=None, start_at=None, ends_at=None):
+def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
+                            start_at=None, ends_at=None):
     """
     All accounts which have elected to share samples with at least one
     account in grantees.
@@ -70,7 +70,8 @@ def get_accessible_accounts(grantees,
     if (hasattr(settings, 'ACCESSIBLE_ACCOUNTS_CALLABLE') and
         settings.ACCESSIBLE_ACCOUNTS_CALLABLE):
         queryset = import_string(settings.ACCESSIBLE_ACCOUNTS_CALLABLE)(
-            grantees, campaign=campaign, start_at=start_at, ends_at=ends_at)
+            grantees, campaign=campaign, aggregate_set=aggregate_set,
+            start_at=start_at, ends_at=ends_at)
 
     if queryset is None:
         filter_params = {}

@@ -27,6 +27,7 @@ import logging
 from rest_framework import generics
 from rest_framework.filters import BaseFilterBackend
 
+from ..filters import SearchFilter
 from ..models import Unit
 from .serializers import UnitSerializer
 
@@ -181,5 +182,11 @@ class UnitListAPIView(generics.ListAPIView):
           }]
         }
     """
+    search_fields = (
+        'slug',
+        'title',
+    )
+
     serializer_class = UnitSerializer
-    filter_backends = (EquivalenceFilter,)
+    filter_backends = (EquivalenceFilter, SearchFilter)
+    queryset = Unit.objects.all().order_by('slug')

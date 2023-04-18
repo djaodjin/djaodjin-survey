@@ -209,9 +209,13 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 
 class QuestionDetailSerializer(QuestionCreateSerializer):
 
+    title = serializers.CharField(required=False,
+        help_text=_("Title of the question as displayed in user interfaces"))
+
     class Meta:
         model = QuestionCreateSerializer.Meta.model
         fields = QuestionCreateSerializer.Meta.fields + ('path',)
+        read_only_fields = ('path',)
 
 
 class QuestionSerializer(serializers.ModelSerializer):

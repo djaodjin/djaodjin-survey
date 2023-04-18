@@ -160,11 +160,14 @@ var messagesMixin = {
 
     `params = {start_at, ends_at}` must exist in either the `props` or `data`
     of the component.
+
+    A subclass of this mixin must define either the function `autoReload`
+    or `reload` in order to make updates as a user is typing in input fields
+    or when a button is pressed respectively.
  */
 var paramsMixin = {
     data: function(){
         var data = {
-            autoreload: true,
             lastGetParams: {},
         }
         return data;
@@ -177,6 +180,10 @@ var paramsMixin = {
         asDateISOString: function(dateInputField) {
             const dateValue = moment(dateInputField, "YYYY-MM-DD");
             return dateValue.isValid() ? dateValue.toISOString() : null;
+        },
+        autoReload: function() {
+        },
+        reload: function() {
         },
         getParams: function(excludes){
             var vm = this;
@@ -218,7 +225,7 @@ var paramsMixin = {
                     // when the date is incorrect (ex: 09/31/2022).
                     this.$set(this.params, 'start_at',
                         this.asDateISOString(newVal));
-                    if( this.autoreload && this.outdated ) this.get();
+                    if( this.outdated ) this.debouncedAutoReload();
                 }
             }
         },
@@ -242,7 +249,7 @@ var paramsMixin = {
                     // when the date is incorrect (ex: 09/31/2022).
                     this.$set(this.params, 'ends_at',
                         this.asDateISOString(newVal));
-                    if( this.autoreload && this.outdated ) this.get();
+                    if( this.outdated ) this.debouncedAutoReload();
                 }
             }
         },
@@ -264,6 +271,15 @@ var paramsMixin = {
                 }
             }
             return false;
+        }
+    },
+    created: function () {
+        // _.debounce is a function provided by lodash to limit how
+        // often a particularly expensive operation can be run.
+        if( typeof _ != 'undefined' && typeof _.debounce != 'undefined' ) {
+            this.debouncedAutoReload = _.debounce(this.autoReload, 500);
+        } else {
+            this.debouncedAutoReload = this.autoReload;
         }
     }
 };
@@ -896,75 +912,48 @@ var itemMixin = {
 }
 
 
-var filterableMixin = {
-    data: function(){
-        return {
-            params: {
-                q: '',
-            },
-            mixinFilterCb: 'get',
-        }
-    },
-    methods: {
-        filterList: function(){
-            if(this.params.q) {
-                if ("page" in this.params){
-                    this.params.page = 1;
-                }
-            }
-            if(this[this.mixinFilterCb]){
-                this[this.mixinFilterCb]();
-            }
-        },
-    },
-}
-
-
 var paginationMixin = {
     data: function(){
         return {
             params: {
                 page: 1,
             },
+            mergeResults: false,
             itemsPerPage: this.$itemsPerPage,
             ellipsisThreshold: 4,
+            preReload: ['resetPage'],
             getCompleteCb: 'getCompleted',
             getBeforeCb: 'resetPage',
-            qsCache: null,
-            isInfiniteScroll: false,
         }
     },
     methods: {
         resetPage: function(){
             var vm = this;
-            if(!vm.ISState) return;
-            if(vm.qsCache && vm.qsCache !== vm.qs){
-                vm.params.page = 1;
-                vm.ISState.reset();
-            }
-            vm.qsCache = vm.qs;
+            vm.params.page = 1;
         },
         getCompleted: function(){
             var vm = this;
-            if(!vm.ISState) return;
             vm.mergeResults = false;
-            if(vm.pageCount > 0){
-                vm.ISState.loaded();
-            }
-            if(vm.params.page >= vm.pageCount){
-                vm.ISState.complete();
+        },
+        handleScroll: function(evt) {
+            var vm = this;
+            let element = this.$el;
+            if( element.getBoundingClientRect().bottom < window.innerHeight ) {
+                let menubar = vm.$el.querySelector('[role="pagination"]');
+                var style = window.getComputedStyle(menubar);
+                if( style.display == 'none' ) {
+                    // We are not displaying the pagination menubar,
+                    // so let's scroll!
+                    vm.paginationHandler();
+                }
             }
         },
         paginationHandler: function($state){
             var vm = this;
-            if(!vm.ISState) return;
-            if(!vm.itemsLoaded){
-                // this handler is triggered on initial get too
+            if( !vm.itemsLoaded || vm.mergeResults ) {
+                // this handler is triggered on initial get() too.
                 return;
             }
-            // rudimentary way to detect which type of pagination
-            // is active. ideally need to monitor resolution changes
-            vm.isInfiniteScroll = true;
             var nxt = vm.params.page + 1;
             if(nxt <= vm.pageCount){
                 vm.$set(vm.params, 'page', nxt);
@@ -1029,13 +1018,13 @@ var paginationMixin = {
             }
             return pages;
         },
-        ISState: function(){
-            if(!this.$refs.infiniteLoading) return;
-            return this.$refs.infiniteLoading.stateChanger;
-        },
-        qs: function(){
-            return this.getQueryString({page: null});
-        },
+    },
+    mounted: function() {
+        var vm = this;
+        window.addEventListener("scroll", vm.handleScroll);
+    },
+    unmounted: function () {
+        window.removeEventListener("scroll", vm.handleScroll);
     }
 }
 
@@ -1138,7 +1127,6 @@ var itemListMixin = {
     mixins: [
         httpRequestMixin,
         paginationMixin,
-        filterableMixin,
         sortableMixin
     ],
     data: function(){
@@ -1155,7 +1143,8 @@ var itemListMixin = {
                     start_at: null,
                     ends_at: null,
                     // The timezone for both start_at and ends_at.
-                    timezone: 'local'
+                    timezone: 'local',
+                    q: '',
                 },
                 itemsLoaded: false,
                 items: {
@@ -1227,11 +1216,18 @@ var itemListMixin = {
             vm.lastGetParams = vm.getParams();
             vm.reqGet(vm.url, vm.lastGetParams, cb);
         },
+        reload: function() {
+            let vm = this;
+            for( let idx = 0; idx < vm.preReload.length; ++ idx ) {
+                vm[vm.preReload[idx]]();
+            }
+            vm.get();
+        },
     },
 };
 
 
-var TypeAhead = Vue.component('typeahead', {
+var typeAheadMixin = {
     mixins: [
         httpRequestMixin
     ],
@@ -1277,7 +1273,7 @@ var TypeAhead = Vue.component('typeahead', {
         },
 
         onHit: function onHit() {
-            Vue.util.warn('You need to implement the `onHit` method', this);
+            console.warn('You need to implement the `onHit` method', this);
         },
 
         reset: function() {
@@ -1350,7 +1346,7 @@ var TypeAhead = Vue.component('typeahead', {
             this.url = this.$el.dataset.url;
         }
     }
-});
+};
 
     // attach properties to the exports object to define
     // the exported module properties.
@@ -1359,5 +1355,5 @@ var TypeAhead = Vue.component('typeahead', {
     exports.itemMixin = itemMixin;
     exports.messagesMixin = messagesMixin;
     exports.paramsMixin = paramsMixin;
-    exports.TypeAhead = TypeAhead;
+    exports.typeAheadMixin = typeAheadMixin;
 }));

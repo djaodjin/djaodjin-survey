@@ -159,12 +159,12 @@ class DateRangeContextMixin(object):
             self._timezone = self.get_query_param('timezone')
         return self._timezone
 
-    def get_query_param(self, key):
+    def get_query_param(self, key, default_value=None):
         try:
-            return self.request.query_params.get(key, None)
+            return self.request.query_params.get(key, default_value)
         except AttributeError:
             pass
-        return self.request.GET.get(key, None)
+        return self.request.GET.get(key, default_value)
 
     def get_context_data(self, **kwargs):
         context = super(DateRangeContextMixin, self).get_context_data(**kwargs)

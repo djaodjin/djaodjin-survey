@@ -41,19 +41,18 @@ from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
 from ..models import (Answer, Matrix, EditableFilter,
     EditableFilterEnumeratedAccounts, Sample, Unit, UnitEquivalences)
 from ..pagination import MetricsPagination
-from ..utils import (get_accessible_accounts, get_benchmarks_enumerated,
-    get_account_model, get_question_model,
+from ..utils import (datetime_or_now, get_accessible_accounts,
+    get_benchmarks_enumerated, get_account_model, get_question_model,
     get_account_serializer, get_question_serializer)
 from .serializers import (AccountsFilterAddSerializer,
     CompareQuestionSerializer, EditableFilterSerializer, MatrixSerializer,
     SampleBenchmarksSerializer)
 
-
 LOGGER = logging.getLogger(__name__)
 
 
-class BenchmarkAPIView(QuestionMixin, CampaignMixin, AccountMixin,
-                       DateRangeContextMixin, generics.ListAPIView):
+class BenchmarkAPIView(QuestionMixin, DateRangeContextMixin, CampaignMixin,
+                       AccountMixin, generics.ListAPIView):
     """
     Aggregated benchmark for requested accounts
 
@@ -90,13 +89,6 @@ class BenchmarkAPIView(QuestionMixin, CampaignMixin, AccountMixin,
             if param_unit is not None and param_unit in self.valid_units:
                 self._unit = param_unit
         return self._unit
-
-    def get_query_param(self, key):
-        try:
-            return self.request.query_params.get(key, None)
-        except AttributeError:
-            pass
-        return self.request.GET.get(key, None)
 
     def get_accessible_accounts(self, grantees):
         return get_accessible_accounts(grantees, campaign=self.campaign)
@@ -223,7 +215,8 @@ class SampleBenchmarksAPIView(SampleMixin, BenchmarkAPIView):
     def ends_at(self):
         #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_ends_at'):
-            self._ends_at = self.sample.created_at
+            self._ends_at = (self.sample.created_at if self.sample.is_frozen
+                else datetime_or_now())
         return self._ends_at
 
     def get_accessible_accounts(self, grantees):
@@ -253,7 +246,7 @@ class SampleBenchmarksIndexAPIView(SampleBenchmarksAPIView):
     """
 
 
-class CompareAPIView(CampaignMixin, AccountMixin, DateRangeContextMixin,
+class CompareAPIView(DateRangeContextMixin, CampaignMixin, AccountMixin,
                      generics.ListAPIView):
     """
     Lists compared samples
