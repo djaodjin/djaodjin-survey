@@ -1,0 +1,43 @@
+# This pyproject.toml seems to work to build a new package
+# when `setuptools==67.6.1` is installed.
+[project]
+name = "djaodjin-survey"
+description = "Django app for qualitative and quantitative surveys"
+readme = "README.md"
+requires-python = ">=3.7"
+license =  {text = "BSD-2-Clause"}
+keywords = ["survey", "assessment", "census"]
+authors = [
+  {name = "The DjaoDjin Team", email = "help@djaodjin.com"}
+]
+maintainers = [
+  {name = "The DjaoDjin Team", email = "help@djaodjin.com"}
+]
+classifiers = [
+  "Framework :: Django",
+  "Environment :: Web Environment",
+  "Programming Language :: Python",
+  "License :: OSI Approved :: BSD License"
+]
+dependencies = [
+  "Django>=2.2",
+  "djangorestframework>=3.9",
+  "monotonic>=1.1",
+  "python-dateutil>=2.2"
+]
+dynamic = ["version"]
+
+[project.urls]
+repository = "https://github.com/djaodjin/djaodjin-survey"
+documentation = "https://djaodjin-survey.readthedocs.io/"
+changelog = "https://github.com/djaodjin/djaodjin-survey/changelog"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["survey*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "survey.__version__"}
