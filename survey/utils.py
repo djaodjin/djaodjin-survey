@@ -127,13 +127,15 @@ def get_benchmarks_enumerated(samples, questions, questions_by_key=None):
             questions_by_key.update({question_pk: value})
 
     # per-choice number of answers
-    for row in Answer.objects.filter(
+    enum_answers = Answer.objects.filter(
             question__in=questions,
             unit_id=F('question__default_unit_id'),
             sample_id__in=samples,
-            question__default_unit__system=Unit.SYSTEM_ENUMERATED,
+            question__default_unit__system__in=[Unit.SYSTEM_ENUMERATED,
+                Unit.SYSTEM_DATETIME], # XXX target year are stored as choices
             unit__enums__id=F('measured')).values('question__id',
-                'measured', 'unit__enums__text').annotate(Count('sample_id')):
+                'unit__enums__text').annotate(Count('sample_id'))
+    for row in enum_answers:
         question_pk = row['question__id']
         count = row['sample_id__count']
         measured = row['unit__enums__text']

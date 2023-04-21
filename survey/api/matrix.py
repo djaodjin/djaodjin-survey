@@ -50,35 +50,12 @@ from .serializers import (AccountsFilterAddSerializer,
 
 LOGGER = logging.getLogger(__name__)
 
-
-class BenchmarkAPIView(QuestionMixin, DateRangeContextMixin, CampaignMixin,
-                       AccountMixin, generics.ListAPIView):
-    """
-    Aggregated benchmark for requested accounts
-
-    **Examples**:
-
-    .. code-block:: http
-
-        GET /api/energy-utility/reporting/sustainability/benchmarks\
-/sustainability HTTP/1.1
-
-    responds
-
-    .. code-block:: json
-
-
-        {
-          "count": 4,
-          "results": []
-        }
-    """
+class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
+                     AccountMixin):
     scale = 1
     default_unit = 'profiles'
     valid_units = ('percentage',)
     title = "Benchmarks"
-    serializer_class = SampleBenchmarksSerializer
-    pagination_class = MetricsPagination
 
     @property
     def unit(self):
@@ -104,28 +81,25 @@ class BenchmarkAPIView(QuestionMixin, DateRangeContextMixin, CampaignMixin,
         questions_queryset = get_question_model().objects.filter(
             path__startswith=self.db_path).values(
             'pk', 'path', 'ui_hint', 'content__title',
-            'default_unit__slug', 'default_unit__title')
+            'default_unit__slug', 'default_unit__title',
+            'default_unit__system')
         questions_by_key = {question['pk']: {
             'path': question['path'],
             'title': question['content__title'],
             'ui_hint': question['ui_hint'],
             'default_unit': Unit(
                 slug=question['default_unit__slug'],
-                title=question['default_unit__title']),
+                title=question['default_unit__title'],
+                system=question['default_unit__system']),
         } for question in questions_queryset}
 
         self.attach_results(questions_by_key)
 
         return list(six.itervalues(questions_by_key))
 
-
-    def attach_results(self, questions_by_key, account=None):
-        if not account:
-            account = self.account
-
-        # samples that will be counted in the benchmark
+    def _attach_results(self, questions_by_key, accessible_accounts,
+                        title, slug):
         samples = []
-        accessible_accounts = self.get_accessible_accounts([account])
         if accessible_accounts:
             # Calling `get_completed_assessments_at_by` with an `accounts`
             # arguments evaluating to `False` will return all the latest
@@ -135,6 +109,7 @@ class BenchmarkAPIView(QuestionMixin, DateRangeContextMixin, CampaignMixin,
                 start_at=self.start_at, ends_at=self.ends_at,
                 accounts=accessible_accounts)
 
+        # samples that will be counted in the benchmark
         if samples:
             questions_by_key = get_benchmarks_enumerated(
                 samples, questions_by_key.keys(), questions_by_key)
@@ -142,13 +117,46 @@ class BenchmarkAPIView(QuestionMixin, DateRangeContextMixin, CampaignMixin,
                 if not 'benchmarks' in question:
                     question['benchmarks'] = []
                 account_benchmark = {
-                    'slug': account.slug,
-                    'printable_name': account.printable_name,
+                    'slug': slug,
+                    'title': title,
                     'values': []
                 }
                 for key, val in six.iteritems(question.get('rate', {})):
                     account_benchmark['values'] += [(key, int(val))]
                 question['benchmarks'] += [account_benchmark]
+
+
+    def attach_results(self, questions_by_key, account=None):
+        if not account:
+            account = self.account
+        accessible_accounts = self.get_accessible_accounts([account])
+        self._attach_results(questions_by_key, accessible_accounts,
+            account.printable_name, account.slug)
+
+
+class BenchmarkAPIView(BenchmarkMixin, generics.ListAPIView):
+    """
+    Aggregated benchmark for requested accounts
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/reporting/sustainability/benchmarks\
+/sustainability HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+    serializer_class = SampleBenchmarksSerializer
+    pagination_class = MetricsPagination
 
     def get_serializer_context(self):
         context = super(BenchmarkAPIView, self).get_serializer_context()

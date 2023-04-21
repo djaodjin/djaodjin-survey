@@ -483,9 +483,9 @@ class TableSerializer(NoModelSerializer):
 
     slug = serializers.SlugField(
         help_text=_("Unique key in the table for the data series"))
-    printable_name = serializers.CharField(
-        required=False, read_only=True,
-        help_text=_("Name that can be safely used for display in HTML pages"))
+    title = serializers.CharField(required=False, read_only=True,
+        help_text=_("Title of data serie that can be safely used for display"\
+        " in HTML pages"))
     extra = ExtraField(required=False,
         help_text=_("Extra meta data (can be stringify JSON)"))
     values = serializers.ListField(
@@ -513,7 +513,8 @@ class MetricsSerializer(NoModelSerializer):
         help_text=_("Unit the measured field is in"))
     title = serializers.CharField(
         help_text=_("Title for the table"))
-    results = TableSerializer(many=True)
+    results = TableSerializer(many=True,
+        help_text=_("Data series"))
 
 
 class CompareQuestionSerializer(QuestionSerializer):
