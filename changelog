@@ -1,3 +1,11 @@
+0.9.6
+
+  * serializes default_unit.system correctly in benchmarks API
+  * renames data series name from 'printable_name' to 'title' for consistency
+  * computes rate on target dates
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu, 27 Apr 2023 18:50:00 -0700
+
 0.9.5
 
   * publishes distribution using pyproject.toml
