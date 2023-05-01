@@ -79,7 +79,7 @@ class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
             prefix = prefix + settings.DB_PATH_SEP
 
         questions_queryset = get_question_model().objects.filter(
-            path__startswith=self.db_path).values(
+            path__startswith=prefix).values(
             'pk', 'path', 'ui_hint', 'content__title',
             'default_unit__slug', 'default_unit__title',
             'default_unit__system')
@@ -127,11 +127,15 @@ class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
 
 
     def attach_results(self, questions_by_key, account=None):
+        account_slug = "all"
+        account_title = "All"
         if not account:
             account = self.account
+            account_slug = account.slug
+            account_title = account.printable_name
         accessible_accounts = self.get_accessible_accounts([account])
         self._attach_results(questions_by_key, accessible_accounts,
-            account.printable_name, account.slug)
+            account_title, account_slug)
 
 
 class BenchmarkAPIView(BenchmarkMixin, generics.ListAPIView):
@@ -191,7 +195,28 @@ class BenchmarkIndexAPIView(BenchmarkAPIView):
     """
 
 
-class SampleBenchmarksAPIView(SampleMixin, BenchmarkAPIView):
+class SampleBenchmarkMixin(SampleMixin, BenchmarkMixin):
+
+    @property
+    def campaign(self):
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_campaign'):
+            self._campaign = self.sample.campaign
+        return self._campaign
+
+    @property
+    def ends_at(self):
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_ends_at'):
+            self._ends_at = (self.sample.created_at if self.sample.is_frozen
+                else datetime_or_now())
+        return self._ends_at
+
+    def get_accessible_accounts(self, grantees):
+        return get_account_model().objects.all()
+
+
+class SampleBenchmarksAPIView(SampleBenchmarkMixin, generics.ListAPIView):
     """
     Benchmark a sub-tree of questions against peers
 
@@ -212,23 +237,6 @@ class SampleBenchmarksAPIView(SampleMixin, BenchmarkAPIView):
           "results": []
         }
     """
-    @property
-    def campaign(self):
-        #pylint:disable=attribute-defined-outside-init
-        if not hasattr(self, '_campaign'):
-            self._campaign = self.sample.campaign
-        return self._campaign
-
-    @property
-    def ends_at(self):
-        #pylint:disable=attribute-defined-outside-init
-        if not hasattr(self, '_ends_at'):
-            self._ends_at = (self.sample.created_at if self.sample.is_frozen
-                else datetime_or_now())
-        return self._ends_at
-
-    def get_accessible_accounts(self, grantees):
-        return get_account_model().objects.all()
 
 
 class SampleBenchmarksIndexAPIView(SampleBenchmarksAPIView):
