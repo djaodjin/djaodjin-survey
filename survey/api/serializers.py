@@ -258,7 +258,7 @@ class CampaignSerializer(serializers.ModelSerializer):
     account = serializers.SlugRelatedField(
         slug_field=settings.BELONGS_LOOKUP_FIELD,
         queryset=get_belongs_model().objects.all(),
-        help_text=("Account this sample belongs to."))
+        help_text=_("Account this sample belongs to."))
 
     class Meta(object):
         model = Campaign
@@ -282,7 +282,7 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
     account = serializers.SlugRelatedField(
         slug_field=settings.BELONGS_LOOKUP_FIELD,
         queryset=get_belongs_model().objects.all(),
-        help_text=("Account this sample belongs to."))
+        help_text=_("Account this sample belongs to."))
     questions = QuestionSerializer(many=True)
 
     class Meta(object):
@@ -296,7 +296,7 @@ class SampleCreateSerializer(serializers.ModelSerializer):
 
     campaign = serializers.SlugRelatedField(slug_field='slug',
         queryset=Campaign.objects.all(), required=False,
-        help_text=("Campaign this sample is part of."))
+        help_text=_("Campaign this sample is part of."))
 
     class Meta(object):
         model = Sample
@@ -307,19 +307,21 @@ class SampleSerializer(SampleCreateSerializer):
 
     campaign = CampaignSerializer(
         read_only=True, allow_null=True,
-        help_text=("Campaign this sample is part of."))
+        help_text=_("Campaign this sample is part of"))
     account = serializers.SlugRelatedField(slug_field='slug',
         read_only=True, required=False,
-        help_text=("Account this sample belongs to."))
+        help_text=_("Account this sample belongs to"))
     location = serializers.URLField(read_only=True, allow_null=True,
-        help_text=("URL at which the response is visible."))
+        help_text=_("URL at which the response is visible"))
+    grantees = serializers.ListField(required=False,
+        help_text=_("Profiles with which sample was shared"))
 
     class Meta(object):
         model = Sample
         fields = ('campaign', 'slug', 'account', 'created_at',
-            'updated_at', 'is_frozen', 'location')
+            'updated_at', 'is_frozen', 'location', 'grantees')
         read_only_fields = ('campaign', 'slug', 'account', 'created_at',
-            'updated_at', 'is_frozen', 'location')
+            'updated_at', 'is_frozen', 'location', 'grantees')
 
     @staticmethod
     def get_location(obj):
@@ -597,6 +599,8 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
     campaign = serializers.SlugRelatedField(
         queryset=Campaign.objects.all(), slug_field='slug')
     state = EnumField(choices=PortfolioDoubleOptIn.STATES)
+    expected_behavior = EnumField(
+        choices=PortfolioDoubleOptIn.EXPECTED_BEHAVIOR, required=False)
     api_accept = serializers.SerializerMethodField()
     api_remove = serializers.SerializerMethodField()
     extra = ExtraField(required=False,
@@ -605,9 +609,9 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
     class Meta:
         model = PortfolioDoubleOptIn
         fields = ('grantee', 'account', 'campaign', 'created_at', 'ends_at',
-            'state', 'api_accept', 'api_remove', 'extra')
+            'state', 'expected_behavior', 'api_accept', 'api_remove', 'extra')
         read_only_fields = ('created_at', 'ends_at',
-            'state', 'api_accept', 'api_remove')
+            'state', 'expected_behavior', 'api_accept', 'api_remove')
 
     def get_api_accept(self, obj):
         api_endpoint = None

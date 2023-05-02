@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,7 @@ import logging
 
 from dateutil.relativedelta import relativedelta
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Max, Q
 from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response as HttpResponse
@@ -35,7 +35,7 @@ from .. import settings, signals
 from ..compat import six, gettext_lazy as _
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..mixins import AccountMixin
-from ..models import PortfolioDoubleOptIn
+from ..models import Portfolio, PortfolioDoubleOptIn, Sample
 from .serializers import (NoModelSerializer, PortfolioOptInSerializer,
     PortfolioOptInUpdateSerializer, PortfolioGrantCreateSerializer,
     PortfolioRequestCreateSerializer)
@@ -48,8 +48,6 @@ LOGGER = logging.getLogger(__name__)
 
 
 class SmartPortfolioListMixin(AccountMixin):
-
-    serializer_class = PortfolioOptInSerializer
 
     search_fields = (
         'grantee__full_name',
@@ -109,6 +107,50 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
             ]
         }
     """
+    serializer_class = PortfolioOptInSerializer
+
+    def decorate_queryset(self, queryset):
+        latest_frozen_by_campaigns = {}
+        latest_shared_by_campaigns = {}
+        for optin in queryset:
+            campaign = optin.campaign
+            query_kwargs = {'campaign': campaign} if campaign else {}
+            if True: # campaign:
+                latest_frozen_at = latest_frozen_by_campaigns.get(campaign)
+                if (not latest_frozen_at and
+                    campaign not in latest_frozen_by_campaigns):
+                    latest_frozen_at = Sample.objects.filter(
+                        account=self.account, is_frozen=True,
+                        **query_kwargs).aggregate(Max('created_at'))
+                    if latest_frozen_at:
+                        latest_frozen_at = latest_frozen_at.get(
+                            'created_at__max')
+                    latest_frozen_by_campaigns.update({
+                        campaign: latest_frozen_at})
+
+                latest_shared_at = latest_shared_by_campaigns.get(campaign)
+                if (not latest_shared_at and
+                    campaign not in latest_shared_by_campaigns):
+                    latest_shared_at = Portfolio.objects.filter(
+                        account=self.account, grantee=optin.grantee,
+                        **query_kwargs).aggregate(Max('ends_at'))
+                    if latest_shared_at:
+                        latest_shared_at = latest_shared_at.get('ends_at__max')
+                    latest_shared_by_campaigns.update({
+                        campaign: latest_shared_at})
+
+                # compute expected behavior
+                if not latest_frozen_at:
+                    optin.expected_behavior = optin.EXPECTED_CREATE
+                elif (not latest_shared_at and
+                      latest_frozen_at < latest_shared_at and
+                      latest_shared_at < optin.created_at):
+                    optin.expected_behavior = optin.EXPECTED_UPDATE
+                else:
+                    optin.expected_behavior = optin.EXPECTED_SHARE
+
+        return queryset
+
 
     def get_queryset(self):
         return PortfolioDoubleOptIn.objects.filter(
@@ -116,6 +158,10 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
             Q(state=PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED)) |
             (Q(grantee=self.account) &
             Q(state=PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED)))
+
+    def paginate_queryset(self, queryset):
+        page = super(PortfoliosAPIView, self).paginate_queryset(queryset)
+        return self.decorate_queryset(page if page else queryset)
 
 
 class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
@@ -154,8 +200,8 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
             ]
         }
     """
-    serializer_class = PortfolioOptInSerializer
     lookup_field = settings.ACCOUNT_LOOKUP_FIELD
+    serializer_class = PortfolioOptInSerializer
 
     def get_queryset(self):
         return PortfolioDoubleOptIn.objects.filter(

@@ -40,7 +40,8 @@ from ..compat import six, is_authenticated
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..filters import DateRangeFilter, OrderingFilter, SampleStateFilter
 from ..mixins import AccountMixin, SampleMixin
-from ..models import Answer, Choice, Sample, Unit, UnitEquivalences
+from ..models import (Answer, Choice, Portfolio, PortfolioDoubleOptIn, Sample,
+    Unit, UnitEquivalences)
 from ..queries import is_sqlite3
 from ..utils import datetime_or_now, get_question_model, get_user_serializer
 from .serializers import (AnswerSerializer, NoModelSerializer,
@@ -1454,9 +1455,9 @@ class SampleResetIndexAPIView(SampleResetAPIView):
 
 class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
     """
-    Lists updatable samples
+    Lists historical samples
 
-    This API end-point returns all samples which have not been frozen
+    This API end-point returns all samples which have or have not been frozen
     for an account.
 
     **Tags**: assessments
@@ -1505,11 +1506,38 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
 
     serializer_class = SampleSerializer
 
+    def decorate_queryset(self, queryset):
+        frozen_by_campaigns = {}
+        for sample in queryset:
+            if sample.is_frozen:
+                if sample.campaign not in frozen_by_campaigns:
+                    frozen_by_campaigns[sample.campaign] = [sample]
+                else:
+                    frozen_by_campaigns[sample.campaign] += [sample]
+        for campaign, samples in six.iteritems(frozen_by_campaigns):
+            accessibles_by = Portfolio.objects.filter(
+                account=self.account, campaign=campaign).values(
+                    'ends_at', 'grantee__slug').order_by('-ends_at')
+            for sample in samples:
+                sample.grantees = []
+                for accessible in accessibles_by:
+                    ends_at = accessible.get('ends_at')
+                    grantee = accessible.get('grantee__slug')
+                    if sample.created_at <= ends_at:
+                        sample.grantees += [grantee]
+        return queryset
+
+
     def get_queryset(self):
         return Sample.objects.filter(
             account=self.account,
             extra__isnull=True         # XXX convinience
         ).select_related('campaign')
+
+    def paginate_queryset(self, queryset):
+        page = super(
+            SampleRecentCreateAPIView, self).paginate_queryset(queryset)
+        return self.decorate_queryset(page if page else queryset)
 
     @swagger_auto_schema(request_body=SampleCreateSerializer)
     def post(self, request, *args, **kwargs):

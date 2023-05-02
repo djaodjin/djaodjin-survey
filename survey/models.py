@@ -918,6 +918,16 @@ class PortfolioDoubleOptIn(models.Model):
         (OPTIN_REQUEST_EXPIRED, 'request-expired'),
     ]
 
+    EXPECTED_SHARE = 0
+    EXPECTED_CREATE = 1
+    EXPECTED_UPDATE = 2
+
+    EXPECTED_BEHAVIOR = [
+        (EXPECTED_SHARE, 'share'),
+        (EXPECTED_CREATE, 'create'),
+        (EXPECTED_UPDATE, 'update'),
+    ]
+
     objects = PortfolioDoubleOptInManager()
 
     created_at = models.DateTimeField(auto_now_add=True,
