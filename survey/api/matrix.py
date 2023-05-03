@@ -75,11 +75,12 @@ class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
         Overrides CampaignContentMixin.get_questions to return a list
         of questions based on the answers available in the benchmarkd samples.
         """
-        if not prefix.endswith(settings.DB_PATH_SEP):
-            prefix = prefix + settings.DB_PATH_SEP
+        qualified_prefix = prefix
+        if not qualified_prefix.endswith(settings.DB_PATH_SEP):
+            qualified_prefix = qualified_prefix + settings.DB_PATH_SEP
 
         questions_queryset = get_question_model().objects.filter(
-            path__startswith=prefix).values(
+            Q(path=prefix) | Q(path__startswith=qualified_prefix)).values(
             'pk', 'path', 'ui_hint', 'content__title',
             'default_unit__slug', 'default_unit__title',
             'default_unit__system')
