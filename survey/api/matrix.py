@@ -238,6 +238,18 @@ class SampleBenchmarksAPIView(SampleBenchmarkMixin, generics.ListAPIView):
           "results": []
         }
     """
+    serializer_class = SampleBenchmarksSerializer
+    pagination_class = MetricsPagination
+
+    def get_serializer_context(self):
+        context = super(SampleBenchmarksAPIView, self).get_serializer_context()
+        context.update({
+            'prefix': self.db_path if self.db_path else settings.DB_PATH_SEP,
+        })
+        return context
+
+    def get_queryset(self):
+        return self.get_questions(self.db_path)
 
 
 class SampleBenchmarksIndexAPIView(SampleBenchmarksAPIView):
