@@ -347,7 +347,8 @@ class SampleMixin(QuestionMixin, AccountMixin):
                 else:
                     queryset = Sample.objects.filter(
                         Q(account=self.account) |
-                        (Q(account__portfolios__grantee=self.account) &
+                        (Q(is_frozen=True) &
+                         Q(account__portfolios__grantee=self.account) &
                          Q(account__portfolios__ends_at__gte=F('created_at'))),
                         slug=sample_slug)
                 sample = queryset.select_related('campaign').distinct().get()

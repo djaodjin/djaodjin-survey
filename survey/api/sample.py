@@ -312,7 +312,10 @@ class SampleAPIView(SampleMixin, generics.RetrieveAPIView):
         "updated_at": "2018-01-24T17:03:34.926193Z",
         "is_frozen": false,
         "account": "supplier-1",
-        "campaign": "sustainability"
+        "campaign": {
+            "slug": "sustainability",
+            "title": "ESG/Environmental practices"
+        }
     }
     """
     serializer_class = SampleSerializer
@@ -736,7 +739,8 @@ answers/construction HTTP/1.1
         errors = []
 
         if self.sample.is_frozen:
-            raise ValidationError("sample is frozen")
+            raise ValidationError({
+                'detail': "cannot update answers in a frozen sample"})
 
         for datapoint in validated_data:
             measured = datapoint.get('measured', None)
@@ -1061,7 +1065,8 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
     def create(self, request, *args, **kwargs):
         #pylint:disable=too-many-locals
         if self.sample.is_frozen:
-            raise ValidationError("sample is frozen")
+            raise ValidationError({
+                'detail': "cannot update answers in a frozen sample"})
 
         at_time = datetime_or_now()
         at_least_one_created = False
@@ -1365,6 +1370,8 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
     serializer_class = SampleSerializer
 
     def create(self, request, *args, **kwargs):
+        if self.sample.is_frozen:
+            raise ValidationError({'detail': "sample is already frozen"})
         self.sample.is_frozen = True
         self.sample.save()
         serializer = self.get_serializer(self.sample)
@@ -1405,6 +1412,9 @@ class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
     serializer_class = SampleSerializer
 
     def create(self, request, *args, **kwargs):
+        if self.sample.is_frozen:
+            raise ValidationError({
+                'detail': "cannot update answers in a frozen sample"})
         prefix = self.path
         if prefix:
             queryset = self.sample.answers.filter(
@@ -1515,16 +1525,21 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
                 else:
                     frozen_by_campaigns[sample.campaign] += [sample]
         for campaign, samples in six.iteritems(frozen_by_campaigns):
-            accessibles_by = Portfolio.objects.filter(
+            next_level = Portfolio.objects.filter(
                 account=self.account, campaign=campaign).values(
                     'ends_at', 'grantee__slug').order_by('-ends_at')
-            for sample in samples:
+            for sample in sorted(samples,
+                        key=lambda smp: smp.created_at, reverse=True):
                 sample.grantees = []
-                for accessible in accessibles_by:
+                level = next_level
+                next_level = []
+                for accessible in level:
                     ends_at = accessible.get('ends_at')
                     grantee = accessible.get('grantee__slug')
                     if sample.created_at <= ends_at:
                         sample.grantees += [grantee]
+                    else:
+                        next_level += [accessible]
         return queryset
 
 

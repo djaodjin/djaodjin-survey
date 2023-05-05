@@ -588,7 +588,10 @@ class PortfolioOptInUpdateSerializer(serializers.ModelSerializer):
         fields = ('extra',)
 
 
-class PortfolioOptInSerializer(serializers.ModelSerializer):
+class PortfolioReceivedSerializer(serializers.ModelSerializer):
+
+    # `PortfolioReceivedSerializer` is used in `PortfoliosAPIView` which
+    # is used by the receiving profile.
 
     grantee = serializers.SlugRelatedField(
         queryset=get_account_model().objects.all(),
@@ -596,20 +599,18 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
     account = serializers.SlugRelatedField(
         queryset=get_account_model().objects.all(),
         slug_field=settings.ACCOUNT_LOOKUP_FIELD)
-    campaign = serializers.SlugRelatedField(
-        queryset=Campaign.objects.all(), slug_field='slug')
+    campaign = CampaignSerializer(allow_null=True,
+        help_text=_("Campaign granted/requested"))
     state = EnumField(choices=PortfolioDoubleOptIn.STATES)
     expected_behavior = EnumField(
         choices=PortfolioDoubleOptIn.EXPECTED_BEHAVIOR, required=False)
     api_accept = serializers.SerializerMethodField()
     api_remove = serializers.SerializerMethodField()
-    extra = ExtraField(required=False,
-        help_text=_("Extra meta data (can be stringify JSON)"))
 
     class Meta:
         model = PortfolioDoubleOptIn
         fields = ('grantee', 'account', 'campaign', 'created_at', 'ends_at',
-            'state', 'expected_behavior', 'api_accept', 'api_remove', 'extra')
+            'state', 'expected_behavior', 'api_accept', 'api_remove')
         read_only_fields = ('created_at', 'ends_at',
             'state', 'expected_behavior', 'api_accept', 'api_remove')
 
@@ -644,6 +645,18 @@ class PortfolioOptInSerializer(serializers.ModelSerializer):
         if request and api_endpoint:
             return request.build_absolute_uri(api_endpoint)
         return api_endpoint
+
+
+class PortfolioOptInSerializer(PortfolioReceivedSerializer):
+
+    extra = ExtraField(required=False,
+        help_text=_("Extra meta data (can be stringify JSON)"))
+
+    class Meta(PortfolioReceivedSerializer.Meta):
+        fields = PortfolioReceivedSerializer.Meta.fields + (
+            'extra',)
+        read_only_fields = PortfolioReceivedSerializer.Meta.read_only_fields + (
+            'extra',)
 
 
 class AccountsFilterAddSerializer(serializers.ModelSerializer):

@@ -36,9 +36,9 @@ from ..compat import six, gettext_lazy as _
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..mixins import AccountMixin
 from ..models import Portfolio, PortfolioDoubleOptIn, Sample
-from .serializers import (NoModelSerializer, PortfolioOptInSerializer,
-    PortfolioOptInUpdateSerializer, PortfolioGrantCreateSerializer,
-    PortfolioRequestCreateSerializer)
+from .serializers import (NoModelSerializer, PortfolioReceivedSerializer,
+    PortfolioOptInSerializer, PortfolioOptInUpdateSerializer,
+    PortfolioGrantCreateSerializer, PortfolioRequestCreateSerializer)
 from ..filters import (DateRangeFilter, DoubleOptInStateFilter, OrderingFilter,
      SearchFilter)
 from ..utils import datetime_or_now, get_account_model
@@ -98,7 +98,11 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
               {
                 "grantee": "energy-utility",
                 "account": "supplier-1",
-                "campaign": "sustainability",
+                "campaign": {
+                    "slug": "sustainability",
+                    "title": "ESG/Environmental practices",
+                    "account": "tspproject"
+                },
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-initiated",
                 "api_accept": "/api/supplier-1/portfolios/requests/\
@@ -107,7 +111,7 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
             ]
         }
     """
-    serializer_class = PortfolioOptInSerializer
+    serializer_class = PortfolioReceivedSerializer
 
     def decorate_queryset(self, queryset):
         latest_frozen_by_campaigns = {}
@@ -191,7 +195,11 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
                 {
                   "grantee": "water-utility",
                   "account": "supplier-1",
-                  "campaign": "sustainability",
+                  "campaign": {
+                      "slug": "sustainability",
+                      "title": "ESG/Environmental practices",
+                      "account": "tspproject"
+                  },
                   "ends_at": "2022-01-01T00:00:00Z",
                   "state": "grant-initiated",
                   "api_accept": "/api/water-utility/portfolios/grants\
@@ -248,7 +256,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
                "results": [{
                  "grantee": "water-utility",
                  "account": "supplier-1",
-                 "campaign": "sustainability",
+                 "campaign": null,
                  "ends_at": "2022-01-01T00:00:00Z",
                  "state": "grant-initiated",
                  "api_accept": "/api/water-utility/portfolios/grants\
@@ -468,7 +476,11 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
               {
                 "grantee": "energy-utility",
                 "account": "supplier-1",
-                "campaign": "sustainability",
+                "campaign": {
+                    "slug": "sustainability",
+                    "title": "ESG/Environmental practices",
+                    "account": "tspproject"
+                },
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-denied",
                 "api_accept": null
@@ -476,7 +488,11 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
               {
                 "grantee": "energy-utility",
                 "account": "supplier-1",
-                "campaign": "sustainability",
+                "campaign": {
+                    "slug": "sustainability",
+                    "title": "ESG/Environmental practices",
+                    "account": "tspproject"
+                },
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-initiated",
                 "api_accept": "/api/supplier-1/portfolios/requests/\
@@ -485,7 +501,11 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
               {
                 "grantee": "energy-utility",
                 "account": "andy-shop",
-                "campaign": "sustainability",
+                "campaign": {
+                    "slug": "sustainability",
+                    "title": "ESG/Environmental practices",
+                    "account": "tspproject"
+                },
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-initiated",
                 "api_accept": "/api/andy-shop/portfolios/requests/\
@@ -701,7 +721,11 @@ class PortfoliosUpdateAPIView(AccountMixin, generics.UpdateAPIView):
         {
           "grantee": "energy-utility",
           "account": "supplier-1",
-          "campaign": "sustainability",
+          "campaign": {
+              "slug": "sustainability",
+              "title": "ESG/Environmental practices",
+              "account": "tspproject"
+          },
           "ends_at": "2022-01-01T00:00:00Z",
           "state": "request-denied",
           "api_accept": null,
