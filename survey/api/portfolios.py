@@ -119,7 +119,8 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
         for optin in queryset:
             campaign = optin.campaign
             query_kwargs = {'campaign': campaign} if campaign else {}
-            if True: # campaign:
+            optin.expected_behavior = optin.EXPECTED_CREATE
+            if campaign:
                 latest_frozen_at = latest_frozen_by_campaigns.get(campaign)
                 if (not latest_frozen_at and
                     campaign not in latest_frozen_by_campaigns):

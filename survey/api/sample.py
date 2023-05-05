@@ -40,8 +40,7 @@ from ..compat import six, is_authenticated
 from ..docs import OpenAPIResponse, swagger_auto_schema
 from ..filters import DateRangeFilter, OrderingFilter, SampleStateFilter
 from ..mixins import AccountMixin, SampleMixin
-from ..models import (Answer, Choice, Portfolio, PortfolioDoubleOptIn, Sample,
-    Unit, UnitEquivalences)
+from ..models import Answer, Choice, Portfolio, Sample, Unit, UnitEquivalences
 from ..queries import is_sqlite3
 from ..utils import datetime_or_now, get_question_model, get_user_serializer
 from .serializers import (AnswerSerializer, NoModelSerializer,
