@@ -32,11 +32,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.9.6
+0.9.7
 
-  * serializes default_unit.system correctly in benchmarks API
-  * renames data series name from 'printable_name' to 'title' for consistency
-  * computes rate on target dates
+  * prevents extra data to leak through API under unexpected conditions
+  * uses prefix to filter questions in benchmarks API
 
 [previous release notes](changelog)
 

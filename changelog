@@ -1,3 +1,10 @@
+0.9.7
+
+  * prevents extra data to leak through API under unexpected conditions
+  * uses prefix to filter questions in benchmarks API
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 5 May 2023 11:15:00 -0700
+
 0.9.6
 
   * serializes default_unit.system correctly in benchmarks API
