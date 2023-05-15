@@ -961,12 +961,14 @@ class PortfolioDoubleOptIn(models.Model):
             "campaign='%s', ends_at='%s')>" % (self.grantee_id,
             self.account_id, self.campaign_id, self.ends_at)
 
-    def create_portfolios(self):
+    def create_portfolios(self, at_time=None):
+        if not at_time:
+            at_time = datetime_or_now()
         with transaction.atomic():
             Portfolio.objects.update_or_create(
                 grantee=self.grantee, account=self.account,
                 campaign=self.campaign,
-                defaults={'ends_at': self.ends_at})
+                defaults={'ends_at': at_time})
 
     @staticmethod
     def generate_key(account):

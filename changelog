@@ -1,3 +1,9 @@
+0.9.8
+
+  * insures Portfolio.ends_at is not set to NULL
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 15 May 2023 12:00:00 -0700
+
 0.9.7
 
   * prevents extra data to leak through API under unexpected conditions

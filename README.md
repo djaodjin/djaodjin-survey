@@ -32,10 +32,9 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.9.7
+0.9.8
 
-  * prevents extra data to leak through API under unexpected conditions
-  * uses prefix to filter questions in benchmarks API
+  * insures Portfolio.ends_at is not set to NULL
 
 [previous release notes](changelog)
 
