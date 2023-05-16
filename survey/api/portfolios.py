@@ -147,7 +147,7 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
                 # compute expected behavior
                 if not latest_frozen_at:
                     optin.expected_behavior = optin.EXPECTED_CREATE
-                elif (not latest_shared_at and
+                elif (latest_shared_at and
                       latest_frozen_at < latest_shared_at and
                       latest_shared_at < optin.created_at):
                     optin.expected_behavior = optin.EXPECTED_UPDATE
