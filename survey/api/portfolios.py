@@ -571,7 +571,6 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
         ends_at = datetime_or_now()
         defaults = {
             'state': PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
-            'ends_at': ends_at,
             'initiated_by': self.request.user
         }
         accounts = serializer.validated_data['accounts']
