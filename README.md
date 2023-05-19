@@ -32,9 +32,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (latest)
 - **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.9.8
+0.9.9
 
-  * insures Portfolio.ends_at is not set to NULL
+  * defaults portfolio request to not expire (definitely not expire at creation)
+  * fixes logic to decide when to expect an update to an assessment
 
 [previous release notes](changelog)
 
