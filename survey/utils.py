@@ -35,7 +35,7 @@ from django.apps import apps as django_apps
 from django.conf import settings as django_settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import ImproperlyConfigured
-from django.db.models import Count, F
+from django.db.models import Count, F, FilteredRelation, Q
 from django.http.request import split_domain_port, validate_host
 from django.utils.timezone import utc
 
@@ -80,10 +80,26 @@ def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
                 'portfolio_double_optin_accounts__created_at__gte': start_at})
         if campaign:
             filter_params.update({'portfolios__campaign': campaign})
+        # Implementation note: requires Django>=2 because of `FilteredRelation`
+        # Adding the correct condition on the LEFT OUTER JOIN is quite
+        # a challenge with Django. The SQL we need is as follow:
+        #   SELECT DISTINCT saas_organization.*,
+        #                 survey_portfoliodoubleoptin.extra AS _extra
+        #   FROM saas_organization
+        #   INNER JOIN survey_portfolio
+        #   ON saas_organization.id = survey_portfolio.account_id
+        #   LEFT OUTER JOIN survey_portfoliodoubleoptin
+        #   ON saas_organization.id = survey_portfoliodoubleoptin.account_id
+        #     AND survey_portfoliodoubleoptin.grantee_id IN (${grantees})
+        #   WHERE survey_portfolio.grantee_id IN (${grantees});
         queryset = get_account_model().objects.filter(
             portfolios__grantee__in=grantees,
             **filter_params).annotate(
-                _extra=F('portfolio_double_optin_accounts__extra')).distinct()
+            granted=FilteredRelation(
+                'portfolio_double_optin_accounts',
+                condition=Q(
+                    portfolio_double_optin_accounts__grantee__in=grantees
+            ))).annotate(_extra=F('granted__extra'))
 
     return queryset
 
