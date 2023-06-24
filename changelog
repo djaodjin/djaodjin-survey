@@ -1,3 +1,11 @@
+0.9.10
+
+  * ends support for Django<2 (see commit afec1d96)
+  * fixes multiple profiles on dashboard when survey_portfoliodoubleoptin.extra
+  * enables filters to be added to download views
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sat, 24 Jun 2023 07:45:00 -0700
+
 0.9.9
 
   * defaults portfolio request to not expire (definitely not expire at creation)

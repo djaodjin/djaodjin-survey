@@ -30,12 +30,12 @@ Tested with
 
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
-- **Python:** 2.7, **Django:** 1.11 (legacy) - use testsite/requirements-legacy.txt
 
-0.9.9
+0.9.10
 
-  * defaults portfolio request to not expire (definitely not expire at creation)
-  * fixes logic to decide when to expect an update to an assessment
+  * ends support for Django<2 (see commit afec1d96)
+  * fixes multiple profiles on dashboard when survey_portfoliodoubleoptin.extra
+  * enables filters to be added to download views
 
 [previous release notes](changelog)
 
