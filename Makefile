@@ -52,7 +52,7 @@ install-conf:: $(DESTDIR)$(CONFIG_DIR)/credentials \
                 $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf
 
 
-dist:
+dist::
 	$(PYTHON) -m build
 	$(TWINE) check dist/*
 	$(TWINE) upload dist/*
@@ -118,3 +118,5 @@ $(installTop)/.npm/djaodjin-survey-packages: $(srcDir)/testsite/package.json
 	$(installFiles) $(installTop)/node_modules/vue-resource/dist/vue-resource.js $(srcDir)/testsite/static/vendor
 	touch $@
 
+
+.PHONY: all check dist doc install
