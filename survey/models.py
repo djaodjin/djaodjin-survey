@@ -776,6 +776,25 @@ class PortfolioDoubleOptInQuerySet(models.QuerySet):
             kwargs.update({'ends_at__gte': until})
         return self.filter(grantee=account, **kwargs)
 
+
+    def pending_for(self, account, campaign=None, at_time=None):
+        """
+        Returns the current portfolio grant/request for `account`
+        that a user must either accept or deny.
+        """
+        if not at_time:
+            at_time = datetime_or_now()
+        kwargs = {}
+        if campaign:
+            kwargs.update({'campaign': campaign})
+        return self.filter(
+            (models.Q(ends_at__isnull=True) | models.Q(ends_at__gte=at_time)) &
+            (models.Q(account=account) &
+            models.Q(state=PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED)) |
+            (models.Q(grantee=account) &
+            models.Q(state=PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED)),
+            **kwargs)
+
     def requested(self, account, campaign=None,
                   start_at=None, ends_at=None, until=None):
         """
@@ -834,6 +853,10 @@ class PortfolioDoubleOptInManager(models.Manager):
         #pylint:disable=too-many-arguments
         return self.get_queryset().by_grantee(account, campaign=campaign,
             start_at=start_at, ends_at=ends_at, until=until)
+
+    def pending_for(self, account, campaign=None, at_time=None):
+        return self.get_queryset().pending_for(account,
+            campaign=campaign, at_time=at_time)
 
     def requested(self, account, campaign=None,
                   start_at=None, ends_at=None, until=None):

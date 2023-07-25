@@ -83,6 +83,8 @@ class PortfoliosGrantAcceptView(AccountMixin, SingleObjectMixin,
                                 PortfoliosAcceptView):
 
     def get_queryset(self):
+        # Look up grant to be accepted through the 'verification_key'
+        # so it OK to just filter by grantee.
         return PortfolioDoubleOptIn.objects.filter(grantee=self.account)
 
     def get(self, request, *args, **kwargs):
@@ -98,6 +100,8 @@ class PortfoliosRequestAcceptView(AccountMixin, SingleObjectMixin,
                                   PortfoliosAcceptView):
 
     def get_queryset(self):
+        # Look up request to be accepted through the 'verification_key'
+        # so it OK to just filter by account.
         return PortfolioDoubleOptIn.objects.filter(account=self.account)
 
     def get(self, request, *args, **kwargs):

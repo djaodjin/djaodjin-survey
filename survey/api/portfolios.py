@@ -158,11 +158,7 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
 
 
     def get_queryset(self):
-        return PortfolioDoubleOptIn.objects.filter(
-            (Q(account=self.account) &
-            Q(state=PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED)) |
-            (Q(grantee=self.account) &
-            Q(state=PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED)))
+        return PortfolioDoubleOptIn.objects.pending_for(self.account)
 
     def paginate_queryset(self, queryset):
         page = super(PortfoliosAPIView, self).paginate_queryset(queryset)
@@ -403,6 +399,8 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
     serializer_class = NoModelSerializer
 
     def get_queryset(self):
+        # Look up grant to be accepted through the 'verification_key'
+        # so it OK to just filter by grantee.
         return PortfolioDoubleOptIn.objects.filter(grantee=self.account)
 
     def post(self, request, *args, **kwargs):
@@ -519,6 +517,8 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
     serializer_class = PortfolioOptInSerializer
 
     def get_queryset(self):
+        # Look up request to be accepted through the 'verification_key'
+        # so it OK to just filter by grantee.
         return PortfolioDoubleOptIn.objects.filter(grantee=self.account)
 
     def post(self, request, *args, **kwargs):
@@ -618,6 +618,8 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
     serializer_class = NoModelSerializer
 
     def get_queryset(self):
+        # Look up request to be accepted through the 'verification_key'
+        # so it OK to just filter by account.
         return PortfolioDoubleOptIn.objects.filter(account=self.account)
 
     def post(self, request, *args, **kwargs):
