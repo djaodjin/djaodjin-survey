@@ -1051,11 +1051,9 @@ var sortableMixin = {
     data: function(){
         var defaultDir = this.$sortDirection || 'desc';
         var dir = (defaultDir === 'desc') ? DESC_SORT_PRE : '';
-        var o = this.$sortByField || 'created_at';
+        var params = this.$sortByField ? {o: (dir + this.$sortByField)} : {};
         return {
-            params: {
-                o: dir + o,
-            },
+            params: params,
             mixinSortCb: 'get'
         }
     },
