@@ -31,11 +31,12 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.9.10
+0.9.11
 
-  * ends support for Django<2 (see commit afec1d96)
-  * fixes multiple profiles on dashboard when survey_portfoliodoubleoptin.extra
-  * enables filters to be added to download views
+  * adds command to expire grants/requests
+  * takes into account expired requests/grants
+  * compatibles with Bootstrap5
+  * fixes regression in filters
 
 [previous release notes](changelog)
 
