@@ -1,6 +1,8 @@
 DjaoDjin survey
 ================
 
+[![Documentation Status](https://readthedocs.org/projects/djaodjin-survey/badge/?version=latest)](https://djaodjin-survey.readthedocs.io/en/latest/?badge=latest)
+
 The Django app implements a simple survey app.
 
 Full documentation for the project is available at

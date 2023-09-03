@@ -73,7 +73,7 @@ class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
     def get_questions(self, prefix):
         """
         Overrides CampaignContentMixin.get_questions to return a list
-        of questions based on the answers available in the benchmarkd samples.
+        of questions based on the answers available in the benchmarks samples.
         """
         qualified_prefix = prefix
         if not qualified_prefix.endswith(settings.DB_PATH_SEP):
@@ -125,7 +125,12 @@ class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
                 for key, val in six.iteritems(question.get('rate', {})):
                     account_benchmark['values'] += [(key, int(val))]
                 question['benchmarks'] += [account_benchmark]
-
+        else:
+            # We need a 'benchamrks' key, otherwise the serializer
+            # will raise a `KeyError` exception leading to a 500 error.
+            for question in six.itervalues(questions_by_key):
+                if not 'benchmarks' in question:
+                    question['benchmarks'] = []
 
     def attach_results(self, questions_by_key, account=None):
         account_slug = "all"
