@@ -6,7 +6,7 @@
         "d3": "3.5.5",
         "jquery": "~3.6.0",
         "moment": "2.29.1",
-        "moment-timezone": "0.5.33",
+        "moment-timezone": "0.5.35",
         "nvd3": "v1.8.1",
         "vue": "~2.7.8",
         "vue-resource": "~1.5.3"
