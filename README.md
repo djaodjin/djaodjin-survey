@@ -3,6 +3,9 @@ DjaoDjin survey
 
 [![Documentation Status](https://readthedocs.org/projects/djaodjin-survey/badge/?version=latest)](https://djaodjin-survey.readthedocs.io/en/latest/?badge=latest)
 
+[![PyPI version](https://badge.fury.io/py/djaodjin-survey.svg)](https://badge.fury.io/py/djaodjin-survey)
+
+
 The Django app implements a simple survey app.
 
 Full documentation for the project is available at
@@ -33,12 +36,10 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.9.11
+0.9.12
 
-  * adds command to expire grants/requests
-  * takes into account expired requests/grants
-  * compatibles with Bootstrap5
-  * fixes regression in filters
+  * adds frozen field to returned answers
+  * handles empty set of engaged profiles
 
 [previous release notes](changelog)
 

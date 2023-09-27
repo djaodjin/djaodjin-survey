@@ -1,3 +1,10 @@
+0.9.12
+
+  * adds frozen field to returned answers
+  * handles empty set of engaged profiles
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 26 Sep 2023 20:45:00 -0700
+
 0.9.11
 
   * adds command to expire grants/requests
