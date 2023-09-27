@@ -427,7 +427,8 @@ SELECT
     answers.sample_id AS sample_id,
     questions.rank AS _rank,
     questions.required AS required,
-    answers._measured_text AS _measured_text
+    answers._measured_text AS _measured_text,
+    1 AS frozen
 FROM questions
 LEFT OUTER JOIN answers
   ON questions.id = answers.question_id""" % {
@@ -435,9 +436,9 @@ LEFT OUTER JOIN answers
       'convert_to_text': ("" if is_sqlite3() else "::text"),
       'extra_question_clause': extra_question_clause,
       'prefix': prefix,
-      'sample': sample.pk,
+      'sample': sample.pk
   }
-        else:
+        else: # `not sample.is_frozen`
             query_text = """
 WITH answers AS (
     SELECT
@@ -480,7 +481,8 @@ SELECT
     answers.sample_id AS sample_id,
     campaign_questions.rank AS _rank,
     campaign_questions.required AS required,
-    answers._measured_text AS _measured_text
+    answers._measured_text AS _measured_text,
+    0 AS frozen
 FROM campaign_questions
 LEFT OUTER JOIN answers
   ON campaign_questions.id = answers.question_id""" % {

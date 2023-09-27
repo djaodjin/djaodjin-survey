@@ -1,4 +1,4 @@
-# Copyright (c) 2029, DjaoDjin inc.
+# Copyright (c) 2023, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -23,9 +23,23 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from django import template
+from dateutil import rrule
+from dateutil.relativedelta import relativedelta, SU, FR
+
+from ..compat import gettext_lazy as _
 
 
 register = template.Library()
+
+@register.filter()
+def humanize_relative_to_now(date):
+    if date:
+        nb_weeks = rrule.rrule(
+            rrule.WEEKLY, dtstart=datetime_or_now(),
+            until=datetime_or_now(ASSESSMENT_DEADLINE)).count()
+        return _("%(nb_weeks)d weeks") % {'nb_weeks': nb_weeks}
+    return ""
+
 
 @register.filter()
 def by_key(items, key):

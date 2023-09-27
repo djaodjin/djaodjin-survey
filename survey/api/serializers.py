@@ -475,9 +475,12 @@ class MatrixSerializer(serializers.ModelSerializer):
 
 
 class KeyValueTuple(serializers.ListField):
+    # `KeyValueTuple` is typed as a (String, Integer) tuple.
+    # by not specifying a child field, the serialized data
+    # is generated as expected. Otherwise we would end up
+    # with a (String, String).
 
-    child = serializers.CharField(allow_null=True) # XXX (String, Integer)
-    min_length = 3
+    min_length = 2
     max_length = 3
 
 
