@@ -41,7 +41,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
     Retrieves the details of a ``Campaign``.
 
-    **Tags**: assessments
+    **Tags**: editors
 
     **Examples**
 
@@ -170,11 +170,11 @@ class SmartCampaignListMixin(DateRangeContextMixin):
 class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
                           generics.ListCreateAPIView):
     """
-    Lists campaigns
+    Lists profile campaigns
 
     Lists campaigns that belongs to a profile.
 
-    **Tags**: assessments
+    **Tags**: editors
 
     **Examples**
 
@@ -209,7 +209,7 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
 
         Creates a campaign against which profiles can be assessed.
 
-        **Tags**: assessments
+        **Tags**: editors
 
         **Examples**
 

@@ -69,7 +69,7 @@ class SmartPortfolioListMixin(AccountMixin):
 
 class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
     """
-    Lists grants and requests to be accepted/denied
+    Lists active grants and requests
 
     Lists all grants and requests that have to be accepted or denied
     by *account*.
@@ -223,7 +223,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
         many=True)})
     def post(self, request, *args, **kwargs):
         """
-        Initiates a grant
+        Initiates grant
 
         Initiate a grant of data to a grantee
 
@@ -367,7 +367,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
 
 class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
     """
-    Accepts a portfolio grant
+    Accepts grant
 
     An `account` has sent its portfolio to a `grantee`. The `grantee`
     accepts the request, making the `account`'s answers up-to-date `ends_at`
@@ -411,7 +411,7 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         """
-        Denies or removes a portfolio grant
+        Ignores grant
 
         **Tags**: portfolios
 
@@ -523,7 +523,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
 
     def post(self, request, *args, **kwargs):
         """
-        Initiates a request
+        Initiates request
 
         Initiate a request of data for an account.
 
@@ -624,7 +624,7 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
     def post(self, request, *args, **kwargs):
         """
-        Accepts a portfolio request
+        Accepts request
 
         A `grantee` has made a request to *account*'s portfolio. The *account*
         accepts the request, making the *account*'s answers up-to-date `ends_at`
@@ -664,7 +664,7 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
         """
-        Removes or denies a portfolio request
+        Ignores request
 
         **Tags**: portfolios
 
@@ -697,7 +697,7 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
 class PortfoliosUpdateAPIView(AccountMixin, generics.UpdateAPIView):
     """
-    Update extra information in a portfolio request/grant
+    Updates extra field in a request/grant
 
     The requestor/grantor uses this API call to add metadata about
     the request/grant.

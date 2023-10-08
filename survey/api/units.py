@@ -79,7 +79,7 @@ class UnitDetailAPIView(generics.RetrieveAPIView):
 
     Retrieves the details of a ``Unit``.
 
-    **Tags**: assessments
+    **Tags**: content
 
     **Examples**
 
@@ -127,9 +127,9 @@ class UnitDetailAPIView(generics.RetrieveAPIView):
 
 class UnitListAPIView(generics.ListAPIView):
     """
-    Lists units available
+    Lists units
 
-    **Tags**: assessments
+    **Tags**: content
 
     This API end-point lists all the units of measurement available
     to record datapoints.

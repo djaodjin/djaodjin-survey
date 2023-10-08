@@ -22,19 +22,28 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ....api.sample import (SampleAPIView, SampleAnswersAPIView,
-    SampleCandidatesAPIView, SampleFreezeAPIView, SampleRecentCreateAPIView,
+from ....api.sample import (SampleAPIView,
+    SampleAnswersAPIView, SampleAnswersIndexAPIView,
+    SampleCandidatesAPIView, SampleCandidatesIndexAPIView,
+    SampleFreezeAPIView, SampleRecentCreateAPIView,
     SampleRespondentsAPIView, SampleRespondentsIndexAPIView)
 from ....api.matrix import SampleBenchmarksAPIView, SampleBenchmarksIndexAPIView
 from ....compat import path
+
 
 urlpatterns = [
     path('sample/<slug:sample>/freeze/<path:path>',
         SampleFreezeAPIView.as_view(), name='survey_api_sample_freeze'),
     path('sample/<slug:sample>/candidates/<path:path>',
         SampleCandidatesAPIView.as_view(), name='survey_api_sample_candidates'),
+    path('sample/<slug:sample>/candidates',
+        SampleCandidatesIndexAPIView.as_view(),
+        name='survey_api_sample_candidates_index'),
     path('sample/<slug:sample>/answers/<path:path>',
         SampleAnswersAPIView.as_view(), name='survey_api_sample_answers'),
+    path('sample/<slug:sample>/answers',
+        SampleAnswersIndexAPIView.as_view(),
+        name='survey_api_sample_answers_index'),
     path('sample/<slug:sample>/benchmarks/<path:path>',
         SampleBenchmarksAPIView.as_view(), name='survey_api_sample_benchmarks'),
     path('sample/<slug:sample>/benchmarks',

@@ -49,9 +49,9 @@ LOGGER = logging.getLogger(__name__)
 
 class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
     """
-    Retrieve a aggregated metric over a time period
+    Retrieves aggregated metric over a time period
 
-    **Tags**: assessments
+    **Tags**: reporting
 
     **Examples**
 
@@ -113,7 +113,7 @@ class AccountsValuesAPIView(AccountMixin, ListAPIView):
     """
     Lists values in an account
 
-    **Tags**: assessments
+    **Tags**: reporting
 
     **Examples**
 
@@ -150,7 +150,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
     """
     Lists quantitative measurements
 
-    **Tags**: assessments
+    **Tags**: reporting
 
     **Examples**
 

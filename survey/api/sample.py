@@ -500,7 +500,7 @@ LEFT OUTER JOIN answers
 
 class SampleAnswersAPIView(SampleAnswersMixin, generics.ListCreateAPIView):
     """
-    Lists answers
+    Lists answers matching prefix
 
     The list returned contains at least one measurement for each question
     in the campaign. If there are no measurement yet on a question, ``measured``
@@ -788,6 +788,164 @@ answers/construction HTTP/1.1
         return http.Response(serializer.data, status=status, headers=headers)
 
 
+class SampleAnswersIndexAPIView(SampleAnswersAPIView):
+    """
+    Lists answers
+
+    The list returned contains at least one measurement for each question
+    in the campaign. If there are no measurement yet on a question, ``measured``
+    will be null.
+
+    There might be more than one measurement per question as long as there are
+    no duplicated ``unit`` per question. For example, to the question
+    ``adjust-air-fuel-ratio``, there could be a measurement with unit
+    ``assessment`` (Mostly Yes/ Yes / No / Mostly No) and a measurement with
+    unit ``freetext`` (i.e. a comment).
+
+    The {sample} must belong to {organization}.
+
+    {path} can be used to filter the tree of questions by a prefix.
+
+    **Tags**: assessments
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/answers HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+    {
+        "count": 3,
+        "previous": null,
+        "next": null,
+        "results": [
+            {
+                "question": {
+                    "path": "/construction/governance/the-assessment\
+-process-is-rigorous",
+                    "title": "The assessment process is rigorous",
+                    "default_unit": {
+                        "slug": "assessment",
+                        "title": "assessments",
+                        "system": "enum",
+                        "choices": [
+                        {
+                            "rank": 1,
+                            "text": "mostly-yes",
+                            "descr": "Mostly yes"
+                        },
+                        {
+                            "rank": 2,
+                            "text": "yes",
+                            "descr": "Yes"
+                        },
+                        {
+                            "rank": 3,
+                            "text": "no",
+                            "descr": "No"
+                        },
+                        {
+                            "rank": 4,
+                            "text": "mostly-no",
+                            "descr": "Mostly no"
+                        }
+                        ]
+                    },
+                    "ui_hint": "radio"
+                },
+                "required": true,
+                "measured": "yes",
+                "unit": "assessment",
+                "created_at": "2020-09-28T00:00:00.000000Z",
+                "collected_by": "steve"
+            },
+            {
+                "question": {
+                    "path": "/construction/governance/the-assessment\
+-process-is-rigorous",
+                    "title": "The assessment process is rigorous",
+                    "default_unit": {
+                        "slug": "assessment",
+                        "title": "assessments",
+                        "system": "enum",
+                        "choices": [
+                        {
+                            "rank": 1,
+                            "text": "mostly-yes",
+                            "descr": "Mostly yes"
+                        },
+                        {
+                            "rank": 2,
+                            "text": "yes",
+                            "descr": "Yes"
+                        },
+                        {
+                            "rank": 3,
+                            "text": "no",
+                            "descr": "No"
+                        },
+                        {
+                            "rank": 4,
+                            "text": "mostly-no",
+                            "descr": "Mostly no"
+                        }
+                        ]
+                    },
+                    "ui_hint": "radio"
+                },
+                "measured": "Policy document on the public website",
+                "unit": "freetext",
+                "created_at": "2020-09-28T00:00:00.000000Z",
+                "collected_by": "steve"
+            },
+            {
+                "question": {
+                    "path": "/construction/production/adjust-air-fuel\
+-ratio",
+                    "title": "Adjust Air fuel ratio",
+                    "default_unit": {
+                        "slug": "assessment",
+                        "title": "assessments",
+                        "system": "enum",
+                        "choices": [
+                        {
+                            "rank": 1,
+                            "text": "mostly-yes",
+                            "descr": "Mostly yes"
+                        },
+                        {
+                            "rank": 2,
+                            "text": "yes",
+                            "descr": "Yes"
+                        },
+                        {
+                            "rank": 3,
+                            "text": "no",
+                            "descr": "No"
+                        },
+                        {
+                            "rank": 4,
+                            "text": "mostly-no",
+                            "descr": "Mostly no"
+                        }
+                        ]
+                    },
+                    "ui_hint": "radio"
+                },
+                "required": true,
+                "measured": null,
+                "unit": null
+            }
+         ]
+    }
+    """
+    http_method_names = ['get', 'head', 'options']
+
+
 class SampleCandidatesMixin(SampleMixin):
 
     def get_candidates(self, prefix=None, extra=None, excludes=None):
@@ -902,7 +1060,7 @@ class SampleCandidatesMixin(SampleMixin):
 class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
                               generics.ListCreateAPIView):
     """
-    Lists candidate answers
+    Lists candidate answers matching prefix
 
     The list returned contains at least one answer for each question
     in the campaign. If there are no answer yet on a question, ``measured``
@@ -1336,9 +1494,333 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
             request, *args, **kwargs)
 
 
+class SampleCandidatesIndexAPIView(SampleCandidatesAPIView):
+    """
+    Lists candidate answers
+
+    The list returned contains at least one answer for each question
+    in the campaign. If there are no answer yet on a question, ``measured``
+    will be null.
+
+    There might be more than one answer per question as long as there are
+    no duplicated ``unit`` per question. For example, to the question
+    ``adjust-air-fuel-ratio``, there could be an answer with unit
+    ``assessment`` (Mostly Yes/ Yes / No / Mostly No) and an answer with
+    unit ``freetext`` (i.e. a comment).
+
+    The ``sample`` must belong to ``organization``.
+
+    ``path`` can be used to filter the tree of questions by a prefix.
+
+    **Tags**: assessments
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/candidates HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+    {
+        "count": 3,
+        "previous": null,
+        "next": null,
+        "results": [
+            {
+                "question": {
+                    "path": "/construction/governance/the-assessment\
+-process-is-rigorous",
+                    "title": "The assessment process is rigorous",
+                    "default_unit": {
+                        "slug": "assessment",
+                        "title": "assessments",
+                        "system": "enum",
+                        "choices": [
+                        {
+                            "rank": 1,
+                            "text": "mostly-yes",
+                            "descr": "Mostly yes"
+                        },
+                        {
+                            "rank": 2,
+                            "text": "yes",
+                            "descr": "Yes"
+                        },
+                        {
+                            "rank": 3,
+                            "text": "no",
+                            "descr": "No"
+                        },
+                        {
+                            "rank": 4,
+                            "text": "mostly-no",
+                            "descr": "Mostly no"
+                        }
+                        ]
+                    },
+                    "ui_hint": "radio"
+                },
+                "required": true,
+                "measured": "yes",
+                "unit": "assessment",
+                "created_at": "2020-09-28T00:00:00.000000Z",
+                "collected_by": "steve"
+            },
+            {
+                "question": {
+                    "path": "/construction/governance/the-assessment\
+-process-is-rigorous",
+                    "title": "The assessment process is rigorous",
+                    "default_unit": {
+                        "slug": "assessment",
+                        "title": "assessments",
+                        "system": "enum",
+                        "choices": [
+                        {
+                            "rank": 1,
+                            "text": "mostly-yes",
+                            "descr": "Mostly yes"
+                        },
+                        {
+                            "rank": 2,
+                            "text": "yes",
+                            "descr": "Yes"
+                        },
+                        {
+                            "rank": 3,
+                            "text": "no",
+                            "descr": "No"
+                        },
+                        {
+                            "rank": 4,
+                            "text": "mostly-no",
+                            "descr": "Mostly no"
+                        }
+                        ]
+                    },
+                    "ui_hint": "radio"
+                },
+                "measured": "Policy document on the public website",
+                "unit": "freetext",
+                "created_at": "2020-09-28T00:00:00.000000Z",
+                "collected_by": "steve"
+            },
+            {
+                "question": {
+                    "path": "/construction/production/adjust-air-fuel\
+-ratio",
+                    "title": "Adjust Air fuel ratio",
+                    "default_unit": {
+                        "slug": "assessment",
+                        "title": "assessments",
+                        "system": "enum",
+                        "choices": [
+                        {
+                            "rank": 1,
+                            "text": "mostly-yes",
+                            "descr": "Mostly yes"
+                        },
+                        {
+                            "rank": 2,
+                            "text": "yes",
+                            "descr": "Yes"
+                        },
+                        {
+                            "rank": 3,
+                            "text": "no",
+                            "descr": "No"
+                        },
+                        {
+                            "rank": 4,
+                            "text": "mostly-no",
+                            "descr": "Mostly no"
+                        }
+                        ]
+                    },
+                    "ui_hint": "radio"
+                },
+                "required": true,
+                "measured": null,
+                "unit": null
+            }
+         ]
+    }
+    """
+
+    @swagger_auto_schema(responses={
+        201: OpenAPIResponse("Create successful", SampleAnswerSerializer,
+        many=True)})
+    def post(self, request, *args, **kwargs):
+        """
+        Uses candidate answers matching prefix
+
+        The list returned contains at least one answer for each question
+        in the campaign. If there are no answer yet on a question, ``measured``
+        will be null.
+
+        There might be more than one answer per question as long as there are
+        no duplicated ``unit`` per question. For example, to the question
+        ``adjust-air-fuel-ratio``, there could be an answer with unit
+        ``assessment`` (Mostly Yes/ Yes / No / Mostly No) and an answer with
+        unit ``freetext`` (i.e. a comment).
+
+        The ``sample`` must belong to ``organization``.
+
+        ``path`` can be used to filter the tree of questions by a prefix.
+
+        **Tags**: assessments
+
+        **Examples**
+
+        .. code-block:: http
+
+             POST /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a\
+/candidates HTTP/1.1
+
+        .. code-block:: json
+
+        {}
+
+        responds
+
+        .. code-block:: json
+
+        {
+            "count": 3,
+            "previous": null,
+            "next": null,
+            "results": [
+                {
+                    "question": {
+                        "path": "/construction/governance/the-assessment\
+-process-is-rigorous",
+                        "title": "The assessment process is rigorous",
+                        "default_unit": {
+                            "slug": "assessment",
+                            "title": "assessments",
+                            "system": "enum",
+                            "choices": [
+                            {
+                                "rank": 1,
+                                "text": "mostly-yes",
+                                "descr": "Mostly yes"
+                            },
+                            {
+                                "rank": 2,
+                                "text": "yes",
+                                "descr": "Yes"
+                            },
+                            {
+                                "rank": 3,
+                                "text": "no",
+                                "descr": "No"
+                            },
+                            {
+                                "rank": 4,
+                                "text": "mostly-no",
+                                "descr": "Mostly no"
+                            }
+                            ]
+                        },
+                        "ui_hint": "radio"
+                    },
+                    "required": true,
+                    "measured": "yes",
+                    "unit": "assessment",
+                    "created_at": "2020-09-28T00:00:00.000000Z",
+                    "collected_by": "steve"
+                },
+                {
+                    "question": {
+                        "path": "/construction/governance/the-assessment\
+-process-is-rigorous",
+                        "title": "The assessment process is rigorous",
+                        "default_unit": {
+                            "slug": "assessment",
+                            "title": "assessments",
+                            "system": "enum",
+                            "choices": [
+                            {
+                                "rank": 1,
+                                "text": "mostly-yes",
+                                "descr": "Mostly yes"
+                            },
+                            {
+                                "rank": 2,
+                                "text": "yes",
+                                "descr": "Yes"
+                            },
+                            {
+                                "rank": 3,
+                                "text": "no",
+                                "descr": "No"
+                            },
+                            {
+                                "rank": 4,
+                                "text": "mostly-no",
+                                "descr": "Mostly no"
+                            }
+                            ]
+                        },
+                        "ui_hint": "radio"
+                    },
+                    "measured": "Policy document on the public website",
+                    "unit": "freetext",
+                    "created_at": "2020-09-28T00:00:00.000000Z",
+                    "collected_by": "steve"
+                },
+                {
+                    "question": {
+                        "path": "/construction/production/adjust-air-fuel\
+-ratio",
+                        "title": "Adjust Air fuel ratio",
+                        "default_unit": {
+                            "slug": "assessment",
+                            "title": "assessments",
+                            "system": "enum",
+                            "choices": [
+                            {
+                                "rank": 1,
+                                "text": "mostly-yes",
+                                "descr": "Mostly yes"
+                            },
+                            {
+                                "rank": 2,
+                                "text": "yes",
+                                "descr": "Yes"
+                            },
+                            {
+                                "rank": 3,
+                                "text": "no",
+                                "descr": "No"
+                            },
+                            {
+                                "rank": 4,
+                                "text": "mostly-no",
+                                "descr": "Mostly no"
+                            }
+                            ]
+                        },
+                        "ui_hint": "radio"
+                    },
+                    "required": true,
+                    "measured": null,
+                    "unit": null
+                }
+             ]
+        }
+        """
+        #pylint:disable=useless-super-delegation
+        return super(SampleCandidatesIndexAPIView, self).post(
+            request, *args, **kwargs)
+
+
 class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
     """
-    Freezes a sample
+    Freezes answers
 
     The ``sample`` must belong to ``organization``.
 
@@ -1381,7 +1863,7 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
 
 class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
     """
-    Clears answers
+    Clears answers matching prefix
 
     The ``sample`` must belong to ``organization``.
 
@@ -1434,7 +1916,7 @@ class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
 
 class SampleResetIndexAPIView(SampleResetAPIView):
     """
-    Clears all answers
+    Clears answers
 
     The ``sample`` must belong to ``organization``.
 
@@ -1466,10 +1948,9 @@ class SampleResetIndexAPIView(SampleResetAPIView):
 
 class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
     """
-    Lists historical samples
+    Lists samples
 
-    This API end-point returns all samples which have or have not been frozen
-    for an account.
+    Returns all samples for a profile
 
     **Tags**: assessments
 
@@ -1558,7 +2039,7 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
     @swagger_auto_schema(request_body=SampleCreateSerializer)
     def post(self, request, *args, **kwargs):
         """
-        Creates a new sample
+        Creates a sample
 
         Creates a new sample to record qualitative and/or quantitative data.
 
@@ -1595,7 +2076,7 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
 
 class SampleRespondentsAPIView(SampleMixin, generics.ListAPIView):
     """
-    Lists unique respondents
+    Lists respondents matching prefix
 
     The list returned contains the information about the users who answered
     at least one question.
@@ -1640,7 +2121,7 @@ class SampleRespondentsAPIView(SampleMixin, generics.ListAPIView):
 
 class SampleRespondentsIndexAPIView(SampleRespondentsAPIView):
     """
-    Lists unique respondents
+    Lists respondents
 
     The list returned contains the information about the users who answered
     at least one question.
