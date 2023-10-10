@@ -1,3 +1,9 @@
+0.9.13
+
+  * adds sql partial to group by month
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 10 Oct 2023 14:55:00 -0700
+
 0.9.12
 
   * adds frozen field to returned answers

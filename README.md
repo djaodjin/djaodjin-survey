@@ -36,10 +36,9 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.9.12
+0.9.13
 
-  * adds frozen field to returned answers
-  * handles empty set of engaged profiles
+  * adds sql partial to group by month
 
 [previous release notes](changelog)
 
