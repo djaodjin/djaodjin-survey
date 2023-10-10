@@ -17,6 +17,17 @@ from django.utils.timezone import utc
 from . import settings
 from .compat import six
 
+def as_sql_date_trunc(field_name, db_key=None, period='yearly'):
+    if period == 'monthly':
+        return as_sql_date_trunc_month(field_name, db_key=db_key)
+    return as_sql_date_trunc_year(field_name, db_key=db_key)
+
+
+def as_sql_date_trunc_month(field_name, db_key=None):
+    if is_sqlite3(db_key):
+        return "strftime('%%Y-%%M', %s)" % field_name
+    return "date_trunc('month', %s)" % field_name
+
 
 def as_sql_date_trunc_year(field_name, db_key=None):
     if is_sqlite3(db_key):

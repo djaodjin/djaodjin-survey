@@ -36,6 +36,12 @@ from pytz.tzinfo import DstTzInfo
 
 from .compat import six
 
+def period_less_than(left, right, period='yearly'):
+    if period == 'monthly':
+        return left.year < right.year or (
+            left.year == right.year and left.month < right.month)
+    return left.year < right.year
+
 
 def construct_monthly_periods(first_date, last_date, years=0, tzone=None):
     at_time = first_date
