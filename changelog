@@ -1,3 +1,9 @@
+0.9.14
+
+  * fixes first answer saved when multiple items passed to API
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu, 26 Oct 2023 10:15:00 -0700
+
 0.9.13
 
   * adds sql partial to group by month
