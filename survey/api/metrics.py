@@ -297,13 +297,14 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
                     # If we already have a data point for that account
                     # and metric at the end of the period, we update it.
                     # the start date of the period.
+                    measured = measure['measured']
                     try:
                         answer = Answer.objects.get(
                             created_at=created_at,
                             sample__account=account,
                             question=question,
                             unit=measure['unit'])
-                        answer.measured = measure['measured']
+                        answer.measured = measured
                         answer.save()
                     except Answer.DoesNotExist:
                         if not sample.pk:
