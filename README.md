@@ -36,9 +36,9 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.9.13
+0.9.14
 
-  * adds sql partial to group by month
+  * fixes first answer saved when multiple items passed to API
 
 [previous release notes](changelog)
 
