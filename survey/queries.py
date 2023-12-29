@@ -44,6 +44,9 @@ def datetime_or_now(dtime_at=None):
             if as_date:
                 as_datetime = datetime.datetime.combine(
                     as_date, datetime.time.min)
+    elif isinstance(dtime_at, datetime.date):
+        as_datetime = datetime.datetime.combine(
+            dtime_at, datetime.time.min)
     if not as_datetime:
         as_datetime = datetime.datetime.utcnow().replace(tzinfo=utc)
     if as_datetime.tzinfo is None:

@@ -140,10 +140,11 @@ class AccountsValuesAPIView(AccountMixin, ListAPIView):
     filter_backends = (DateRangeFilter,)
 
     def get_queryset(self):
-        return Answer.objects.filter(
+        queryset = Answer.objects.filter(
             sample__account__filters__editable_filter__account=self.account
         ).order_by('-created_at').select_related('sample__account').annotate(
             account=F('sample__account'))
+        return queryset
 
 
 class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):

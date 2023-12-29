@@ -38,6 +38,7 @@ from django import VERSION as DJANGO_VERSION
 from django.contrib.auth import get_user_model
 from django.db import models, transaction, IntegrityError
 from django.template.defaultfilters import slugify
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from . import settings
@@ -445,9 +446,9 @@ class Sample(models.Model):
 
     slug = models.SlugField(unique=True,
         help_text="Unique identifier for the sample. It can be used in a URL.")
-    created_at = models.DateTimeField(auto_now_add=True,
+    created_at = models.DateTimeField(default=timezone.now,
         help_text="Date/time of creation (in ISO format)")
-    updated_at = models.DateTimeField(auto_now_add=True,
+    updated_at = models.DateTimeField(auto_now=True,
         help_text="Date/time of last update (in ISO format)")
     time_spent = models.DurationField(default=datetime.timedelta,
         help_text="Total recorded time to complete the survey")

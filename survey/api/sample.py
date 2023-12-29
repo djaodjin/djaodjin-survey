@@ -431,7 +431,8 @@ SELECT
     1 AS frozen
 FROM questions
 LEFT OUTER JOIN answers
-  ON questions.id = answers.question_id""" % {
+  ON questions.id = answers.question_id
+ORDER BY answers.created_at, answers.id""" % {
       'campaign': sample.campaign.pk,
       'convert_to_text': ("" if is_sqlite3() else "::text"),
       'extra_question_clause': extra_question_clause,
