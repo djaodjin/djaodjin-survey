@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@ from rest_framework.response import Response as HttpResponse
 from rest_framework.exceptions import ValidationError
 
 from ..compat import gettext_lazy as _, six
+from ..docs import extend_schema
 from ..filters import DateRangeFilter
 from ..helpers import get_extra
 from ..mixins import AccountMixin, EditableFilterMixin, QuestionMixin
@@ -193,6 +194,11 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
             self._editable_filter_question = get_object_or_404(
                 get_question_model().objects.all(), path=path)
         return self._editable_filter_question
+
+    @extend_schema(operation_id='filters_accounts_values_by_subset')
+    def get(self, request, *args, **kwargs):
+        return super(AccountsFilterValuesAPIView, self).get(
+            request, *args, **kwargs)
 
     def get_queryset(self):
         queryset = Answer.objects.filter(

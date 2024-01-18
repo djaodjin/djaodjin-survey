@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -37,7 +37,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
 from ..compat import six, is_authenticated
-from ..docs import OpenAPIResponse, swagger_auto_schema
+from ..docs import OpenApiResponse, extend_schema
 from ..filters import DateRangeFilter, OrderingFilter, SampleStateFilter
 from ..mixins import AccountMixin, SampleMixin
 from ..models import Answer, Choice, Portfolio, Sample, Unit, UnitEquivalences
@@ -946,6 +946,11 @@ class SampleAnswersIndexAPIView(SampleAnswersAPIView):
     """
     http_method_names = ['get', 'head', 'options']
 
+    @extend_schema(operation_id='sample_answers_retrieve_index')
+    def get(self, request, *args, **kwargs):
+        return super(SampleAnswersIndexAPIView, self).get(
+            request, *args, **kwargs)
+
 
 class SampleCandidatesMixin(SampleMixin):
 
@@ -1327,9 +1332,8 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
     def get_queryset(self):
         return self.get_candidates()
 
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("Create successful", SampleAnswerSerializer,
-        many=True)})
+    @extend_schema(responses={
+        201: OpenApiResponse(SampleAnswerSerializer(many=True))})
     def post(self, request, *args, **kwargs):
         """
         Uses candidate answers
@@ -1650,10 +1654,13 @@ class SampleCandidatesIndexAPIView(SampleCandidatesAPIView):
          ]
     }
     """
+    @extend_schema(operation_id='sample_candidates_index')
+    def get(self, request, *args, **kwargs):
+        return super(SampleCandidatesIndexAPIView, self).get(
+            request, *args, **kwargs)
 
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("Create successful", SampleAnswerSerializer,
-        many=True)})
+    @extend_schema(operation_id='sample_candidates_create_index', responses={
+        201: OpenApiResponse(SampleAnswerSerializer(many=True))})
     def post(self, request, *args, **kwargs):
         """
         Uses candidate answers matching prefix
@@ -1947,6 +1954,13 @@ class SampleResetIndexAPIView(SampleResetAPIView):
         }
     """
 
+    @extend_schema(operation_id='sample_reset_create_index')
+    def post(self, request, *args, **kwargs):
+        return super(SampleResetIndexAPIView, self).post(
+            request, *args, **kwargs)
+
+
+
 class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
     """
     Lists samples
@@ -2037,7 +2051,7 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
             SampleRecentCreateAPIView, self).paginate_queryset(queryset)
         return self.decorate_queryset(page if page else queryset)
 
-    @swagger_auto_schema(request_body=SampleCreateSerializer)
+    @extend_schema(request=SampleCreateSerializer)
     def post(self, request, *args, **kwargs):
         """
         Creates a sample
@@ -2154,3 +2168,8 @@ class SampleRespondentsIndexAPIView(SampleRespondentsAPIView):
          }]
     }
     """
+
+    @extend_schema(operation_id='sample_respondents_index')
+    def get(self, request, *args, **kwargs):
+        return super(SampleRespondentsIndexAPIView, self).get(
+            request, *args, **kwargs)

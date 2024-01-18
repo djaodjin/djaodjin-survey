@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@ from rest_framework.response import Response as HttpResponse
 
 from .. import settings, signals
 from ..compat import six, gettext_lazy as _
-from ..docs import OpenAPIResponse, swagger_auto_schema
+from ..docs import OpenApiResponse, extend_schema
 from ..mixins import AccountMixin
 from ..models import Portfolio, PortfolioDoubleOptIn, Sample
 from .serializers import (NoModelSerializer, PortfolioReceivedSerializer,
@@ -218,9 +218,8 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
             return PortfolioGrantCreateSerializer
         return super(PortfoliosGrantsAPIView, self).get_serializer_class()
 
-    @swagger_auto_schema(responses={
-        201: OpenAPIResponse("Create successful", PortfolioOptInSerializer,
-        many=True)})
+    @extend_schema(responses={
+        201: OpenApiResponse(PortfolioOptInSerializer(many=True))})
     def post(self, request, *args, **kwargs):
         """
         Initiates grant
@@ -403,6 +402,7 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         # so it OK to just filter by grantee.
         return PortfolioDoubleOptIn.objects.filter(grantee=self.account)
 
+    @extend_schema(operation_id='portfolios_grants_accept')
     def post(self, request, *args, **kwargs):
         #pylint:disable=unused-argument
         instance = self.get_object()
@@ -622,6 +622,7 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         # so it OK to just filter by account.
         return PortfolioDoubleOptIn.objects.filter(account=self.account)
 
+    @extend_schema(operation_id='portfolios_requests_accept')
     def post(self, request, *args, **kwargs):
         """
         Accepts request
@@ -742,16 +743,14 @@ class PortfoliosUpdateAPIView(AccountMixin, generics.UpdateAPIView):
             return PortfolioOptInUpdateSerializer
         return super(PortfoliosUpdateAPIView, self).get_serializer_class()
 
-    @swagger_auto_schema(responses={
-      200: OpenAPIResponse("Update successful", PortfolioOptInSerializer,
-      many=False)})
+    @extend_schema(responses={
+      200: OpenApiResponse(PortfolioOptInSerializer)})
     def put(self, request, *args, **kwargs):
         return super(PortfoliosUpdateAPIView, self).put(
             request, *args, **kwargs)
 
-    @swagger_auto_schema(responses={
-      200: OpenAPIResponse("Update successful", PortfolioOptInSerializer,
-      many=False)})
+    @extend_schema(responses={
+      200: OpenApiResponse(PortfolioOptInSerializer)})
     def patch(self, request, *args, **kwargs):
         return super(PortfoliosUpdateAPIView, self).patch(
             request, *args, **kwargs)

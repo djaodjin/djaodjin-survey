@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from .. import settings
 from ..compat import reverse, six
+from ..docs import extend_schema
 from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
     MatrixMixin, QuestionMixin, SampleMixin)
 from ..models import (Answer, Matrix, EditableFilter,
@@ -1030,6 +1031,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
         return super(AccountsFilterDetailAPIView, self).delete(
             request, *args, **kwargs)
 
+    @extend_schema(operation_id='filters_accounts_add_item')
     def post(self, request, *args, **kwargs):
         """
         Updates a profiles fitler
@@ -1118,6 +1120,11 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
     lookup_field = 'rank'
     serializer_class = AccountsFilterAddSerializer
 
+    @extend_schema(operation_id='filters_accounts_retrieve_item')
+    def get(self, request, *args, **kwargs):
+        return super(AccountsFilterEnumeratedAPIView, self).get(
+            request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = EditableFilterEnumeratedAccounts.objects.filter(
             editable_filter__slug=self.kwargs.get('editable_filter'))
@@ -1152,6 +1159,7 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
         return obj
 
 
+    @extend_schema(operation_id='filters_accounts_update_item')
     def put(self, request, *args, **kwargs):
         """
         Updates a profile in an enumerated profiles filter
@@ -1183,6 +1191,13 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
         return super(AccountsFilterEnumeratedAPIView, self).put(
             request, *args, **kwargs)
 
+    @extend_schema(operation_id='filters_accounts_partial_update_item')
+    def patch(self, request, *args, **kwargs):
+        #pylint:disable=useless-parent-delegation
+        return super(AccountsFilterEnumeratedAPIView, self).patch(
+            request, *args, **kwargs)
+
+    @extend_schema(operation_id='filters_accounts_remove_item')
     def delete(self, request, *args, **kwargs):
         """
         Deletes a profile in an enumerated profiles filter

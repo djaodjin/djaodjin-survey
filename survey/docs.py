@@ -1,4 +1,4 @@
-# Copyright (c) 2022, Djaodjin Inc.
+# Copyright (c) 2021, Djaodjin Inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,18 +25,14 @@
 #pylint:disable=unused-argument,unused-import
 
 try:
-    from drf_yasg.openapi import Response as OpenAPIResponse
-    from drf_yasg.utils import no_body, swagger_auto_schema
+    from drf_spectacular.utils import extend_schema, OpenApiResponse
 except ImportError:
     from functools import wraps
     from .compat import available_attrs
 
-    class no_body(object):#pylint:disable=invalid-name
-        pass
-
-    def swagger_auto_schema(function=None, **kwargs):
+    def extend_schema(function=None, **kwargs):
         """
-        Dummy decorator when drf_yasg is not present.
+        Dummy decorator when drf_spectacular is not present.
         """
         def decorator(view_func):
             @wraps(view_func, assigned=available_attrs(view_func))
@@ -48,7 +44,7 @@ except ImportError:
             return decorator(function)
         return decorator
 
-    class OpenAPIResponse(object):
+    class OpenApiResponse(object):
         """
         Dummy response object to document API.
         """
