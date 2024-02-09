@@ -1,3 +1,11 @@
+0.10.0
+
+  * converts between engineering units
+  * supports OpenAPI 3 schemas
+  * fixes multiple date/time accuracy
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 9 Feb 2024 14:15:00 -0700
+
 0.9.14
 
   * fixes first answer saved when multiple items passed to API

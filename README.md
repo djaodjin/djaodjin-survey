@@ -36,9 +36,11 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.9.14
+0.10.0
 
-  * fixes first answer saved when multiple items passed to API
+  * converts between engineering units
+  * supports OpenAPI 3 schemas
+  * fixes multiple date/time accuracy
 
 [previous release notes](changelog)
 
