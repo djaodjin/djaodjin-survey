@@ -99,6 +99,24 @@ class SlugTitleMixin(object):
 class Unit(models.Model):
     """
     Unit in which an ``Answer.measured`` value is collected.
+
+    There are 6 types of units, each with its own use.
+
+    +----+------------+------------------------------------------------------+
+    | Unit Type       | Description                                          |
+    +====+============+======================================================+
+    | SYSTEM_STANDARD | SI or International System of Units (ex: m, kg, J)   |
+    +----+------------+------------------------------------------------------+
+    | SYSTEM_IMPERIAL | Imperial/US customary measurement system (ex: ft, lb)|
+    +----+------------+------------------------------------------------------+
+    | SYSTEM_RANK     | Natural positive integer (ex: score, percentage)     |
+    +----+------------+------------------------------------------------------+
+    |SYSTEM_ENUMERATED| Finite set of named values                           |
+    +----+------------+------------------------------------------------------+
+    | SYSTEM_FREETEXT | UTF-8 text string                                    |
+    +----+------------+------------------------------------------------------+
+    | SYSTEM_DATETIME | Date/time in Gregorian calendar                      |
+    +----+------------+------------------------------------------------------+
     """
 
     SYSTEM_STANDARD = 0
@@ -117,9 +135,12 @@ class Unit(models.Model):
             (SYSTEM_DATETIME, 'datetime'),
         ]
 
-    NUMERICAL_SYSTEMS = [
+    METRIC_SYSTEMS = [
         SYSTEM_STANDARD,
         SYSTEM_IMPERIAL,
+    ]
+
+    NUMERICAL_SYSTEMS = METRIC_SYSTEMS + [
         SYSTEM_RANK
     ]
 
@@ -167,9 +188,32 @@ class UnitEquivalences(models.Model):
         help_text=_("Target unit in the equivalence"))
     content = models.TextField(null=True,
         help_text=_("Description of the equivalence function"))
+    # Implementation Note: We set `factor` to zero by default such
+    # that a misconfigured equivalence will result in "odd" results.
+    # By default the scale is 1 because in general we are converting
+    # from one system to another without affecting the scale
+    # (ex: SI to US Customary).
+    factor = models.FloatField(default=0)
+    scale = models.FloatField(default=1)
 
     def __str__(self):
         return "%s:%s" % (self.source, self.target)
+
+
+    def as_source_unit(self, value):
+        if not self.content:
+            raise RuntimeError("cannot convert %s to %s" % (
+                self.target, self.source))
+        return convert_to_source_unit(
+            value, self.factor, self.scale, self.content)
+
+
+    def as_target_unit(self, value):
+        if not self.content:
+            raise RuntimeError("cannot convert %s to %s" % (
+                self.source, self.target))
+        return convert_to_target_unit(
+            value, self.factor, self.scale, self.content)
 
 
 @python_2_unicode_compatible
@@ -626,6 +670,21 @@ class Answer(models.Model):
 
 
 @python_2_unicode_compatible
+class AnswerCollected(models.Model):
+
+    first_measured = models.IntegerField()
+    second_measured = models.IntegerField()
+    answer = models.ForeignKey(Answer, on_delete=models.CASCADE)
+    unit = models.ForeignKey(Unit, on_delete=models.PROTECT)
+
+    def __str__(self):
+        return "<AnswerCollected(answer_id=%d, unit_id=%d,"\
+            " first_measured=%d, second_measured=%d)>" % (
+            self.answer_id, self.unit_id, self.first_measured,
+            self.second_measured)
+
+
+@python_2_unicode_compatible
 class EditableFilter(SlugTitleMixin, models.Model):
     """
     A model type and list of predicates to create a subset of the
@@ -1015,6 +1074,54 @@ class PortfolioDoubleOptIn(models.Model):
             self.state = PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED
             self.verification_key = None
             self.save()
+
+
+def convert_to_source_unit(value, factor, scale, formula):
+    """
+    Convert value from a target unit to a source unit
+    using `factor` and `scale`.
+    """
+    result = value
+
+    # Temperatures use a little more complex formula than linear scaling.
+    if formula == "1C + 273.15":                  # Celcius to Kelvin
+        return value - 273.15
+    elif formula == "1K - 273.15":                # Kelvin to Celcius
+        return value + 273.15
+    elif formula == "(1F - 32) * 5/9 + 273.15":   # Farenheit to Kelvin
+        return (value - 273.15) * 9/5 + 32
+    elif formula == "(1K - 273.15) * 9/5 + 32":   # Kelvin to Farenheit
+        return (value - 32) * 5/9 + 273.15
+    elif formula == "(1°C * 9/5) + 32":           # Celcius to Farenheit
+        return (value - 32) * 5/9
+    elif formula == "(1°F - 32) * 5/9":           # Farenheit to Celsius
+        return (value * 9/5) + 32
+
+    return value / (factor * scale)
+
+
+def convert_to_target_unit(value, factor, scale, formula):
+    """
+    Convert value from a source unit to a target unit
+    using `factor` and `scale`.
+    """
+    result = value
+
+    # Temperatures use a little more complex formula than linear scaling.
+    if formula == "1C + 273.15":                  # Celcius to Kelvin
+        return value + 273.15
+    elif formula == "1K - 273.15":                # Kelvin to Celcius
+        return value - 273.15
+    elif formula == "(1F - 32) * 5/9 + 273.15":   # Farenheit to Kelvin
+        return (value - 32) * 5/9 + 273.15
+    elif formula == "(1K - 273.15) * 9/5 + 32":   # Kelvin to Farenheit
+        return (value - 273.15) * 9/5 + 32
+    elif formula == "(1°C * 9/5) + 32":           # Celcius to Farenheit
+        return (value * 9/5) + 32
+    elif formula == "(1°F - 32) * 5/9":           # Farenheit to Celsius
+        return (value - 32) * 5/9
+
+    return value * factor * scale
 
 
 def get_collected_by(campaign, start_at=None, ends_at=None,

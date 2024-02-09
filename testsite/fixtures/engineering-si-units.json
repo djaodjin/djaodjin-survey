@@ -1,0 +1,1471 @@
+[
+{ "fields": {
+    "slug": "m",
+    "title": "metre",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 1
+},
+{ "fields": {
+    "slug": "kg",
+    "title": "kilogram",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 2
+},
+{ "fields": {
+    "slug": "s",
+    "title": "second",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 3
+},
+{ "fields": {
+    "slug": "A",
+    "title": "ampere",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 4
+},
+{ "fields": {
+    "slug": "K",
+    "title": "kelvin",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 5
+},
+{ "fields": {
+    "slug": "cd",
+    "title": "candela",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 6
+},
+{ "fields": {
+    "slug": "mol",
+    "title": "mole",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 7
+},
+{ "fields": {
+    "slug": "m2",
+    "title": "square metre",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 8
+},
+{ "fields": {
+    "slug": "m3",
+    "title": "cubic metre",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 9
+},
+
+{ "fields": {
+    "slug": "kg_m3",
+    "title": "kilogram per cubic metre",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 10
+},
+
+{ "fields": {
+    "slug": "m_s-1",
+    "title": "metre per second",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 11
+},
+
+{ "fields": {
+    "slug": "m_s-2",
+    "title": "metre per second squared",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 12
+},
+
+
+{ "fields": {
+    "slug": "N",
+    "title": "newton (kg m s^-2)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 13
+},
+{ "fields": {
+    "slug": "Pa",
+    "title": "pascal (kg m^-1 s^-2)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 14
+},
+{ "fields": {
+    "slug": "Nm",
+    "title": "newton-metre (kg m^2 s^-2)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 15
+},
+{ "fields": {
+    "slug": "J",
+    "title": "joule (kg m^2 s^-2)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 16
+},
+{ "fields": {
+    "slug": "W",
+    "title": "watt (kg m^2 s^-3)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 17
+},
+{ "fields": {
+    "slug": "Hz",
+    "title": "hertz (s^-1)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 18
+},
+{ "fields": {
+    "slug": "rad",
+    "title": "radian (m m^-1 = 1)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 19
+},
+{ "fields": {
+    "slug": "sr",
+    "title": "steradian (m^2 m^-2 = 1)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 20
+},
+{ "fields": {
+    "slug": "lm",
+    "title": "lumen (sr cd)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 21
+},
+{ "fields": {
+    "slug": "lx",
+    "title": "lux (sr m^-2 cd)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 22
+},
+{ "fields": {
+    "slug": "St",
+    "title": "stokes (m^2 s^-1)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 23
+},
+{ "fields": {
+    "slug": "Pl",
+    "title": "poiseuille (kg m^-1 s^-1)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 24
+},
+{ "fields": {
+    "slug": "Wb",
+    "title": "weber (kg m^2 s^-2 A^-1)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 25
+},
+{ "fields": {
+    "slug": "T",
+    "title": "tesla (kg s^-2 A^-1)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 26
+},
+{ "fields": {
+    "slug": "F",
+    "title": "farad (s^4 A^2 m^-2 kg^-1)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 27
+},
+{ "fields": {
+    "slug": "C",
+    "title": "coulomb (A s)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 28
+},
+{ "fields": {
+    "slug": "S",
+    "title": "siemens (kg^-1 m^-2 s^3 A^2)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 29
+},
+{ "fields": {
+    "slug": "H",
+    "title": "henry (kg m^2 s^-2 A^-2)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 30
+},
+{ "fields": {
+    "slug": "O",
+    "title": "ohm (kg m^2 s^-3 A^-2)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 31
+},
+{ "fields": {
+    "slug": "V",
+    "title": "volt (kg m^2 A^-1 s^-3)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 32
+},
+
+{ "fields": {
+    "slug": "km",
+    "title": "kilometre",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 33
+},
+{ "fields": {
+    "slug": "cm",
+    "title": "centimetre",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 34
+},
+{ "fields": {
+    "slug": "mm",
+    "title": "millimetre",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 35
+},
+{ "fields": {
+    "source": 1,
+    "target": 33,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 1
+},
+{ "fields": {
+    "source": 1,
+    "target": 34,
+    "content": "* 1e2",
+    "factor": 1,
+    "scale": 1e2
+  },
+  "model" : "survey.unitequivalences", "pk": 2
+},
+{ "fields": {
+    "source": 1,
+    "target": 35,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 3
+},
+{ "fields": {
+    "source": 33,
+    "target": 1,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 4
+},
+{ "fields": {
+    "source": 33,
+    "target": 34,
+    "content": "* 1e5",
+    "factor": 1,
+    "scale": 1e5
+  },
+  "model" : "survey.unitequivalences", "pk": 5
+},
+{ "fields": {
+    "source": 33,
+    "target": 35,
+    "content": "* 1e7",
+    "factor": 1,
+    "scale": 1e7
+  },
+  "model" : "survey.unitequivalences", "pk": 6
+},
+{ "fields": {
+    "source": 34,
+    "target": 33,
+    "content": "* 1e-5",
+    "factor": 1,
+    "scale": 1e-5
+  },
+  "model" : "survey.unitequivalences", "pk": 7
+},
+{ "fields": {
+    "source": 34,
+    "target": 1,
+    "content": "* 1e-2",
+    "factor": 1,
+    "scale": 1e-2
+  },
+  "model" : "survey.unitequivalences", "pk": 8
+},
+{ "fields": {
+    "source": 34,
+    "target": 35,
+    "content": "* 1e1",
+    "factor": 1,
+    "scale": 1e1
+  },
+  "model" : "survey.unitequivalences", "pk": 9
+},
+{ "fields": {
+    "source": 35,
+    "target": 33,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 10
+},
+{ "fields": {
+    "source": 35,
+    "target": 34,
+    "content": "* 1e-1",
+    "factor": 1,
+    "scale": 1e-1
+  },
+  "model" : "survey.unitequivalences", "pk": 11
+},
+{ "fields": {
+    "source": 35,
+    "target": 1,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 12
+},
+
+
+{ "fields": {
+    "slug": "t",
+    "title": "metric tons",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 36
+},
+{ "fields": {
+    "slug": "g",
+    "title": "gram",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 37
+},
+{ "fields": {
+    "slug": "mg",
+    "title": "milligram",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 38
+},
+{ "fields": {
+    "source": 2,
+    "target": 36,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 13
+},
+{ "fields": {
+    "source": 2,
+    "target": 37,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 14
+},
+{ "fields": {
+    "source": 2,
+    "target": 38,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 15
+},
+{ "fields": {
+    "source": 36,
+    "target": 2,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 16
+},
+{ "fields": {
+    "source": 36,
+    "target": 37,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 17
+},
+{ "fields": {
+    "source": 36,
+    "target": 38,
+    "content": "* 1e9",
+    "factor": 1,
+    "scale": 1e9
+  },
+  "model" : "survey.unitequivalences", "pk": 18
+},
+{ "fields": {
+    "source": 37,
+    "target": 36,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 19
+},
+{ "fields": {
+    "source": 37,
+    "target": 2,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 20
+},
+{ "fields": {
+    "source": 37,
+    "target": 38,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 21
+},
+{ "fields": {
+    "source": 38,
+    "target": 36,
+    "content": "* 1e-9",
+    "factor": 1,
+    "scale": 1e-9
+  },
+  "model" : "survey.unitequivalences", "pk": 22
+},
+{ "fields": {
+    "source": 38,
+    "target": 37,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 23
+},
+{ "fields": {
+    "source": 38,
+    "target": 2,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 24
+},
+
+
+{ "fields": {
+    "slug": "h",
+    "title": "hour",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 39
+},
+{ "fields": {
+    "slug": "min",
+    "title": "minute",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 40
+},
+{ "fields": {
+    "slug": "ms",
+    "title": "milliseconds",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 41
+},
+{ "fields": {
+    "slug": "µs",
+    "title": "microseconds",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 42
+},
+{ "fields": {
+    "slug": "ns",
+    "title": "nanoseconds",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 43
+},
+{ "fields": {
+    "slug": "ps",
+    "title": "picoseconds",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 44
+},
+
+{ "fields": {
+    "source": 3,
+    "target": 39,
+    "content": "/ 3600",
+    "factor": 0.00027777777,
+    "scale": 1
+  },
+  "model" : "survey.unitequivalences", "pk": 25
+},
+{ "fields": {
+    "source": 3,
+    "target": 40,
+    "content": "/ 60",
+    "factor": 0.01666666666,
+    "scale": 1
+  },
+  "model" : "survey.unitequivalences", "pk": 26
+},
+{ "fields": {
+    "source": 3,
+    "target": 41,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 27
+},
+{ "fields": {
+    "source": 3,
+    "target": 42,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 28
+},
+{ "fields": {
+    "source": 3,
+    "target": 43,
+    "content": "* 1e9",
+    "factor": 1,
+    "scale": 1e9
+  },
+  "model" : "survey.unitequivalences", "pk": 29
+},
+{ "fields": {
+    "source": 3,
+    "target": 44,
+    "content": "* 1e12",
+    "factor": 1,
+    "scale": 1e12
+  },
+  "model" : "survey.unitequivalences", "pk": 30
+},
+
+{ "fields": {
+    "source": 39,
+    "target": 3,
+    "content": "* 3600",
+    "factor": 3600,
+    "scale": 1
+  },
+  "model" : "survey.unitequivalences", "pk": 31
+},
+{ "fields": {
+    "source": 39,
+    "target": 40,
+    "content": "* 60",
+    "factor": 60,
+    "scale": 1
+  },
+  "model" : "survey.unitequivalences", "pk": 32
+},
+{ "fields": {
+    "source": 39,
+    "target": 41,
+    "content": "* 3600 * 1e3",
+    "factor": 3600,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 33
+},
+{ "fields": {
+    "source": 39,
+    "target": 42,
+    "content": "* 3600 * 1e6",
+    "factor": 3600,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 34
+},
+{ "fields": {
+    "source": 39,
+    "target": 43,
+    "content": "* 3600 * 1e9",
+    "factor": 3600,
+    "scale": 1e9
+  },
+  "model" : "survey.unitequivalences", "pk": 35
+},
+{ "fields": {
+    "source": 39,
+    "target": 44,
+    "content": "* 3600 * 1e12",
+    "factor": 3600,
+    "scale": 1e12
+  },
+  "model" : "survey.unitequivalences", "pk": 36
+},
+{ "fields": {
+    "source": 40,
+    "target": 39,
+    "content": "/ 60",
+    "factor": 0.01666666666,
+    "scale": 1
+  },
+  "model" : "survey.unitequivalences", "pk": 37
+},
+{ "fields": {
+    "source": 40,
+    "target": 3,
+    "content": "* 60",
+    "factor": 60,
+    "scale": 1
+  },
+  "model" : "survey.unitequivalences", "pk": 38
+},
+{ "fields": {
+    "source": 40,
+    "target": 41,
+    "content": "* 60 * 1e3",
+    "factor": 60,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 39
+},
+{ "fields": {
+    "source": 40,
+    "target": 42,
+    "content": "* 60 * 1e6",
+    "factor": 60,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 40
+},
+{ "fields": {
+    "source": 40,
+    "target": 43,
+    "content": "* 60 * 1e9",
+    "factor": 60,
+    "scale": 1e9
+  },
+  "model" : "survey.unitequivalences", "pk": 41
+},
+{ "fields": {
+    "source": 40,
+    "target": 44,
+    "content": "* 60 * 1e12",
+    "factor": 60,
+    "scale": 1e12
+  },
+  "model" : "survey.unitequivalences", "pk": 42
+},
+
+{ "fields": {
+    "source": 41,
+    "target": 39,
+    "content": "* 10e-3 / 3600",
+    "factor": 0.00027777777,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 43
+},
+{ "fields": {
+    "source": 41,
+    "target": 40,
+    "content": "* 10e-3 / 60",
+    "factor": 0.01666666666,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 44
+},
+{ "fields": {
+    "source": 41,
+    "target": 3,
+    "content": "* 10e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 45
+},
+{ "fields": {
+    "source": 41,
+    "target": 42,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 46
+},
+{ "fields": {
+    "source": 41,
+    "target": 43,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 47
+},
+{ "fields": {
+    "source": 41,
+    "target": 44,
+    "content": "* 1e9",
+    "factor": 1,
+    "scale": 1e9
+  },
+  "model" : "survey.unitequivalences", "pk": 48
+},
+
+{ "fields": {
+    "source": 42,
+    "target": 39,
+    "content": "* 1e-6 / 3600",
+    "factor": 0.00027777777,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 49
+},
+{ "fields": {
+    "source": 42,
+    "target": 40,
+    "content": "* 1e-6 / 60",
+    "factor": 0.01666666666,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 50
+},
+{ "fields": {
+    "source": 42,
+    "target": 41,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 51
+},
+{ "fields": {
+    "source": 42,
+    "target": 3,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 52
+},
+{ "fields": {
+    "source": 42,
+    "target": 43,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 53
+},
+{ "fields": {
+    "source": 42,
+    "target": 44,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 54
+},
+
+{ "fields": {
+    "source": 43,
+    "target": 39,
+    "content": "* 1e-9 / 3600",
+    "factor": 0.00027777777,
+    "scale": 1e-9
+  },
+  "model" : "survey.unitequivalences", "pk": 55
+},
+{ "fields": {
+    "source": 43,
+    "target": 40,
+    "content": "* 1e-9 / 60",
+    "factor": 0.01666666666,
+    "scale": 1e-9
+  },
+  "model" : "survey.unitequivalences", "pk": 56
+},
+{ "fields": {
+    "source": 43,
+    "target": 41,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 57
+},
+{ "fields": {
+    "source": 43,
+    "target": 42,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 58
+},
+{ "fields": {
+    "source": 43,
+    "target": 3,
+    "content": "* 1e-9",
+    "factor": 1,
+    "scale": 1e-9
+  },
+  "model" : "survey.unitequivalences", "pk": 59
+},
+{ "fields": {
+    "source": 43,
+    "target": 44,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 60
+},
+
+{ "fields": {
+    "source": 44,
+    "target": 39,
+    "content": "* 1e-12 / 3600",
+    "factor": 0.00027777777,
+    "scale": 1e-12
+  },
+  "model" : "survey.unitequivalences", "pk": 61
+},
+{ "fields": {
+    "source": 44,
+    "target": 40,
+    "content": "* 1e-12 / 60",
+    "factor": 0.01666666666,
+    "scale": 1e-12
+  },
+  "model" : "survey.unitequivalences", "pk": 62
+},
+{ "fields": {
+    "source": 44,
+    "target": 41,
+    "content": "* 1e-9",
+    "factor": 1,
+    "scale": 1e-9
+  },
+  "model" : "survey.unitequivalences", "pk": 63
+},
+{ "fields": {
+    "source": 44,
+    "target": 42,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 64
+},
+{ "fields": {
+    "source": 44,
+    "target": 43,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 65
+},
+{ "fields": {
+    "source": 44,
+    "target": 3,
+    "content": "* 1e-12",
+    "factor": 1,
+    "scale": 1e-12
+  },
+  "model" : "survey.unitequivalences", "pk": 66
+},
+
+{ "fields": {
+    "slug": "km2",
+    "title": "square kilometre",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 45
+},
+{ "fields": {
+    "slug": "mm2",
+    "title": "square millimetre",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 46
+},
+{ "fields": {
+    "source": 8,
+    "target": 45,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 67
+},
+{ "fields": {
+    "source": 8,
+    "target": 46,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 68
+},
+
+{ "fields": {
+    "source": 45,
+    "target": 8,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 69
+},
+{ "fields": {
+    "source": 45,
+    "target": 46,
+    "content": "* 1e12",
+    "factor": 1,
+    "scale": 1e12
+  },
+  "model" : "survey.unitequivalences", "pk": 70
+},
+
+{ "fields": {
+    "source": 46,
+    "target": 45,
+    "content": "* 1e-12",
+    "factor": 1,
+    "scale": 1e-12
+  },
+  "model" : "survey.unitequivalences", "pk": 71
+},
+{ "fields": {
+    "source": 46,
+    "target": 8,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 72
+},
+
+{ "fields": {
+    "slug": "L",
+    "title": "liter (0.001 m^3)",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 47
+},
+{ "fields": {
+    "slug": "cm3",
+    "title": "cubic centimetre",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 48
+},
+{ "fields": {
+    "source": 9,
+    "target": 47,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 73
+},
+{ "fields": {
+    "source": 9,
+    "target": 48,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 74
+},
+
+{ "fields": {
+    "source": 47,
+    "target": 9,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 75
+},
+{ "fields": {
+    "source": 47,
+    "target": 48,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 76
+},
+
+{ "fields": {
+    "source": 48,
+    "target": 47,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 77
+},
+{ "fields": {
+    "source": 48,
+    "target": 9,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 78
+},
+
+
+{ "fields": {
+    "slug": "km_s-1",
+    "title": "kilometre per second",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 49
+},
+{ "fields": {
+    "slug": "km_h-1",
+    "title": "kilometre per hour",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 50
+},
+{ "fields": {
+    "source": 11,
+    "target": 49,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 79
+},
+{ "fields": {
+    "source": 11,
+    "target": 50,
+    "content": "* 3600 * 1e-3",
+    "factor": 3600,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 80
+},
+{ "fields": {
+    "source": 49,
+    "target": 11,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 81
+},
+{ "fields": {
+    "source": 49,
+    "target": 50,
+    "content": "* 3600",
+    "factor": 3600,
+    "scale": 1
+  },
+  "model" : "survey.unitequivalences", "pk": 82
+},
+{ "fields": {
+    "source": 50,
+    "target": 49,
+    "content": "/ 3600",
+    "factor": 0.000277777777777778,
+    "scale": 1
+  },
+  "model" : "survey.unitequivalences", "pk": 83
+},
+{ "fields": {
+    "source": 50,
+    "target": 11,
+    "content": "/ 3600 * 1e3",
+    "factor": 0.000277777777777778,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 84
+},
+
+{ "fields": {
+    "slug": "MJ",
+    "title": "megajoule",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 51
+},
+{ "fields": {
+    "slug": "kJ",
+    "title": "kilojoule",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 52
+},
+{ "fields": {
+    "source": 16,
+    "target": 51,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 85
+},
+{ "fields": {
+    "source": 16,
+    "target": 52,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 86
+},
+{ "fields": {
+    "source": 51,
+    "target": 16,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 87
+},
+{ "fields": {
+    "source": 51,
+    "target": 52,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 88
+},
+{ "fields": {
+    "source": 52,
+    "target": 51,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 89
+},
+{ "fields": {
+    "source": 52,
+    "target": 16,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 90
+},
+
+{ "fields": {
+    "slug": "MW",
+    "title": "megawatt",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 53
+},
+{ "fields": {
+    "slug": "kW",
+    "title": "kilowatt",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 54
+},
+{ "fields": {
+    "source": 17,
+    "target": 53,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 91
+},
+{ "fields": {
+    "source": 17,
+    "target": 54,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 92
+},
+{ "fields": {
+    "source": 53,
+    "target": 17,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 93
+},
+{ "fields": {
+    "source": 53,
+    "target": 54,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 94
+},
+{ "fields": {
+    "source": 54,
+    "target": 53,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 95
+},
+{ "fields": {
+    "source": 54,
+    "target": 17,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 96
+},
+
+
+{ "fields": {
+    "slug": "MHz",
+    "title": "megahertz",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 55
+},
+{ "fields": {
+    "slug": "kHz",
+    "title": "kilohertz",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 56
+},
+{ "fields": {
+    "source": 18,
+    "target": 55,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 97
+},
+{ "fields": {
+    "source": 18,
+    "target": 56,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 98
+},
+{ "fields": {
+    "source": 55,
+    "target": 18,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 99
+},
+{ "fields": {
+    "source": 55,
+    "target": 56,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 100
+},
+{ "fields": {
+    "source": 56,
+    "target": 55,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 101
+},
+{ "fields": {
+    "source": 56,
+    "target": 18,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 102
+},
+
+{ "fields": {
+    "slug": "MV",
+    "title": "megavolt",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 57
+},
+{ "fields": {
+    "slug": "kV",
+    "title": "kilovolt",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 58
+},
+{ "fields": {
+    "slug": "mV",
+    "title": "millivolt",
+    "system": 0
+  },
+  "model" : "survey.unit", "pk": 59
+},
+{ "fields": {
+    "source": 32,
+    "target": 57,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 103
+},
+{ "fields": {
+    "source": 32,
+    "target": 58,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 104
+},
+{ "fields": {
+    "source": 32,
+    "target": 59,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 105
+},
+{ "fields": {
+    "source": 57,
+    "target": 32,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 106
+},
+{ "fields": {
+    "source": 57,
+    "target": 58,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 107
+},
+{ "fields": {
+    "source": 57,
+    "target": 59,
+    "content": "* 1e9",
+    "factor": 1,
+    "scale": 1e9
+  },
+  "model" : "survey.unitequivalences", "pk": 108
+},
+
+{ "fields": {
+    "source": 58,
+    "target": 57,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 109
+},
+{ "fields": {
+    "source": 58,
+    "target": 32,
+    "content": "* 1e3",
+    "factor": 1,
+    "scale": 1e3
+  },
+  "model" : "survey.unitequivalences", "pk": 110
+},
+{ "fields": {
+    "source": 58,
+    "target": 59,
+    "content": "* 1e6",
+    "factor": 1,
+    "scale": 1e6
+  },
+  "model" : "survey.unitequivalences", "pk": 111
+},
+{ "fields": {
+    "source": 59,
+    "target": 57,
+    "content": "* 1e-9",
+    "factor": 1,
+    "scale": 1e-9
+  },
+  "model" : "survey.unitequivalences", "pk": 112
+},
+{ "fields": {
+    "source": 59,
+    "target": 58,
+    "content": "* 1e-6",
+    "factor": 1,
+    "scale": 1e-6
+  },
+  "model" : "survey.unitequivalences", "pk": 113
+},
+{ "fields": {
+    "source": 59,
+    "target": 32,
+    "content": "* 1e-3",
+    "factor": 1,
+    "scale": 1e-3
+  },
+  "model" : "survey.unitequivalences", "pk": 114
+}
+]

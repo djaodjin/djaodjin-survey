@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,12 +24,13 @@
 
 import logging
 
+from django.db.models import F
 from rest_framework import generics
 from rest_framework.filters import BaseFilterBackend
 
 from ..filters import SearchFilter
 from ..models import Unit
-from .serializers import UnitSerializer
+from .serializers import ConvertUnitSerializer, UnitSerializer
 
 LOGGER = logging.getLogger(__name__)
 
@@ -54,7 +55,10 @@ class EquivalenceFilter(BaseFilterBackend):
         equiv_terms = self.get_equiv_terms(request)
         if equiv_terms:
             return queryset.filter(
-                source_equivalences__in=equiv_terms)
+                target_equivalences__source__slug__in=equiv_terms).annotate(
+                    factor=F('target_equivalences__factor'),
+                    scale=F('target_equivalences__scale'),
+                    content=F('target_equivalences__content'))
         return queryset
 
     def get_schema_operation_parameters(self, view):
@@ -184,9 +188,13 @@ class UnitListAPIView(generics.ListAPIView):
     """
     search_fields = (
         'slug',
-        'title',
     )
 
     serializer_class = UnitSerializer
     filter_backends = (EquivalenceFilter, SearchFilter)
     queryset = Unit.objects.all().order_by('slug')
+
+    def get_serializer_class(self):
+        if self.request.query_params.get('eq'):
+            return ConvertUnitSerializer
+        return super(UnitListAPIView, self).get_serializer_class()

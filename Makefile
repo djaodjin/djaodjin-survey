@@ -81,7 +81,10 @@ doc:
 initdb: clean-dbs
 	$(installDirs) $(dir $(DB_NAME))
 	cd $(srcDir) && $(MANAGE) migrate $(RUNSYNCDB) --noinput
-	cd $(srcDir) && $(MANAGE) loaddata testsite/fixtures/default-db.json
+	cd $(srcDir) && $(MANAGE) loaddata \
+		testsite/fixtures/engineering-si-units.json \
+		testsite/fixtures/engineering-alt-units.json \
+		testsite/fixtures/default-db.json
 
 
 vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-survey-packages

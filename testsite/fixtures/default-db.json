@@ -149,63 +149,63 @@
   "model" : "survey.campaign", "pk" : 1
 },
 { "fields": {
-    "slug": "sentiment",
-    "title": "Sentiment",
+    "slug": "yes-no",
+    "title": "Yes/No",
     "system": 3
   },
-  "model" : "survey.unit", "pk" : 1
+  "model" : "survey.unit", "pk" : 200
 },
 { "fields": {
-    "unit": 1,
+    "unit": 200,
     "rank": 1,
-    "text": "Somewhat"
+    "text": "Yes"
   },
   "model" : "survey.choice", "pk" : 1
 },
 { "fields": {
-    "unit": 1,
+    "unit": 200,
     "rank": 2,
-    "text": "Yes"
+    "text": "No"
   },
   "model" : "survey.choice", "pk" : 2
 },
 { "fields": {
-    "unit": 1,
-    "rank": 3,
-    "text": "Awesome"
+    "slug": "comment",
+    "title": "Comments/notes",
+    "system": 4
   },
-  "model" : "survey.choice", "pk" : 3
+  "model" : "survey.unit", "pk" : 201
 },
 { "fields": {
     "slug": "features",
     "title": "Features",
     "system": 3
   },
-  "model" : "survey.unit", "pk" : 2
+  "model" : "survey.unit", "pk" : 202
 },
 { "fields": {
-    "unit": 2,
+    "unit": 202,
     "rank": 4,
     "text": "Radio"
   },
   "model" : "survey.choice", "pk" : 4
 },
 { "fields": {
-    "unit": 2,
+    "unit": 202,
     "rank": 5,
     "text": "Select Multiple"
   },
   "model" : "survey.choice", "pk" : 5
 },
 { "fields": {
-    "unit": 2,
+    "unit": 202,
     "rank": 6,
     "text": "Free form text"
   },
   "model" : "survey.choice", "pk" : 6
 },
 { "fields": {
-    "unit": 2,
+    "unit": 202,
     "rank": 7,
     "text": "Integer"
   },
@@ -216,22 +216,9 @@
     "title": "Rating",
     "system": 2
   },
-  "model" : "survey.unit", "pk" : 3
+  "model" : "survey.unit", "pk" : 203
 },
-{ "fields": {
-    "slug": "freetext",
-    "title": "Free Text",
-    "system": 4
-  },
-  "model" : "survey.unit", "pk" : 4
-},
-{ "fields": {
-    "slug": "tons",
-    "title": "Metric Tons",
-    "system": 0
-  },
-  "model" : "survey.unit", "pk": 6
-},
+
 {
   "fields" : {
       "title": "Do you like the djaodjin-survey app...",
@@ -241,10 +228,10 @@
 },
 {
   "fields" : {
-      "path": "/q1",
+      "path": "/code-of-conduct",
       "ui_hint" : "radio",
       "content": 1,
-      "default_unit": 1
+      "default_unit": 200
   },
   "model" : "survey.question", "pk" : 1
 },
@@ -268,7 +255,7 @@
       "path": "/q2",
       "ui_hint" : "checkbox",
       "content": 2,
-      "default_unit": 2
+      "default_unit": 202
   },
   "model" : "survey.question", "pk" : 2
 },
@@ -292,7 +279,7 @@
       "path": "/q3",
       "ui_hint" : "integer",
       "content": 3,
-      "default_unit": 3
+      "default_unit": 203
   },
   "model" : "survey.question", "pk" : 3
 },
@@ -316,7 +303,7 @@
     "path": "/sustainability/data-measured/ghg-emissions-measured/ghg-emissions-totals/ghg-emissions-scope1",
     "ui_hint" : "number",
     "content": 4,
-    "default_unit": 4
+    "default_unit": 36
   },
   "model" : "survey.question", "pk" : 4
 },
@@ -330,6 +317,59 @@
 },
 
 {
+  "fields" : {
+      "title": "How can we improve",
+      "text" : "Please tell us which features, documentation, etc. you would like to see ..."
+  },
+  "model" : "survey.content", "pk" : 5
+},
+{
+  "fields" : {
+    "path": "/improvement-plan",
+    "ui_hint" : "textarea",
+    "content": 5,
+    "default_unit": 4
+  },
+  "model" : "survey.question", "pk" : 5
+},
+{
+  "fields": {
+    "campaign": 1,
+    "question": 5,
+    "rank": 5
+  },
+  "model": "survey.EnumeratedQuestions", "pk": 5
+},
+
+{
+  "fields" : {
+      "title": "factory-size",
+      "text" : "Factory footprint area ..."
+  },
+  "model" : "survey.content", "pk" : 10
+},
+{
+  "fields" : {
+    "path": "/sustainability/data-measured/factory-size",
+    "ui_hint" : "number",
+    "content": 4,
+    "default_unit": 203
+  },
+  "model" : "survey.question", "pk" : 10
+},
+
+{
+  "fields": {
+    "slug": "4c6675a5d5af46c796b8033a7731a86e",
+    "created_at": "2022-12-31T00:00:00+00:00",
+    "updated_at": "2022-12-31T00:00:00+00:00",
+    "campaign": 1,
+    "account": 6,
+    "is_frozen": false
+  },
+  "model": "survey.sample", "pk": 1
+},
+{
   "fields": {
     "slug": "dda134c8b4da487da9169e771794deed",
     "created_at": "2022-12-31T00:00:00+00:00",
@@ -338,15 +378,15 @@
     "account": 6,
     "is_frozen": true
   },
-  "model": "survey.sample", "pk": 1
+  "model": "survey.sample", "pk": 2
 },
 {
   "fields": {
     "created_at": "2022-12-31T00:00:00+00:00",
-    "sample": 1,
+    "sample": 2,
     "question": 1,
     "collected_by": 3,
-    "unit": 1,
+    "unit": 200,
     "measured": 2
   },
   "model": "survey.answer", "pk": 1
@@ -354,10 +394,10 @@
 {
   "fields": {
     "created_at": "2022-12-31T00:00:00+00:00",
-    "sample": 1,
+    "sample": 2,
     "question": 2,
     "collected_by": 3,
-    "unit": 2,
+    "unit": 202,
     "measured": 4
   },
   "model": "survey.answer", "pk": 2
@@ -365,10 +405,10 @@
 {
   "fields": {
     "created_at": "2022-12-31T00:00:00+00:00",
-    "sample": 1,
+    "sample": 2,
     "question": 3,
     "collected_by": 3,
-    "unit": 3,
+    "unit": 203,
     "measured": 1
   },
   "model": "survey.answer", "pk": 3
@@ -383,7 +423,7 @@
 {
   "fields": {
     "created_at": "2022-12-31T00:00:00+00:00",
-    "sample": 1,
+    "sample": 2,
     "question": 4,
     "collected_by": 3,
     "unit": 4,
@@ -401,12 +441,12 @@
     "account": 19,
     "is_frozen": true
   },
-  "model": "survey.sample", "pk": 2
+  "model": "survey.sample", "pk": 3
 },
 {
   "fields": {
     "created_at": "2022-12-31T00:00:00+00:00",
-    "sample": 2,
+    "sample": 3,
     "question": 4,
     "collected_by": 5,
     "unit": 4,
@@ -523,4 +563,21 @@
     "rank": 1
   },
   "model": "survey.EditableFilterEnumeratedAccounts", "pk": 1
+},
+{
+  "fields": {
+    "slug": "factory-size",
+    "title": "Factory footprint area",
+    "account": 6,
+    "extra": "{\"path\":\"/sustainability/data-measured/factory-size\"}"
+  },
+  "model": "survey.editablefilter", "pk": 16
+},
+{
+  "fields": {
+    "editable_filter": 16,
+    "account": 9,
+    "rank": 1
+  },
+  "model": "survey.EditableFilterEnumeratedAccounts", "pk": 2
 }]

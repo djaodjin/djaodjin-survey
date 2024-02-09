@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@ from .. import settings
 from ..compat import gettext_lazy as _, reverse, six
 from ..models import (Answer, Campaign, Choice,
     EditableFilter, EditablePredicate, Matrix, PortfolioDoubleOptIn,
-    Sample, Unit)
+    Sample, Unit, convert_to_target_unit)
 from ..utils import (get_account_model, get_belongs_model, get_question_model,
     get_account_serializer)
 
@@ -188,6 +188,29 @@ class UnitSerializer(serializers.ModelSerializer):
         model = Unit
         fields = ('slug', 'title', 'system', 'choices')
         read_only_fields = ('slug', 'choices',)
+
+
+class ConvertUnitSerializer(UnitSerializer):
+
+    value = serializers.SerializerMethodField()
+
+    class Meta(UnitSerializer.Meta):
+        fields = UnitSerializer.Meta.fields + ('value',)
+        read_only_fields = UnitSerializer.Meta.read_only_fields + ('value',)
+
+    def get_value(self, obj):
+        request = self.context.get('request')
+        view = self.context.get('view')
+        if request and view:
+            source = request.query_params.get('eq', None)
+            value = request.query_params.get('value', 1)
+            try:
+                return convert_to_target_unit(
+                    value, obj.factor, obj.scale, obj.content)
+            except TypeError:
+                # We just pretent we can't convert to the target unit.
+                pass
+        return None
 
 
 class QuestionCreateSerializer(serializers.ModelSerializer):

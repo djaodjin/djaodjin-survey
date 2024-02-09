@@ -1,8 +1,14 @@
 Encoding answers in the database
 ================================
 
-Quantitative measurements
--------------------------
+All data points entered in the system are stored as an instance of ``Answer``
+(see :doc:`database schema <models>`).
+
+.. autoclass:: survey.models.Unit
+
+
+Entering quantitative measurements
+----------------------------------
 
 Quantitative (numeric) measurements are recorded through the
 `Records quantitative measurements API`_.
@@ -16,23 +22,23 @@ specified, the intent is to record an absolute measurement at time
 Absolute measurements database encoding
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Absolute measurements, for example weight of a team player at a certain date,
+Absolute measurements, for example the area occupied on the ground by a factory,
 are recorded as an `Answer` whose `created_at` field is the date of the
 measurement and a `Sample` whose `created_at` field is the date the record
 was created in the database.
 
     .. code-block:: http
 
-        POST /api/bobcats/filters/accounts/players/values HTTP/1.1
+        POST /api/supplier-1/filters/accounts/factory-size/values HTTP/1.1
 
     .. code-block:: json
 
         {
               "created_at":"2023-01-01",
               "items":[{
-                "slug":"steve",
+                "slug":"main-factory",
                 "measured":"65",
-                "unit":"kg"
+                "unit":"m2"
               }]
         }
 
@@ -41,7 +47,7 @@ TABLE survey_answer:
 +----+------------+-------------+---------------+--------+---------------+
 | id | created_at | measured    | unit          | sample | question      |
 +====+============+=============+===============+========+===============+
-| 1  | 2022-01-01 |          65 | kg            |     1  | weight        |
+| 1  | 2022-01-01 |          65 | m2            |     1  | factory-size  |
 +----+------------+-------------+---------------+--------+---------------+
 
 TABLE survey_sample:
@@ -49,7 +55,7 @@ TABLE survey_sample:
 +----+------------+--------------+----------------+-----------+
 | id | created_at | account      | campaign       | is_frozen |
 +====+============+==============+================+===========+
-|  1 | 2023-01-27 | steve        | null           | true      |
+|  1 | 2023-01-27 | main-factory | null           | true      |
 +----+------------+--------------+----------------+-----------+
 
 
@@ -148,9 +154,101 @@ TABLE survey_sample:
 +----+------------+--------------+----------------+-----------+
 
 
-Qualitivative assessments
--------------------------
+Responding to a questionnaire
+-----------------------------
 
+Answering a single choice question
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In questionnaires (i.e. ``Campaign``) with closed questions, phrased as
+for example: "Does your organization has a code of conduct?", answers
+are saved in the database with a unit of type ``SYSTEM_ENUMERATED``.
+
+    .. code-block:: http
+
+        POST /api/supplier-1/sample/4c6675a5d5af46c796b8033a7731a86e/answers/code-of-conduct HTTP/1.1
+
+    .. code-block:: json
+
+        {
+              "measured": "Yes"
+        }
+
+TABLE survey_answer:
+
++----+------------+-------------+---------------+--------+-----------------+
+| id | created_at | measured    | unit          | sample | question        |
++====+============+=============+===============+========+=================+
+| 1  | 2023-01-01 |           1 | yes-no        |     1  | code-of-conduct |
++----+------------+-------------+---------------+--------+-----------------+
+
+TABLE survey_choice:
+
++----+----------+---------+---------------+
+| id | unit     | rank    | text          |
++====+==========+=========+===============+
+| 1  | yes-no   |       1 | Yes           |
++----+----------+---------+---------------+
+| 2  | yes-no   |       2 | No            |
++----+----------+---------+---------------+
+
+TABLE survey_sample:
+
++----+------------+--------------+----------------+
+| id | created_at | account      | campaign       |
++====+============+==============+================+
+|  1 | 2023-01-27 | supplier 1   | sustainability |
++----+------------+--------------+----------------+
+
+The primary key of the ``Choice`` model for the enumerated value matching
+the answer is saved in the ``Answer.measured`` field. Therefore most
+computations can be done on the Answer table alone, but you will need to
+do a SQL join with the ``survey_choice`` table for User Interface presentation.
+
+
+Answering an open question
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In questionnaires (i.e. ``Campaign``) with open questions, phrased as
+for example: "What is your improvement plan?", answers are saved
+in the database with a unit of type ``SYSTEM_FREETEXT``.
+
+    .. code-block:: http
+
+        POST /api/supplier-1/sample/4c6675a5d5af46c796b8033a7731a86e/answers/improvement-plan HTTP/1.1
+
+    .. code-block:: json
+
+        {
+              "measured": "Introducing recycle bins in cafetaria"
+        }
+
+TABLE survey_answer:
+
++----+------------+-------------+---------------+--------+------------------+
+| id | created_at | measured    | unit          | sample | question         |
++====+============+=============+===============+========+==================+
+| 1  | 2023-01-01 |           1 | freetext      |     1  | improvement-plan |
++----+------------+-------------+---------------+--------+------------------+
+
+TABLE survey_choice:
+
++----+----------+---------+-------------------------------------------------+
+| id | unit     | rank    | text                                            |
++====+==========+=========+=================================================+
+| 1  | freetext |       - | Introducing recycle bins in cafetaria           |
++----+----------+---------+-------------------------------------------------+
+
+TABLE survey_sample:
+
++----+------------+--------------+----------------+
+| id | created_at | account      | campaign       |
++====+============+==============+================+
+|  1 | 2023-01-27 | supplier 1   | sustainability |
++----+------------+--------------+----------------+
+
+``Answer.measured`` is used in that case to index the actual text inputed
+by a user inside the ``survey_choice`` table.
 
 
 Reporting metrics over a time period
@@ -180,4 +278,21 @@ TABLE survey_sample:
 +----+------------+--------------+----------------+
 
 
-.. _Records quantitative measurements API: https://www.djaodjin.com/docs/reference/djaopsp/latest/api/#createAccountsFilterValues
+Special cases
+-------------
+
+Absolute measurements in alternative units
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+``Answer`` will be created such that
+
+    Answer.unit == Answer.question.default_unit
+
+
+
+
+
+
+
+.. _Records quantitative measurements API: https://www.djaodjin.com/docs/reference/djaopsp/2022-09-14/api/#createAccountsFilterValues

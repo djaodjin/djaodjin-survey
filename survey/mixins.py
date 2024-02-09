@@ -210,6 +210,11 @@ class CampaignMixin(object):
         return super(CampaignMixin, self).get_reverse_kwargs() + [
             self.campaign_url_kwarg]
 
+    def get_context_data(self, **kwargs):
+        context = super(CampaignMixin, self).get_context_data(**kwargs)
+        context.update({self.campaign_url_kwarg: self.campaign})
+        return context
+
 
 class CampaignQuerysetMixin(BelongsMixin):
 

@@ -1,7 +1,7 @@
-Django==3.2.20
+Django==3.2.24
 djangorestframework==3.14.0
 monotonic==1.6
-python-dateutil==2.8.1
+python-dateutil==2.8.2
 
 # testsite-only
 coverage==6.3.2

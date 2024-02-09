@@ -702,26 +702,27 @@ class SampleAnswersAPIView(SampleAnswersMixin, generics.ListCreateAPIView):
 
         .. code-block:: http
 
-            POST /api/supplier-1/sample/724bf9648af6420ba79c8a37f962e97e/\
-answers/construction HTTP/1.1
+            POST /api/supplier-1/sample/4c6675a5d5af46c796b8033a7731a86e/\
+answers/code-of-conduct HTTP/1.1
 
         .. code-block:: json
 
             {
-               "measured": "mostly-no",
-               "unit": "assessment"
+               "measured": "Yes"
             }
 
         responds
 
         .. code-block:: json
 
-            {
+            [
+              {
                 "created_at": "2020-09-28T00:00:00.000000Z",
                 "collected_by": "steve",
-                "measured": "mostly-no",
-                "unit": "assessment"
-            }
+                "measured": "Yes",
+                "unit": "yes-no"
+              }
+            ]
         """
         #pylint:disable=useless-super-delegation
         return super(SampleAnswersAPIView, self).post(request, *args, **kwargs)

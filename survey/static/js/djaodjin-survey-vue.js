@@ -407,6 +407,41 @@ Vue.component('compare-dashboard', {
     }
 });
 
+// Vue components to select accounts in compare queries
+// ----------------------------------------------------
+Vue.component('query-individual-account', {
+    mixins: [
+        itemMixin
+    ],
+    data: function() {
+        return {
+            account: null,
+            samples: null
+        }
+    },
+    methods: {
+        validate: function() {
+            var vm = this;
+        },
+        selectAccount: function(dataset, newAccount) {
+            var vm = this;
+            vm.account = newAccount;
+            vm.reqGet(vm._safeUrl(
+                this.$urls.api_version + '/' + vm.account.slug, 'sample'),
+            function (resp) {
+            });
+        }
+    },
+    computed: {
+        hasAccount: function() {
+            return this.account;
+        },
+        hasSamples: function() {
+            return this.samples != null && this.samples.length > 0;
+        }
+    }
+});
+
 
 var AccountTypeAhead = Vue.component('account-typeahead', {
     mixins: [
@@ -472,15 +507,13 @@ var AccountTypeAhead = Vue.component('account-typeahead', {
         },
         onHit: function onHit(newItem) {
             var vm = this;
+            vm.clear();
+            if( typeof newItem.printable_name !== 'undefined' ) {
+                vm.query = newItem.printable_name;
+            }
             vm.$emit('selectitem', vm.dataset, newItem);
-            /*XXX
-              if( typeof newItem.full_name !== 'undefined' ) {
-              vm.query = newItem.full_name;
-              } else {
-              vm.query = newItem;
-              }
-            */
-            vm.reset();
+            // XXX We are letting the parent decide to do reset or not
+            // vm.reset();
         }
     }
 });
