@@ -36,11 +36,10 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.10.0
+0.10.1
 
-  * converts between engineering units
-  * supports OpenAPI 3 schemas
-  * fixes multiple date/time accuracy
+  * enables override of bypass portfolios
+  * fixes create a filter that belongs to an account
 
 [previous release notes](changelog)
 

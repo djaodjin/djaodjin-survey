@@ -1081,20 +1081,19 @@ def convert_to_source_unit(value, factor, scale, formula):
     Convert value from a target unit to a source unit
     using `factor` and `scale`.
     """
-    result = value
-
+    #pylint:disable=too-many-return-statements
     # Temperatures use a little more complex formula than linear scaling.
     if formula == "1C + 273.15":                  # Celcius to Kelvin
         return value - 273.15
-    elif formula == "1K - 273.15":                # Kelvin to Celcius
+    if formula == "1K - 273.15":                  # Kelvin to Celcius
         return value + 273.15
-    elif formula == "(1F - 32) * 5/9 + 273.15":   # Farenheit to Kelvin
+    if formula == "(1F - 32) * 5/9 + 273.15":     # Farenheit to Kelvin
         return (value - 273.15) * 9/5 + 32
-    elif formula == "(1K - 273.15) * 9/5 + 32":   # Kelvin to Farenheit
+    if formula == "(1K - 273.15) * 9/5 + 32":     # Kelvin to Farenheit
         return (value - 32) * 5/9 + 273.15
-    elif formula == "(1°C * 9/5) + 32":           # Celcius to Farenheit
+    if formula == "(1°C * 9/5) + 32":             # Celcius to Farenheit
         return (value - 32) * 5/9
-    elif formula == "(1°F - 32) * 5/9":           # Farenheit to Celsius
+    if formula == "(1°F - 32) * 5/9":             # Farenheit to Celsius
         return (value * 9/5) + 32
 
     return value / (factor * scale)
@@ -1105,20 +1104,19 @@ def convert_to_target_unit(value, factor, scale, formula):
     Convert value from a source unit to a target unit
     using `factor` and `scale`.
     """
-    result = value
-
+    #pylint:disable=too-many-return-statements
     # Temperatures use a little more complex formula than linear scaling.
     if formula == "1C + 273.15":                  # Celcius to Kelvin
         return value + 273.15
-    elif formula == "1K - 273.15":                # Kelvin to Celcius
+    if formula == "1K - 273.15":                  # Kelvin to Celcius
         return value - 273.15
-    elif formula == "(1F - 32) * 5/9 + 273.15":   # Farenheit to Kelvin
+    if formula == "(1F - 32) * 5/9 + 273.15":     # Farenheit to Kelvin
         return (value - 32) * 5/9 + 273.15
-    elif formula == "(1K - 273.15) * 9/5 + 32":   # Kelvin to Farenheit
+    if formula == "(1K - 273.15) * 9/5 + 32":     # Kelvin to Farenheit
         return (value - 273.15) * 9/5 + 32
-    elif formula == "(1°C * 9/5) + 32":           # Celcius to Farenheit
+    if formula == "(1°C * 9/5) + 32":             # Celcius to Farenheit
         return (value * 9/5) + 32
-    elif formula == "(1°F - 32) * 5/9":           # Farenheit to Celsius
+    if formula == "(1°F - 32) * 5/9":             # Farenheit to Celsius
         return (value - 32) * 5/9
 
     return value * factor * scale

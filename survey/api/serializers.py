@@ -202,7 +202,6 @@ class ConvertUnitSerializer(UnitSerializer):
         request = self.context.get('request')
         view = self.context.get('view')
         if request and view:
-            source = request.query_params.get('eq', None)
             value = request.query_params.get('value', 1)
             try:
                 return convert_to_target_unit(

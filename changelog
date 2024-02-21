@@ -1,3 +1,10 @@
+0.10.1
+
+  * enables override of bypass portfolios
+  * fixes create a filter that belongs to an account
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 20 Feb 2024 16:40:00 -0700
+
 0.10.0
 
   * converts between engineering units
