@@ -1326,7 +1326,7 @@ class EditableFilterPagination(PageNumberPagination):
         ]))
 
 
-class EditableFilterObjectsAPIView(generics.ListCreateAPIView):
+class EditableFilterObjectsAPIView(AccountMixin, generics.ListCreateAPIView):
     """
     Base class to filter accounts and questions
     """
@@ -1336,7 +1336,13 @@ class EditableFilterObjectsAPIView(generics.ListCreateAPIView):
     lookup_url_kwarg = 'editable_filter'
 
     def get_queryset(self):
-        return self.get_serializer_class().Meta.model.objects.all()
+        if self.account:
+            queryset = self.get_serializer_class().Meta.model.objects.filter(
+                account=self.account)
+        else:
+            queryset = self.get_serializer_class().Meta.model.objects.all()
+        return queryset.order_by('title')
+
 
     def post(self, request, *args, **kwargs):
         """
@@ -1388,9 +1394,10 @@ class EditableFilterObjectsAPIView(generics.ListCreateAPIView):
                 "likely_metric": null
             }
         """
-        #pylint:disable=useless-super-delegation
-        return super(EditableFilterObjectsAPIView, self).post(
-            request, *args, **kwargs)
+        return self.create(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        serializer.save(account=self.account)
 
 
 class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
@@ -1457,9 +1464,7 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
                "results": []
             }
         """
-        #pylint:disable=useless-super-delegation
-        return super(AccountsFilterListAPIView, self).post(
-            request, *args, **kwargs)
+        return self.create(request, *args, **kwargs)
 
 
 class QuestionsFilterListAPIView(EditableFilterObjectsAPIView):

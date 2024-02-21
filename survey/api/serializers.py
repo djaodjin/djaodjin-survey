@@ -421,8 +421,7 @@ class EditableFilterSerializer(serializers.ModelSerializer):
         return getattr(obj, 'likely_metric', None)
 
     def create(self, validated_data):
-        editable_filter = EditableFilter(
-            title=validated_data['title'], extra=validated_data.get('extra'))
+        editable_filter = EditableFilter(**validated_data)
         with transaction.atomic():
             editable_filter.save()
             for predicate in validated_data.get('predicates', []):
