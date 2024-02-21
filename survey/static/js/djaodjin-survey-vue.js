@@ -416,19 +416,37 @@ Vue.component('query-individual-account', {
     data: function() {
         return {
             account: null,
-            samples: null
+            samples: [],
+            selectedSample: -1
         }
     },
     methods: {
         validate: function() {
             var vm = this;
+            vm.samples[vm.selectedSample].title = vm.account.printable_name + "- " + vm.samples[vm.selectedSample].title;
+            vm.$emit('updatedataset', vm.samples[vm.selectedSample]);
+            vm.account = null;
+            vm.samples = [];
+            vm.selectedSample = -1;
+            vm.$refs.account.reset();
         },
         selectAccount: function(dataset, newAccount) {
             var vm = this;
             vm.account = newAccount;
             vm.reqGet(vm._safeUrl(
-                this.$urls.api_version + '/' + vm.account.slug, 'sample'),
+                vm.$urls.api_version + '/' + vm.account.slug, 'sample'),
             function (resp) {
+                for( let idx = 0; idx < resp.results.length; ++idx ) {
+                    if( resp.results[idx].is_frozen ) {
+                        const title = resp.results[idx].created_at.toString() + (resp.results[idx].verified_status !== 'no-review' ? " - Verified" : "" );
+                        const url = vm._safeUrl(
+                            vm.$urls.api_version + '/' + vm.account.slug + '/sample/' + resp.results[idx].slug, 'content');
+                        vm.samples.push({
+                            title: title,
+                            url: url
+                        });
+                    }
+                }
             });
         }
     },
@@ -443,6 +461,120 @@ Vue.component('query-individual-account', {
 });
 
 
+Vue.component('query-group-accounts', {
+    mixins: [
+        itemListMixin
+    ],
+    data: function() {
+        return {
+            url: this.$urls.api_account_groups,
+            newItem: {title: ""},
+            selectedItem: -1,
+            addAccountEnabled: false,
+        }
+    },
+    methods: {
+        validate: function() {
+            var vm = this;
+            vm.$emit('updatedataset', {});
+            vm.$refs.account.reset();
+        },
+        addAccount: function(dataset, newAccount) {
+            var vm = this;
+            newAccount['full_name'] = newAccount.printable_name;
+            var group = vm.items.results[vm.selectedItem];
+            vm.reqPost(vm._safeUrl(vm.url, group.slug), newAccount,
+            function(resp) {
+                if(typeof group.accounts === 'undefined' ) {
+                    group.accounts = [];
+                }
+                group.accounts.push(resp);
+                vm.addAccountEnabled = false;
+                vm.$refs.account.reset();
+            });
+        },
+        addItem: function() {
+            var vm = this;
+            vm.reqPost(vm.url, vm.newItem, function(resp) {
+                const oldSelectedItem = vm.selectedItem;
+                vm.selectedItem = vm.items.results.length;
+                vm.items.results.push(resp);
+                vm.loadAccounts(oldSelectedItem, vm.selectedItem);
+            });
+        },
+        getAccounts: function(group) {
+            if( group && typeof group.accounts != 'undefined' ) {
+                return group.accounts;
+            }
+            return [];
+        },
+        loadAccounts: function() {
+            var vm = this;
+            if( vm.selectedItem >= 0 ) {
+                var group = vm.items.results[vm.selectedItem];
+                vm.reqGet(vm._safeUrl(vm.url, group.slug), function(resp) {
+                    vm.items.results[vm.selectedItem].accounts = resp.results;
+                    vm.$forceUpdate();
+                });
+            }
+        },
+        removeAccount: function(idx) {
+            var vm = this;
+            var group = vm.items.results[vm.selectedItem];
+            vm.reqDelete(vm._safeUrl(vm._safeUrl(vm.url, group.slug), idx));
+        },
+
+        accountsLoaded: function() {
+            const vm = this;
+            if( vm.selectedItem >= 0 ) {
+                return vm.items.results[vm.selectedItem].hasOwnProperty('accounts');
+            }
+            return false;
+        },
+        accountsEmpty: function() {
+            const vm = this;
+            if( vm.accountsLoaded() ) {
+                return vm.items.results[vm.selectedItem].accounts.length === 0;
+            }
+            return true;
+        },
+    },
+    mounted: function() {
+        this.get();
+    }
+});
+
+
+var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
+    mixins: [
+        itemMixin
+    ],
+    data: function() {
+        return {
+            affinityType: null,
+            params: {
+                start_at: null,
+                ends_at: null
+            }
+        }
+    },
+    methods: {
+        validate: function() {
+            var vm = this;
+            if( vm.affinityType == 'engaged' ) {
+            } else if( vm.affinityType == 'tracked' ) {
+            } else if( vm.affinityType == 'all' ) {
+            }
+            vm.$emit('updatedataset', {
+                title: "",
+                url: null
+            });
+        },
+    },
+});
+
+
+// Generic typeahead widgets
 var AccountTypeAhead = Vue.component('account-typeahead', {
     mixins: [
         typeAheadMixin

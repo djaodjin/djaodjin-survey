@@ -39,7 +39,7 @@ from .compat import gettext_lazy as _, is_authenticated
 from .models import (Campaign, EnumeratedQuestions, EditableFilter, Matrix,
     Sample)
 from .utils import (datetime_or_now, get_account_model, get_belongs_model,
-    get_question_model)
+    get_question_model, is_portfolios_bypass)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -88,10 +88,10 @@ class AccountMixin(object):
                         "the query") % {'verbose_name':
                         self.account_queryset.model._meta.verbose_name})
             else:
+                self._account = None
                 if (isinstance(get_account_model(), get_user_model()) and
                     is_authenticated(self.request)):
                     self._account = self.request.user
-                self._account = None
         return self._account
 
     def get_context_data(self, **kwargs):
@@ -347,7 +347,7 @@ class SampleMixin(QuestionMixin, AccountMixin):
             # We have an id for the sample, let's get it and check
             # the user has rights to it.
             try:
-                if settings.BYPASS_SAMPLE_AVAILABLE:
+                if is_portfolios_bypass(self.account):
                     queryset = Sample.objects.filter(slug=sample_slug)
                 else:
                     queryset = Sample.objects.filter(

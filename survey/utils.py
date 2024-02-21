@@ -252,6 +252,19 @@ def get_user_detail_serializer():
     """
     return import_string(settings.USER_DETAIL_SERIALIZER)
 
+def is_portfolios_bypass(account):
+    """
+    Returns `True` if the account can access samples regardless
+    of portfolio rules.
+
+    This function is used for example as an escape mechanism for platform
+    administrator to help with technical support.
+    """
+    if (isinstance(settings.BYPASS_SAMPLE_AVAILABLE, str) and
+        '.' in settings.BYPASS_SAMPLE_AVAILABLE):
+        return import_string(settings.BYPASS_SAMPLE_AVAILABLE)(account)
+    return bool(settings.BYPASS_SAMPLE_AVAILABLE)
+
 
 def validate_redirect(request):
     """
