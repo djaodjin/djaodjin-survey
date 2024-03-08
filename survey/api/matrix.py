@@ -25,18 +25,18 @@
 import logging, re
 from collections import OrderedDict
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.db.models import F, Max, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, response as http, status
 from rest_framework.mixins import CreateModelMixin
-from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.pagination import PageNumberPagination
 
 from .. import settings
 from ..compat import reverse, six
 from ..docs import extend_schema
+from ..filters import OrderingFilter, SearchFilter
 from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
     MatrixMixin, QuestionMixin, SampleMixin)
 from ..models import (Answer, Matrix, EditableFilter,
@@ -44,7 +44,7 @@ from ..models import (Answer, Matrix, EditableFilter,
 from ..pagination import MetricsPagination
 from ..utils import (datetime_or_now, get_accessible_accounts,
     get_benchmarks_enumerated, get_account_model, get_question_model,
-    get_account_serializer, get_question_serializer)
+    get_account_serializer, get_question_serializer, handle_uniq_error)
 from .serializers import (AccountsFilterAddSerializer,
     CompareQuestionSerializer, EditableFilterSerializer, MatrixSerializer,
     SampleBenchmarksSerializer)
@@ -1335,13 +1335,11 @@ class EditableFilterObjectsAPIView(AccountMixin, generics.ListCreateAPIView):
     lookup_field = 'slug'
     lookup_url_kwarg = 'editable_filter'
 
+    filter_backends = (SearchFilter, OrderingFilter)
+    ordering = ('title',)
+
     def get_queryset(self):
-        if self.account:
-            queryset = self.get_serializer_class().Meta.model.objects.filter(
-                account=self.account)
-        else:
-            queryset = self.get_serializer_class().Meta.model.objects.all()
-        return queryset.order_by('title')
+        return self.get_serializer_class().Meta.model.objects.all()
 
 
     def post(self, request, *args, **kwargs):
@@ -1397,7 +1395,10 @@ class EditableFilterObjectsAPIView(AccountMixin, generics.ListCreateAPIView):
         return self.create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        serializer.save(account=self.account)
+        try:
+            serializer.save(account=self.account)
+        except IntegrityError as err:
+            handle_uniq_error(err)
 
 
 class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
@@ -1410,7 +1411,7 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
 
     .. code-block:: http
 
-        GET /api/supplier-1/filters/accounts HTTP/1.1
+        GET /api/energy-utility/filters/accounts HTTP/1.1
 
     responds
 
@@ -1432,6 +1433,12 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
         }
     """
     serializer_class = EditableFilterSerializer
+
+    def get_queryset(self):
+        queryset = super(AccountsFilterListAPIView, self).get_queryset()
+        if self.account:
+            queryset = queryset.filter(account=self.account)
+        return queryset
 
     def post(self, request, *args, **kwargs):
         """
@@ -1496,6 +1503,7 @@ class QuestionsFilterListAPIView(EditableFilterObjectsAPIView):
         }
     """
     serializer_class = get_question_serializer()
+    ordering = ('path',)
 
     def post(self, request, *args, **kwargs):
         """

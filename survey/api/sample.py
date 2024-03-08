@@ -56,6 +56,7 @@ def update_or_create_answer(datapoint, question, sample, created_at,
     created = False
     measured = datapoint.get('measured', None)
     unit = datapoint.get('unit', question.default_unit)
+    overflow_unit = None
     try:
         with transaction.atomic():
             if unit.system in Unit.NUMERICAL_SYSTEMS:
@@ -83,7 +84,12 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                     LOGGER.warning("\"%s\": %s for '%s'",
                         measured.replace('"', '\\"'), str(err).strip(),
                         unit.title)
-                    unit = Unit.objects.get(slug='freetext')
+                    if not overflow_unit:
+                        # Pick the first freetext `Unit` we find to store
+                        # the overflow as a textual representation.
+                        overflow_unit = Unit.objects.filter(
+                            system=Unit.SYSTEM_FREETEXT).order_by('pk')
+                    unit = overflow_unit
 
             if unit.system not in Unit.NUMERICAL_SYSTEMS:
                 if unit.system == Unit.SYSTEM_ENUMERATED:

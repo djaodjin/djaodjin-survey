@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,7 @@ on importing Django models.
 See helpers.py for functions useful throughout the whole project which do
 not require to import `django` modules.
 """
-import datetime, logging
+import datetime, logging, re
 from importlib import import_module
 
 from django.apps import apps as django_apps
@@ -38,9 +38,10 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db.models import Count, F, FilteredRelation, Q
 from django.http.request import split_domain_port, validate_host
 from django.utils.timezone import utc
+from rest_framework.exceptions import ValidationError
 
 from . import settings
-from .compat import import_string, urlparse, urlunparse
+from .compat import gettext_lazy as _, import_string, urlparse, urlunparse
 from .models import Answer, Unit
 #pylint:disable=unused-import
 from .queries import datetime_or_now, get_account_model, get_question_model
@@ -74,10 +75,11 @@ def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
             start_at=start_at, ends_at=ends_at)
 
     if queryset is None:
+        account_model = get_account_model()
         if campaign:
             queryset = account_model.objects.filter(
-                models.Q(portfolios__campaign=campaign) |
-                models.Q(portfolios__campaign__isnull=True))
+                Q(portfolios__campaign=campaign) |
+                Q(portfolios__campaign__isnull=True))
         else:
             queryset = account_model.objects.all()
         filter_params = {}
@@ -255,6 +257,51 @@ def get_user_detail_serializer():
     Returns the user serializer model that is active in this project.
     """
     return import_string(settings.USER_DETAIL_SERIALIZER)
+
+
+def handle_uniq_error(err, renames=None):
+    """
+    Will raise a ``ValidationError`` with the appropriate error message.
+    """
+    field_names = None
+    err_msg = str(err).splitlines().pop()
+    # PostgreSQL unique constraint.
+    look = re.match(
+        r'DETAIL:\s+Key \(([a-z_]+(, [a-z_]+)*)\)=\(.*\) already exists\.',
+        err_msg)
+    if look:
+        # XXX Do we need to include '.' in pattern as done later on?
+        field_names = look.group(1).split(',')
+    else:
+        look = re.match(
+          r'DETAIL:\s+Key \(lower\(([a-z_]+)::text\)\)=\(.*\) already exists\.',
+            err_msg)
+        if look:
+            field_names = [look.group(1)]
+        else:
+            # SQLite unique constraint.
+            look = re.match(r'UNIQUE constraint failed: '\
+                r'(?P<cols>[a-z_]+\.[a-z_]+(, [a-z_]+\.[a-z_]+)*)', err_msg)
+            if not look:
+                # On CentOS 7, installed sqlite 3.7.17
+                # returns differently-formatted error message.
+                look = re.match(
+                    r'column(s)? (?P<cols>[a-z_]+(\.[a-z_]+)?'\
+                    r'(, [a-z_]+(\.[a-z_]+)?)*) (is|are) not unique', err_msg)
+            if look:
+                field_names = [field_name.split('.')[-1]
+                    for field_name in look.group('cols').split(',')]
+    if field_names:
+        renamed_fields = []
+        for field_name in field_names:
+            if renames and field_name in renames:
+                field_name = renames[field_name]
+            renamed_fields += [field_name]
+        # XXX retrieves `saas_coupon.code` duplicates
+        field_name = renamed_fields[-1]
+        raise ValidationError({field_name:
+            _("This %(field)s is already taken.") % {'field': field_name}})
+    raise err
 
 
 def is_portfolios_bypass(account, request=None):

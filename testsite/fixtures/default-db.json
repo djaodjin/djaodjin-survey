@@ -170,7 +170,7 @@
   "model" : "survey.choice", "pk" : 2
 },
 { "fields": {
-    "slug": "comment",
+    "slug": "freetext",
     "title": "Comments/notes",
     "system": 4
   },
@@ -328,7 +328,7 @@
     "path": "/improvement-plan",
     "ui_hint" : "textarea",
     "content": 5,
-    "default_unit": 4
+    "default_unit": 201
   },
   "model" : "survey.question", "pk" : 5
 },
