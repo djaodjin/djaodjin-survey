@@ -74,12 +74,16 @@ def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
             start_at=start_at, ends_at=ends_at)
 
     if queryset is None:
+        if campaign:
+            queryset = account_model.objects.filter(
+                models.Q(portfolios__campaign=campaign) |
+                models.Q(portfolios__campaign__isnull=True))
+        else:
+            queryset = account_model.objects.all()
         filter_params = {}
         if start_at:
             filter_params.update({
                 'portfolio_double_optin_accounts__created_at__gte': start_at})
-        if campaign:
-            filter_params.update({'portfolios__campaign': campaign})
         # Implementation note: requires Django>=2 because of `FilteredRelation`
         # Adding the correct condition on the LEFT OUTER JOIN is quite
         # a challenge with Django. The SQL we need is as follow:
@@ -92,7 +96,7 @@ def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
         #   ON saas_organization.id = survey_portfoliodoubleoptin.account_id
         #     AND survey_portfoliodoubleoptin.grantee_id IN (${grantees})
         #   WHERE survey_portfolio.grantee_id IN (${grantees});
-        queryset = get_account_model().objects.filter(
+        queryset = queryset.filter(
             portfolios__grantee__in=grantees,
             **filter_params).annotate(
             granted=FilteredRelation(
@@ -252,7 +256,8 @@ def get_user_detail_serializer():
     """
     return import_string(settings.USER_DETAIL_SERIALIZER)
 
-def is_portfolios_bypass(account):
+
+def is_portfolios_bypass(account, request=None):
     """
     Returns `True` if the account can access samples regardless
     of portfolio rules.
@@ -262,7 +267,7 @@ def is_portfolios_bypass(account):
     """
     if (isinstance(settings.BYPASS_SAMPLE_AVAILABLE, str) and
         '.' in settings.BYPASS_SAMPLE_AVAILABLE):
-        return import_string(settings.BYPASS_SAMPLE_AVAILABLE)(account)
+        return import_string(settings.BYPASS_SAMPLE_AVAILABLE)(account, request)
     return bool(settings.BYPASS_SAMPLE_AVAILABLE)
 
 

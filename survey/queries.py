@@ -373,7 +373,7 @@ INNER JOIN survey_sample
   ON answers.sample_id = survey_sample.id
 INNER JOIN %(accounts_table)s
   ON survey_sample.account_id = %(accounts_table)s.id
-ORDER BY questions.id, %(accounts_table)s.full_name""" % {
+ORDER BY questions.id, answers.unit_id, %(accounts_table)s.full_name""" % {
       'convert_to_text': ("" if is_sqlite3() else "::text"),
       'campaign_questions_filters': campaign_questions_filters,
       'additional_filters': additional_filters,

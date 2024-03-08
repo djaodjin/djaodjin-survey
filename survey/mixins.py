@@ -347,7 +347,7 @@ class SampleMixin(QuestionMixin, AccountMixin):
             # We have an id for the sample, let's get it and check
             # the user has rights to it.
             try:
-                if is_portfolios_bypass(self.account):
+                if is_portfolios_bypass(self.account, request=self.request):
                     queryset = Sample.objects.filter(slug=sample_slug)
                 else:
                     queryset = Sample.objects.filter(

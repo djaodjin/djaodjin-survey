@@ -111,7 +111,7 @@ class Unit(models.Model):
     +----+------------+------------------------------------------------------+
     | SYSTEM_RANK     | Natural positive integer (ex: score, percentage)     |
     +----+------------+------------------------------------------------------+
-    |SYSTEM_ENUMERATED| Finite set of named values                           |
+    |SYSTEM_ENUMERATED| Finite set of named values (ex: Yes, No, N/A)        |
     +----+------------+------------------------------------------------------+
     | SYSTEM_FREETEXT | UTF-8 text string                                    |
     +----+------------+------------------------------------------------------+
