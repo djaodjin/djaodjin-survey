@@ -1,12 +1,12 @@
 {
     "name": "djaodjin-survey-ui",
-    "version": "0.9.4-dev",
+    "version": "0.10.2-dev",
     "dependencies": {
         "bootstrap": "4.3.1",
         "d3": "3.5.5",
         "jquery": "~3.6.0",
-        "moment": "2.29.1",
-        "moment-timezone": "0.5.33",
+        "moment": "~2.29.4",
+        "moment-timezone": "0.5.35",
         "nvd3": "v1.8.1",
         "vue": "~2.7.8",
         "vue-resource": "~1.5.3"

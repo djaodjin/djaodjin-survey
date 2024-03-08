@@ -70,9 +70,6 @@ clean-dbs:
 	[ ! -f $(DB_NAME) ] || rm $(DB_NAME)
 
 
-vendor-assets-prerequisites: $(srcDir)/testsite/package.json
-
-
 doc:
 	$(installDirs) build/docs
 	cd $(srcDir) && sphinx-build -b html ./docs $(PWD)/build/docs

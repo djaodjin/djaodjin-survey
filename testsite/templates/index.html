@@ -2,4 +2,12 @@
 
 {% block content %}
 <a href="{% url 'survey_sample_new' 'sustainability' %}">Take the Example Campaign!</a>
+<div>
+  <form action="{% url 'login' %}" method="post">
+    <input name="csrfmiddlewaretoken" type="hidden" value="{{csrf_token}}"/>
+    <input name="username" type="hidden" value="donny"/>
+    <input name="password" type="hidden" value="yoyo"/>
+    <button type="submit">Login as an editor</button>
+  </form>
+</div>
 {% endblock %}
