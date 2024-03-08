@@ -1,3 +1,10 @@
+0.10.2
+
+  * passes request to `is_portfolios_bypass`
+  * adds accounts to accessibles with Portfolio.campaign is None (fix)
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri,  7 Mar 2024 12:25:00 -0700
+
 0.10.1
 
   * enables override of bypass portfolios

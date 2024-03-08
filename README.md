@@ -2,11 +2,11 @@ DjaoDjin survey
 ================
 
 [![Documentation Status](https://readthedocs.org/projects/djaodjin-survey/badge/?version=latest)](https://djaodjin-survey.readthedocs.io/en/latest/?badge=latest)
-
 [![PyPI version](https://badge.fury.io/py/djaodjin-survey.svg)](https://badge.fury.io/py/djaodjin-survey)
 
 
-The Django app implements a simple survey app.
+This Django app implements a survey app for qualitative and quantitative
+data points.
 
 Full documentation for the project is available at
 [Read-the-Docs](http://djaodjin-survey.readthedocs.org/)
@@ -23,10 +23,14 @@ The source code is bundled with a sample django project.
     $ python manage.py migrate --run-syncdb --noinput
     $ python manage.py loaddata testsite/fixtures/default-db.json
 
+    # Install the browser client dependencies (i.e. through `npm`)
+    $ make vendor-assets-prerequisites
+
+    # Start the Web server
     $ python manage.py runserver
 
     # Visit url at http://localhost:8000/
-    # You can use username: donny, password: yoyo to test the manager options.
+
 
 Releases
 ========
@@ -36,10 +40,10 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.10.1
+0.10.2
 
-  * enables override of bypass portfolios
-  * fixes create a filter that belongs to an account
+  * passes request to `is_portfolios_bypass`
+  * adds accounts to accessibles with Portfolio.campaign is None (fix)
 
 [previous release notes](changelog)
 
