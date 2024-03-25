@@ -163,11 +163,18 @@ def get_benchmarks_enumerated(samples, questions, questions_by_key=None):
         measured = row['unit__enums__text']
         value = questions_by_key.get(question_pk)
         total = value.get('nb_respondents', None)
+
+        counts = value.get('counts', {})
+        counts.update({measured: count})
+        if 'counts' not in value:
+            value.update({'counts': counts})
+
         rate = value.get('rate', {})
         rate.update({
             measured: (int(count * 100 // total) if total else 0)})
         if 'rate' not in value:
             value.update({'rate': rate})
+
         if question_pk not in questions_by_key:
             questions_by_key.update({question_pk: value})
 

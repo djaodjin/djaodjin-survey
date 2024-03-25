@@ -29,6 +29,7 @@ from django.db import transaction, IntegrityError
 from django.db.models import F, Max, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.template.defaultfilters import slugify
 from rest_framework import generics, response as http, status
 from rest_framework.mixins import CreateModelMixin
 from rest_framework.pagination import PageNumberPagination
@@ -123,7 +124,8 @@ class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
                     'title': title,
                     'values': []
                 }
-                for key, val in six.iteritems(question.get('rate', {})):
+                dkey = 'rate' if self.unit == 'percentage' else 'counts'
+                for key, val in six.iteritems(question.get(dkey, {})):
                     account_benchmark['values'] += [(key, int(val))]
                 question['benchmarks'] += [account_benchmark]
         else:
@@ -1042,7 +1044,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
 
         .. code-block:: http
 
-             PUT /api/energy-utility/filters/accounts/suppliers HTTP/1.1
+             POST /api/energy-utility/filters/accounts/suppliers HTTP/1.1
 
         .. code-block:: json
 
@@ -1068,6 +1070,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
 
         # Create the `Account` (if necessary) and add it to the filter.
         with transaction.atomic():
+            full_name = serializer.validated_data.get('full_name')
             account_slug = serializer.validated_data.get('slug')
             extra = serializer.validated_data.get('extra')
             if account_slug:
@@ -1076,9 +1079,14 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
                 filter_args = {account_lookup_field: account_slug}
                 account = get_object_or_404(account_queryset, **filter_args)
             else:
-                account = get_account_model().objects.create(
-                    full_name=serializer.validated_data.get('full_name'),
-                    extra=extra)
+                try:
+                    # We rely on the account model to create a unique slug
+                    # on `save()`.
+                    account = get_account_model().objects.create(
+                        # XXX Candidate slug with account prefix...
+                        full_name=full_name, extra=extra)
+                except IntegrityError as err:
+                    handle_uniq_error(err)
             last_rank = EditableFilterEnumeratedAccounts.objects.filter(
                 editable_filter=self.editable_filter).aggregate(
                 Max('rank')).get('rank__max')

@@ -1,6 +1,6 @@
 {
     "name": "djaodjin-survey-ui",
-    "version": "0.10.2-dev",
+    "version": "0.10.3-dev",
     "dependencies": {
         "bootstrap": "4.3.1",
         "d3": "3.5.5",
