@@ -57,28 +57,29 @@ def get_extra_field_class():
     return extra_class
 
 
-class SlugTitleMixin(object):
+class SlugifyFieldMixin(object):
     """
     Generate a unique slug from title on ``save()`` when none is specified.
     """
     slug_field = 'slug'
+    slugify_field = 'title'
 
     def save(self, force_insert=False, force_update=False,
              using=None, update_fields=None):
         if getattr(self, self.slug_field):
             # serializer will set created slug to '' instead of None.
-            return super(SlugTitleMixin, self).save(
+            return super(SlugifyFieldMixin, self).save(
                 force_insert=force_insert, force_update=force_update,
                 using=using, update_fields=update_fields)
         max_length = self._meta.get_field(self.slug_field).max_length
-        slug_base = slugify(self.title)
+        slug_base = getattr(self, self.slugify_field)
         if len(slug_base) > max_length:
             slug_base = slug_base[:max_length]
         setattr(self, self.slug_field, slug_base)
         for _ in range(1, 10):
             try:
                 with transaction.atomic():
-                    return super(SlugTitleMixin, self).save(
+                    return super(SlugifyFieldMixin, self).save(
                         force_insert=force_insert, force_update=force_update,
                         using=using, update_fields=update_fields)
             except IntegrityError as err:
@@ -92,7 +93,8 @@ class SlugTitleMixin(object):
                 else:
                     setattr(self, self.slug_field, slug_base + suffix)
         raise ValidationError({'detail':
-            "Unable to create a unique URL slug from title '%s'" % self.title})
+            "Unable to create a unique URL slug from %s '%s'" % (
+                self.slugify_field, slugified_value)})
 
 
 @python_2_unicode_compatible
@@ -254,7 +256,7 @@ class Content(models.Model):
 
 
 @python_2_unicode_compatible
-class AbstractQuestion(SlugTitleMixin, models.Model):
+class AbstractQuestion(SlugifyFieldMixin, models.Model):
 
     slug_field = 'path'
 
@@ -352,7 +354,7 @@ class Question(AbstractQuestion):
 
 
 @python_2_unicode_compatible
-class Campaign(SlugTitleMixin, models.Model):
+class Campaign(SlugifyFieldMixin, models.Model):
 
     slug = models.SlugField(unique=True,
         help_text=_("Unique identifier that can be used in a URL"))
@@ -685,12 +687,11 @@ class AnswerCollected(models.Model):
 
 
 @python_2_unicode_compatible
-class EditableFilter(SlugTitleMixin, models.Model):
+class EditableFilter(SlugifyFieldMixin, models.Model):
     """
     A model type and list of predicates to create a subset of the
     of the rows of a model type
     """
-
     slug = models.SlugField(unique=True,
         help_text="Unique identifier for the sample. It can be used in a URL.")
     title = models.CharField(max_length=255,
@@ -764,7 +765,7 @@ class EditableFilterEnumeratedAccounts(models.Model):
 
 
 @python_2_unicode_compatible
-class Matrix(SlugTitleMixin, models.Model):
+class Matrix(SlugifyFieldMixin, models.Model):
     """
     Represent a set of cohorts against a metric.
     """
