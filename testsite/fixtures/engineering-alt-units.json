@@ -2500,7 +2500,7 @@
 { "fields": {
     "source": 127,
     "target": 126,
-    "content": "",
+    "content": "* 0.293071 * 0.001",
     "factor": 0.293071,
     "scale": 1e-3
   },

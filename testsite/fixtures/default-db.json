@@ -228,7 +228,7 @@
 },
 {
   "fields" : {
-      "path": "/code-of-conduct",
+      "path": "/sustainability/esg-strategy-heading/governance-policies/employee-code-of-conduct",
       "ui_hint" : "radio",
       "content": 1,
       "default_unit": 200
@@ -300,7 +300,7 @@
 },
 {
   "fields" : {
-    "path": "/sustainability/data-measured/ghg-emissions-measured/ghg-emissions-totals/ghg-emissions-scope1",
+    "path": "/sustainability/environmental-reporting/ghg-emissions-reporting/ghg-emissions-scope1-measured/ghg-emissions-scope1",
     "ui_hint" : "number",
     "content": 4,
     "default_unit": 36
@@ -325,7 +325,7 @@
 },
 {
   "fields" : {
-    "path": "/improvement-plan",
+    "path": "/sustainability/environmental-reporting/ghg-emissions-reporting/ghg-emissions-scope1-target/ghg-emissions-scope1-target-comments",
     "ui_hint" : "textarea",
     "content": 5,
     "default_unit": 201
@@ -552,7 +552,7 @@
     "slug": "ghg-emissions",
     "title": "GHG Emissions",
     "account": 6,
-    "extra": "{\"path\":\"/sustainability/data-measured/ghg-emissions-measured/ghg-emissions-totals/ghg-emissions-scope1\"}"
+    "extra": "{\"path\":\"/sustainability/environmental-reporting/ghg-emissions-reporting/ghg-emissions-scope1-measured/ghg-emissions-scope1\"}"
   },
   "model": "survey.editablefilter", "pk": 15
 },
