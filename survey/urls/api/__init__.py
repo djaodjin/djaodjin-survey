@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,5 +31,6 @@ urlpatterns = [
     path('', include('survey.urls.api.filters')),
     path('', include('survey.urls.api.sample')),
     path('', include('survey.urls.api.portfolios')),
+    path('', include('survey.urls.api.benchmarks')),
     path('<slug:campaign>/', include('survey.urls.api.matrix')),
 ]

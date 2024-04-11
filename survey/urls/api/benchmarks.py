@@ -24,19 +24,25 @@
 
 from ...api.matrix import (BenchmarkAPIView, BenchmarkIndexAPIView,
     AccessiblesBenchmarkAPIView, AccessiblesBenchmarkIndexAPIView,
-    EngagedBenchmarkAPIView, EngagedBenchmarkIndexAPIView,
-    CompareAPIView, CompareIndexAPIView,
-    MatrixCreateAPIView, MatrixDetailAPIView)
+    EngagedBenchmarkAPIView, EngagedBenchmarkIndexAPIView)
 from ...compat import path
 
 
 urlpatterns = [
-    path('compare/<path:path>',
-        CompareAPIView.as_view(), name='survey_api_compare_samples'),
-    path('compare',
-        CompareIndexAPIView.as_view(), name='survey_api_compare_samples_index'),
-    path('matrix/<path:path>',
-        MatrixDetailAPIView.as_view(), name='matrix_api'),
-    path('matrix',
-        MatrixCreateAPIView.as_view(), name='matrix_api_base'),
+    path('benchmarks/engaged/<path:path>',
+        EngagedBenchmarkAPIView.as_view(),
+        name='survey_api_benchmarks_engaged'),
+    path('benchmarks/engaged',
+        EngagedBenchmarkIndexAPIView.as_view(),
+        name='survey_api_benchmarks_engaged_index'),
+    path('benchmarks/accessibles/<path:path>',
+        AccessiblesBenchmarkAPIView.as_view(),
+        name='survey_api_benchmarks_accessibles'),
+    path('benchmarks/accessibles',
+        AccessiblesBenchmarkIndexAPIView.as_view(),
+        name='survey_api_benchmarks_accessibles_index'),
+    path('benchmarks/<path:path>',
+        BenchmarkAPIView.as_view(), name='survey_api_benchmarks'),
+    path('benchmarks',
+        BenchmarkIndexAPIView.as_view(), name='survey_api_benchmarks_index'),
 ]

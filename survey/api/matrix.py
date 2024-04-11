@@ -40,17 +40,18 @@ from ..docs import extend_schema
 from ..filters import OrderingFilter, SearchFilter
 from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
     MatrixMixin, QuestionMixin, SampleMixin)
-from ..models import (Answer, Matrix, EditableFilter,
+from ..models import (Answer, Choice, Matrix, EditableFilter,
     EditableFilterEnumeratedAccounts, Sample, Unit, UnitEquivalences)
 from ..pagination import MetricsPagination
 from ..utils import (datetime_or_now, get_accessible_accounts,
     get_benchmarks_enumerated, get_account_model, get_question_model,
     get_account_serializer, get_question_serializer, handle_uniq_error)
-from .serializers import (AccountsFilterAddSerializer,
-    CompareQuestionSerializer, EditableFilterSerializer, MatrixSerializer,
-    SampleBenchmarksSerializer)
+from .serializers import (AccountsByAnswerPredicateSerializer,
+    AccountsFilterAddSerializer, CompareQuestionSerializer,
+    EditableFilterSerializer, MatrixSerializer, SampleBenchmarksSerializer)
 
 LOGGER = logging.getLogger(__name__)
+
 
 class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
                      AccountMixin):
@@ -155,7 +156,7 @@ class BenchmarkAPIView(BenchmarkMixin, generics.ListAPIView):
 
     .. code-block:: http
 
-        GET /api/energy-utility/reporting/sustainability/benchmarks\
+        GET /api/energy-utility/benchmarks\
 /sustainability HTTP/1.1
 
     responds
@@ -190,7 +191,95 @@ class BenchmarkIndexAPIView(BenchmarkAPIView):
 
     .. code-block:: http
 
-        GET /api/energy-utility/reporting/sustainability/benchmarks HTTP/1.1
+        GET /api/energy-utility/benchmarks HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+
+
+class AccessiblesBenchmarkAPIView(BenchmarkAPIView):
+    """
+    Aggregated benchmark for accessible profiles
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/benchmarks/accessibles/sustainability HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+
+
+class AccessiblesBenchmarkIndexAPIView(AccessiblesBenchmarkAPIView):
+    """
+    Aggregated benchmark for accessible profiles
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/benchmarks/accessibles HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+
+
+class EngagedBenchmarkAPIView(BenchmarkAPIView):
+    """
+    Aggregated benchmark for engaged profiles
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/benchmarks/engaged/sustainability HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+
+
+class EngagedBenchmarkIndexAPIView(EngagedBenchmarkAPIView):
+    """
+    Aggregated benchmark for engaged profiles
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/benchmarks/engaged HTTP/1.1
 
     responds
 
@@ -931,6 +1020,10 @@ class EditableFilterDetailAPIView(AccountMixin,
         editable_filter.results = get_account_model().objects.filter(
             filters__editable_filter=self.editable_filter).annotate(
                 rank=Max('filters__rank')).order_by('rank')
+        editable_filter.accounts_by = \
+            EditableFilterEnumeratedAccounts.objects.filter(
+                editable_filter=self.editable_filter).exclude(
+                question__isnull=True).order_by('rank')
         return editable_filter
 
 
@@ -1068,11 +1161,18 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        full_name = serializer.validated_data.get('full_name')
+        account_slug = serializer.validated_data.get('slug')
+        if full_name or account_slug:
+            return self.create_nominative_predicate(serializer.validated_data)
+        return self.create_by_answers_predicate(serializer.validated_data)
+
+    def create_nominative_predicate(self, validated_data):
         # Create the `Account` (if necessary) and add it to the filter.
+        full_name = validated_data.get('full_name')
+        account_slug = validated_data.get('slug')
         with transaction.atomic():
-            full_name = serializer.validated_data.get('full_name')
-            account_slug = serializer.validated_data.get('slug')
-            extra = serializer.validated_data.get('extra')
+            extra = validated_data.get('extra')
             if account_slug:
                 account_queryset = get_account_model().objects.all()
                 account_lookup_field = settings.ACCOUNT_LOOKUP_FIELD
@@ -1102,6 +1202,41 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
         headers = self.get_success_headers(serializer.data)
         return http.Response(account_serializer.to_representation(account),
             status=status.HTTP_201_CREATED, headers=headers)
+
+
+    def create_by_answers_predicate(self, validated_data):
+        question = get_object_or_404(
+            get_question_model(), path=validated_data.get('path'))
+        measured = validated_data.get('measured')
+        with transaction.atomic():
+            last_rank = EditableFilterEnumeratedAccounts.objects.filter(
+                editable_filter=self.editable_filter).aggregate(
+                Max('rank')).get('rank__max')
+            if not last_rank:
+                last_rank = 0
+
+            unit = question.default_unit
+            if unit.system == Unit.SYSTEM_ENUMERATED:
+                try:
+                    measured = Choice.objects.get(question__isnull=True,
+                        unit=unit, text=measured).pk
+                except Choice.DoesNotExist:
+                    choices = Choice.objects.filter(question__isnull=True,
+                        unit=unit)
+                    raise ValidationError("'%s' is not a valid choice."\
+                        " Expected one of %s." % (measured,
+                        [choice.get('text', "")
+                         for choice in six.itervalues(choices)]))
+
+            enum_account = EditableFilterEnumeratedAccounts.objects.create(
+                question=question,
+                measured=measured,
+                editable_filter=self.editable_filter,
+                rank=last_rank + 1)
+
+        serializer = AccountsByAnswerPredicateSerializer()
+        return http.Response(seriallizer.to_representation(enum_account),
+            status=status.HTTP_201_CREATED)
 
 
 class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -1220,98 +1355,6 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
         """
         #pylint:disable=useless-parent-delegation
         return super(AccountsFilterEnumeratedAPIView, self).delete(
-            request, *args, **kwargs)
-
-
-class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
-    """
-    Retrieves a questions fitler
-
-    **Tags**: reporting
-
-    **Examples**
-
-    .. code-block:: http
-
-         GET /api/energy-utility/filters/questions/governance HTTP/1.1
-
-    responds
-
-    .. code-block:: json
-
-        {
-            "slug": "governance",
-            "title": "Governance questions",
-            "predicates": [{
-                "rank": 1,
-                "operator": "contains",
-                "operand": "Energy",
-                "field": "extra",
-                "selector": "keepmatching"
-            }]
-        }
-    """
-
-    def put(self, request, *args, **kwargs):
-        """
-        Updates a questions fitler
-
-        **Tags**: reporting
-
-        **Examples**
-
-        .. code-block:: http
-
-             PUT /api/energy-utility/filters/questions/governance HTTP/1.1
-
-        .. code-block:: json
-
-            {
-                "slug": "governance",
-                "title": "Governance questions",
-                "predicates": [{
-                    "rank": 1,
-                    "operator": "contains",
-                    "operand": "Energy",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }]
-            }
-
-        responds
-
-        .. code-block:: json
-
-            {
-                "slug": "governance",
-                "title": "Governance questions",
-                "predicates": [{
-                    "rank": 1,
-                    "operator": "contains",
-                    "operand": "Energy",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }]
-            }
-        """
-        #pylint:disable=useless-super-delegation
-        return super(QuestionsFilterDetailAPIView, self).put(
-            request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        """
-        Deletes a questions fitler
-
-        **Tags**: reporting
-
-        **Examples**
-
-        .. code-block:: http
-
-             DELETE /api/energy-utility/filters/questions/governance HTTP/1.1
-        """
-        #pylint:disable=useless-super-delegation
-        return super(QuestionsFilterDetailAPIView, self).delete(
             request, *args, **kwargs)
 
 
@@ -1482,6 +1525,8 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
         return self.create(request, *args, **kwargs)
 
 
+# XXX Question fitlers currently have a shaky definition and should not be used.
+
 class QuestionsFilterListAPIView(EditableFilterObjectsAPIView):
     """
     Lists questions filters
@@ -1545,4 +1590,96 @@ class QuestionsFilterListAPIView(EditableFilterObjectsAPIView):
         """
         #pylint:disable=useless-super-delegation
         return super(QuestionsFilterListAPIView, self).post(
+            request, *args, **kwargs)
+
+
+class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
+    """
+    Retrieves a questions fitler
+
+    **Tags**: reporting
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/energy-utility/filters/questions/governance HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "slug": "governance",
+            "title": "Governance questions",
+            "predicates": [{
+                "rank": 1,
+                "operator": "contains",
+                "operand": "Energy",
+                "field": "extra",
+                "selector": "keepmatching"
+            }]
+        }
+    """
+
+    def put(self, request, *args, **kwargs):
+        """
+        Updates a questions fitler
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             PUT /api/energy-utility/filters/questions/governance HTTP/1.1
+
+        .. code-block:: json
+
+            {
+                "slug": "governance",
+                "title": "Governance questions",
+                "predicates": [{
+                    "rank": 1,
+                    "operator": "contains",
+                    "operand": "Energy",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }]
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "slug": "governance",
+                "title": "Governance questions",
+                "predicates": [{
+                    "rank": 1,
+                    "operator": "contains",
+                    "operand": "Energy",
+                    "field": "extra",
+                    "selector": "keepmatching"
+                }]
+            }
+        """
+        #pylint:disable=useless-super-delegation
+        return super(QuestionsFilterDetailAPIView, self).put(
+            request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Deletes a questions fitler
+
+        **Tags**: reporting
+
+        **Examples**
+
+        .. code-block:: http
+
+             DELETE /api/energy-utility/filters/questions/governance HTTP/1.1
+        """
+        #pylint:disable=useless-super-delegation
+        return super(QuestionsFilterDetailAPIView, self).delete(
             request, *args, **kwargs)

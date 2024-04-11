@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -754,14 +754,29 @@ class EditableFilterEnumeratedAccounts(models.Model):
         help_text=_("used to order accounts when presenting a filter"))
     editable_filter = models.ForeignKey(
         EditableFilter, on_delete=models.CASCADE, related_name='accounts')
-    account = models.ForeignKey(settings.ACCOUNT_MODEL,
+    account = models.ForeignKey(settings.ACCOUNT_MODEL, null=True,
         on_delete=models.CASCADE, related_name='filters')
+    question = models.ForeignKey(settings.QUESTION_MODEL, null=True,
+        on_delete=models.CASCADE)
+    measured = models.IntegerField(null=True)
 
     class Meta:
         unique_together = ('editable_filter', 'rank')
 
     def __str__(self):
         return '%s-%d' % (self.editable_filter.slug, int(self.rank))
+
+    def as_choice(self):
+        if (self.question and
+            self.question.default_unit.system == Unit.SYSTEM_ENUMERATED):
+            try:
+                return Choice.objects.get(
+                    models.Q(question__isnull=True)
+                    | models.Q(question=self.question),
+                    unit=self.question.default_unit, pk=self.measured).text
+            except Choice.DoesNotExist:
+                return 'invalid'
+        return measured
 
 
 @python_2_unicode_compatible

@@ -551,7 +551,7 @@ var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
     ],
     data: function() {
         return {
-            affinityType: null,
+            affinityType: "",
             params: {
                 start_at: null,
                 ends_at: null
@@ -559,18 +559,154 @@ var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
         }
     },
     methods: {
+        _getAffinityBaseDataset: function() {
+            var vm = this;
+            const title = vm.$el.querySelector(
+                '[value="' + vm.affinityType + '"]').textContent;
+            const url = vm._safeUrl(
+                vm.$urls.api_benchmarks_index, vm.affinityType
+            ) + vm.getQueryString();
+            return {title: title, url: url};
+        },
         validate: function() {
             var vm = this;
-            if( vm.affinityType == 'engaged' ) {
-            } else if( vm.affinityType == 'tracked' ) {
-            } else if( vm.affinityType == 'all' ) {
+            const dataset = vm._getAffinityBaseDataset();
+            vm.$emit('updatedataset', dataset);
+        },
+    },
+});
+
+
+var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
+    mixins: [
+        itemListMixin
+    ],
+    data: function() {
+        return {
+            url: this.$urls.api_account_groups,
+            newItem: {
+                'title': "",
+            },
+            newPredicate: {
+                'question': null,
+                'measured': null
+            },
+            selectedItem: -1,
+            addPredicateEnabled: false,
+            questions: [],
+            params: {
+                start_at: null,
+                ends_at: null
+            },
+            cachedUnits: {}
+        }
+    },
+    methods: {
+        addItem: function() {
+            var vm = this;
+            vm.reqPost(vm.url, vm.newItem, function(resp) {
+                const oldSelectedItem = vm.selectedItem;
+                vm.selectedItem = vm.items.results.length;
+                vm.items.results.push(resp);
+                vm.loadPredicates(oldSelectedItem, vm.selectedItem);
+            });
+        },
+        addPredicate: function() {
+            var vm = this;
+            var group = vm.items.results[vm.selectedItem];
+            const data = {
+                'path': vm.newPredicate.question.path,
+                'measured': vm.newPredicate.measured,
+            };
+            vm.reqPost(vm._safeUrl(vm.url, group.slug), data,
+            function(resp) {
+                if(typeof group.predicates === 'undefined' ) {
+                    group.predicates = [];
+                }
+                group.predicates.push(resp);
+                vm.addPredicateEnabled = false;
+                vm.newPredicate = {
+                    'question': null,
+                    'measured': null
+                };
+            });
+        },
+        getChoices: function(question) {
+            const vm = this;
+            const unit = question ? vm.cachedUnits[question.default_unit.slug] : null;
+            return unit ? unit.choices : [];
+        },
+        getPredicates: function(group) {
+            if( group && typeof group.predicates != 'undefined' ) {
+                return group.predicates;
             }
+            return [];
+        },
+        loadPredicates: function() {
+            var vm = this;
+            if( vm.selectedItem >= 0 ) {
+                var group = vm.items.results[vm.selectedItem];
+                vm.reqGet(vm._safeUrl(vm.url, group.slug), function(resp) {
+                    vm.items.results[vm.selectedItem].predicates = resp.accounts_by;
+                    vm.addPredicateEnabled = (
+                      vm.items.results[vm.selectedItem].predicates.length == 0);
+                    vm.$forceUpdate();
+                });
+            }
+        },
+        predicatesLoaded: function() {
+            const vm = this;
+            if( vm.selectedItem >= 0 ) {
+                return vm.items.results[vm.selectedItem].hasOwnProperty('predicates');
+            }
+            return false;
+        },
+        predicatesEmpty: function() {
+            const vm = this;
+            if( vm.predicatesLoaded() ) {
+                return vm.items.results[vm.selectedItem].predicates.length === 0;
+            }
+            return true;
+        },
+        selectQuestion: function(dataset, question) {
+            var vm = this;
+            vm.newPredicate.question = question;
+            if( !vm.unitDetailsLoaded(question) ) {
+                vm.reqGet(vm._safeUrl(
+                    vm.$urls.api_units, question.default_unit.slug),
+                function (resp) {
+                    vm.cachedUnits[resp.slug] = resp;
+                    vm.$forceUpdate();
+                });
+            }
+        },
+        unitDetailsLoaded: function(question) {
+            const vm = this;
+            return question && vm.cachedUnits.hasOwnProperty(question.default_unit.slug);
+        },
+        validate: function() {
+            var vm = this;
             vm.$emit('updatedataset', {
                 title: "",
                 url: null
             });
         },
     },
+    computed: {
+        hasQuestion: function() {
+            return this.newPredicate.question;
+        },
+        hasQuestions: function() {
+            return this.questions && this.questions.length > 0;
+        }
+    },
+    mounted: function() {
+        var vm = this;
+        vm.get();
+//XXX        vm.reqGet(vm.$urls.api_campaign_questions, function(resp) {
+//            vm.questions = resp.results;
+//        });
+    }
 });
 
 
@@ -707,6 +843,40 @@ Vue.component('grant-allowed-typeahead', AccountTypeAhead.extend({
     };
   }
 }));
+
+
+QuestionTypeahead = Vue.component('question-typeahead', {
+  mixins: [
+      typeAheadMixin
+  ],
+  props: ['dataset'],
+  data: function data() {
+    return {
+      url: this.$urls.api_question_typeahead,
+      items: [],
+      query: '',
+      current: -1,
+      loading: false,
+      selectFirst: false,
+      queryParamName: 'q'
+    };
+  },
+  methods: {
+    setActiveAndHit: function(item) {
+      var vm = this;
+      vm.setActive(item);
+      vm.hit();
+    },
+    onHit: function onHit(newItem) {
+      var vm = this;
+      if( newItem.title ) {
+        vm.$emit('selectitem', vm.dataset, newItem);
+        vm.query = newItem.title;
+      }
+      vm.clear();
+    },
+  }
+});
 
 
 Vue.component('default-unit-typeahead', {

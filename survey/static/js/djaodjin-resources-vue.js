@@ -1313,6 +1313,26 @@ var typeAheadMixin = {
                 vm.current = -1;
             }
         },
+        reload: function() {
+            var vm = this;
+            vm.loading = true;
+            var params = {};
+            params[vm.queryParamName] = vm.query;
+            vm.reqGet(vm.url, params,
+            function (resp) {
+                const data = vm.prepareResponseData ?
+                    vm.prepareResponseData(resp.results) : resp.results;
+                vm.items = vm.limit ? data.slice(0, vm.limit) : data;
+                vm.current = -1;
+                vm.loading = false;
+                if (vm.selectFirst) {
+                    vm.down();
+                }
+            }, function() {
+                // on failure we just do nothing. - i.e. we don't want a bunch
+                // of error messages to pop up.
+            });
+        },
         search: function() {
             this.update();
         },
@@ -1325,25 +1345,7 @@ var typeAheadMixin = {
             if( vm.minChars && vm.query.length < vm.minChars ) {
                 return;
             }
-            vm.loading = true;
-            var params = {};
-            params[vm.queryParamName] = vm.query;
-            vm.reqGet(vm.url, params,
-            function (resp) {
-                if (resp && vm.query) {
-                    var data = resp.results;
-                    data = vm.prepareResponseData ? vm.prepareResponseData(data) : data;
-                    vm.items = vm.limit ? data.slice(0, vm.limit) : data;
-                    vm.current = -1;
-                    vm.loading = false;
-                    if (vm.selectFirst) {
-                        vm.down();
-                    }
-                }
-            }, function() {
-                // on failure we just do nothing. - i.e. we don't want a bunch
-                // of error messages to pop up.
-            });
+            vm.reload();
         },
     },
     computed: {
@@ -1364,6 +1366,79 @@ var typeAheadMixin = {
     }
 };
 
+
+/** Mixin to load user details from the profile APIs
+ */
+var accountDetailMixin = {
+    data: function() {
+        return {
+            api_accounts_url: this.$urls.api_accounts,
+            accountsBySlug: {}
+        }
+    },
+    methods: {
+        getAccountField: function(user, fieldName) {
+            var vm = this;
+            if( user && user.hasOwnProperty(fieldName) ) {
+                return user[fieldName];
+            }
+            if( user ) {
+                const account = vm.accountsBySlug[user];
+                if( account && account.hasOwnProperty(fieldName) ) {
+                    return account[fieldName];
+                }
+                vm.accountsBySlug[user] = {
+                    picture: null,
+                    printable_name: user
+                };
+                if( vm.api_accounts_url ) {
+                    vm.reqGet(vm._safeUrl(vm.api_accounts_url, user),
+                    function(resp) {
+                        vm.accountsBySlug[resp.slug] = resp;
+                    }, function() {
+                        // discard errors (ex: "not found").
+                    });
+                }
+                return vm.accountsBySlug[user][fieldName];
+            }
+            return "";
+        },
+        getAccountPicture: function(user) {
+            return this.getAccountField(user, 'picture');
+        },
+        getAccountPrintableName: function(user) {
+            return this.getAccountField(user, 'printable_name');
+        },
+        populateAccounts: function(elements, fieldName) {
+            var vm = this;
+
+            if( !vm.api_accounts_url ) return;
+
+            const accounts = new Set();
+            for( let idx = 0; idx < elements.length; ++idx ) {
+                const item = elements[idx];
+                accounts.add((fieldName && item[fieldName]) ?
+                    item[fieldName] : item.slug);
+            }
+            let queryParams = "?q_f=slug&q=";
+            let sep = "";
+            for( const account of accounts ) {
+                queryParams += sep + account;
+                sep = ",";
+            }
+            vm.reqGet(vm.api_accounts_url + queryParams,
+            function(resp) {
+                for( let idx = 0; idx < resp.results.length; ++idx ) {
+                    vm.accountsBySlug[resp.results[idx].slug] =
+                        resp.results[idx];
+                }
+            }, function() {
+                // discard errors (ex: "not found").
+            });
+        },
+    }
+};
+
     // attach properties to the exports object to define
     // the exported module properties.
     exports.httpRequestMixin = httpRequestMixin;
@@ -1372,4 +1447,5 @@ var typeAheadMixin = {
     exports.messagesMixin = messagesMixin;
     exports.paramsMixin = paramsMixin;
     exports.typeAheadMixin = typeAheadMixin;
+    exports.accountDetailMixin = accountDetailMixin;
 }));

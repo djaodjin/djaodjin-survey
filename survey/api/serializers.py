@@ -31,8 +31,8 @@ from rest_framework.generics import get_object_or_404
 
 from .. import settings
 from ..compat import gettext_lazy as _, reverse, six
-from ..models import (Answer, Campaign, Choice,
-    EditableFilter, EditablePredicate, Matrix, PortfolioDoubleOptIn,
+from ..models import (EditableFilterEnumeratedAccounts, Answer, Campaign,
+    Choice, EditableFilter, Matrix, PortfolioDoubleOptIn,
     Sample, Unit, convert_to_target_unit)
 from ..utils import (get_account_model, get_belongs_model, get_question_model,
     get_account_serializer)
@@ -392,27 +392,33 @@ class EditableFilterValuesCreateSerializer(NoModelSerializer):
         fields = ('baseline_at', 'created_at', 'items',)
 
 
-class EditablePredicateSerializer(serializers.ModelSerializer):
+class AccountsByAnswerPredicateSerializer(serializers.ModelSerializer):
 
-    rank = serializers.IntegerField(required=False)
+    question = QuestionSerializer(
+        help_text=_("Question the accounts filter refers to"))
+    measured = serializers.SerializerMethodField()
 
     class Meta:
-        model = EditablePredicate
-        fields = ('rank', 'operator', 'operand', 'field', 'selector')
+        model = EditableFilterEnumeratedAccounts
+        fields = ('question', 'measured')
+
+    @staticmethod
+    def get_measured(obj):
+        return obj.as_choice()
 
 
 class EditableFilterSerializer(serializers.ModelSerializer):
 
     slug = serializers.CharField(required=False)
     likely_metric = serializers.SerializerMethodField()
-    predicates = EditablePredicateSerializer(many=True, required=False)
+    accounts_by = AccountsByAnswerPredicateSerializer(many=True, required=False)
     results = get_account_serializer()(many=True, required=False) # XXX do we still need this field?
     extra = ExtraField(required=False, allow_null=True, allow_blank=True,
         help_text=_("Extra meta data (can be stringify JSON)"))
 
     class Meta:
         model = EditableFilter
-        fields = ('slug', 'title', 'extra', 'predicates', 'likely_metric',
+        fields = ('slug', 'title', 'extra', 'accounts_by', 'likely_metric',
                   'results')
 
     @staticmethod
@@ -423,16 +429,6 @@ class EditableFilterSerializer(serializers.ModelSerializer):
         editable_filter = EditableFilter(**validated_data)
         with transaction.atomic():
             editable_filter.save()
-            for predicate in validated_data.get('predicates', []):
-                predicate, _ = EditablePredicate.objects.get_or_create(
-                    rank=predicate['rank'],
-                    operator=predicate['operator'],
-                    operand=predicate['operand'],
-                    field=predicate['field'],
-                    selector=predicate['selector'])
-                # We have a reverse ORM relationship called 'predicates'
-                #pylint:disable=no-member
-                editable_filter.predicates.add(predicate)
         return editable_filter
 
     def update(self, instance, validated_data):
@@ -440,19 +436,6 @@ class EditableFilterSerializer(serializers.ModelSerializer):
             instance.title = validated_data['title']
             instance.extra = validated_data['extra']
             instance.save()
-            absents = set(instance.predicates.all().values_list(
-                'pk', flat=True))
-            for idx, predicate in enumerate(validated_data['predicates']):
-                predicate, _ = EditablePredicate.objects.get_or_create(
-                    editable_filter=instance,
-                    operator=predicate['operator'],
-                    operand=predicate['operand'],
-                    field=predicate['field'],
-                    selector=predicate['selector'],
-                    defaults={'rank': idx})
-                instance.predicates.add(predicate)
-                absents = absents - set([predicate.pk])
-            EditablePredicate.objects.filter(pk__in=absents).delete()
         return instance
 
 
@@ -686,10 +669,28 @@ class PortfolioOptInSerializer(PortfolioReceivedSerializer):
 class AccountsFilterAddSerializer(serializers.ModelSerializer):
 
     slug = serializers.CharField(required=False)
-    full_name = serializers.CharField()
+    full_name = serializers.CharField(required=False)
     extra = ExtraField(required=False,
         help_text=_("Extra meta data (can be stringify JSON)"))
+    path = serializers.CharField(required=False)
+    measured = serializers.CharField(required=False)
 
     class Meta:
         model = get_account_model()
-        fields = ('slug', 'full_name', 'extra')
+        fields = ('slug', 'full_name', 'extra', 'path', 'measured')
+
+    def validate(self, attrs):
+        slug = attrs.get('slug', None)
+        full_name = attrs.get('full_name', None)
+        path = attrs.get('path', None)
+        measured = attrs.get('measured', None)
+        if not (slug or full_name or (path and measured)):
+            raise ValidationError(
+                _("An account or a question/answer must be specified"))
+        return attrs
+
+    def validate_path(self, obj):
+        if not get_question_model().objects.filter(path=obj).exists():
+            raise ValidationError(
+                _("Question with the specificed path does not exist."))
+        return obj
