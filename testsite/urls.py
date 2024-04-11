@@ -45,6 +45,7 @@ urlpatterns = [
         include('survey.urls.api.matrix')),
     path('api/<slug:organization>/', include('survey.urls.api.sample')),
     path('api/<slug:organization>/', include('survey.urls.api.portfolios')),
+    path('api/<slug:organization>/', include('survey.urls.api.benchmarks')),
     path('api/accounts/grant-allowed', AccountsAPIView.as_view(),
         name='api_grant_allowed_candidates'),
     path('api/accounts', AccountsAPIView.as_view(),

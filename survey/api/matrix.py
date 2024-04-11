@@ -29,8 +29,8 @@ from django.db import transaction, IntegrityError
 from django.db.models import F, Max, Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
-from django.template.defaultfilters import slugify
 from rest_framework import generics, response as http, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.mixins import CreateModelMixin
 from rest_framework.pagination import PageNumberPagination
 
@@ -1198,8 +1198,8 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
                 rank=last_rank + 1)
             account.rank = enum_account.rank
 
-        account_serializer = get_account_serializer()()
-        headers = self.get_success_headers(serializer.data)
+        account_serializer = get_account_serializer()(instance=account)
+        headers = self.get_success_headers(account_serializer.data)
         return http.Response(account_serializer.to_representation(account),
             status=status.HTTP_201_CREATED, headers=headers)
 
@@ -1235,7 +1235,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
                 rank=last_rank + 1)
 
         serializer = AccountsByAnswerPredicateSerializer()
-        return http.Response(seriallizer.to_representation(enum_account),
+        return http.Response(serializer.to_representation(enum_account),
             status=status.HTTP_201_CREATED)
 
 

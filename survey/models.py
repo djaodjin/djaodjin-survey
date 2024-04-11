@@ -72,7 +72,8 @@ class SlugifyFieldMixin(object):
                 force_insert=force_insert, force_update=force_update,
                 using=using, update_fields=update_fields)
         max_length = self._meta.get_field(self.slug_field).max_length
-        slug_base = getattr(self, self.slugify_field)
+        slugified_value = getattr(self, self.slugify_field)
+        slug_base = slugify(slugified_value)
         if len(slug_base) > max_length:
             slug_base = slug_base[:max_length]
         setattr(self, self.slug_field, slug_base)
@@ -776,7 +777,7 @@ class EditableFilterEnumeratedAccounts(models.Model):
                     unit=self.question.default_unit, pk=self.measured).text
             except Choice.DoesNotExist:
                 return 'invalid'
-        return measured
+        return self.measured
 
 
 @python_2_unicode_compatible

@@ -22,10 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...api.matrix import (BenchmarkAPIView, BenchmarkIndexAPIView,
-    AccessiblesBenchmarkAPIView, AccessiblesBenchmarkIndexAPIView,
-    EngagedBenchmarkAPIView, EngagedBenchmarkIndexAPIView,
-    CompareAPIView, CompareIndexAPIView,
+from ...api.matrix import (CompareAPIView, CompareIndexAPIView,
     MatrixCreateAPIView, MatrixDetailAPIView)
 from ...compat import path
 
