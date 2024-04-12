@@ -1,3 +1,11 @@
+0.11.0
+
+  * adds filter to select accounts by answers
+  * generalizes SlugifyFieldMixin
+  * takes into account unit query parameter in benchmarks API
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu, 11 Apr 2024 15:50:00 -0700
+
 0.10.2
 
   * passes request to `is_portfolios_bypass`

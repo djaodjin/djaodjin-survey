@@ -40,10 +40,11 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.10.2
+0.11.0
 
-  * passes request to `is_portfolios_bypass`
-  * adds accounts to accessibles with Portfolio.campaign is None (fix)
+  * adds filter to select accounts by answers
+  * generalizes SlugifyFieldMixin
+  * takes into account unit query parameter in benchmarks API
 
 [previous release notes](changelog)
 
