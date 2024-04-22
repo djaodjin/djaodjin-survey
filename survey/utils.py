@@ -35,14 +35,14 @@ from django.apps import apps as django_apps
 from django.conf import settings as django_settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import ImproperlyConfigured
-from django.db.models import Count, F, FilteredRelation, Q
+from django.db import models
 from django.http.request import split_domain_port, validate_host
 from django.utils.timezone import utc
 from rest_framework.exceptions import ValidationError
 
 from . import settings
 from .compat import gettext_lazy as _, import_string, urlparse, urlunparse
-from .models import Answer, Unit
+from .models import Answer, PortfolioDoubleOptIn, Unit
 #pylint:disable=unused-import
 from .queries import datetime_or_now, get_account_model, get_question_model
 
@@ -78,8 +78,8 @@ def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
         account_model = get_account_model()
         if campaign:
             queryset = account_model.objects.filter(
-                Q(portfolios__campaign=campaign) |
-                Q(portfolios__campaign__isnull=True))
+                models.Q(portfolios__campaign=campaign) |
+                models.Q(portfolios__campaign__isnull=True))
         else:
             queryset = account_model.objects.all()
         filter_params = {}
@@ -101,11 +101,66 @@ def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
         queryset = queryset.filter(
             portfolios__grantee__in=grantees,
             **filter_params).annotate(
-            granted=FilteredRelation(
+            granted=models.FilteredRelation(
                 'portfolio_double_optin_accounts',
-                condition=Q(
+                condition=models.Q(
                     portfolio_double_optin_accounts__grantee__in=grantees
-            ))).annotate(_extra=F('granted__extra'))
+            ))).annotate(_extra=models.F('granted__extra'))
+
+    return queryset
+
+
+def get_engaged_accounts(grantees, campaign=None, aggregate_set=False,
+                         start_at=None, ends_at=None, search_terms=None):
+    """
+    All accounts which grantee has requested a response from.
+    """
+    #pylint:disable=too-many-arguments
+    queryset = None
+    if aggregate_set:
+        search_terms = None
+    if (hasattr(settings, 'ENGAGED_ACCOUNTS_CALLABLE') and
+        settings.ENGAGED_ACCOUNTS_CALLABLE):
+        queryset = import_string(settings.ENGAGED_ACCOUNTS_CALLABLE)(
+            grantees, campaign=campaign, aggregate_set=aggregate_set,
+            start_at=start_at, ends_at=ends_at, search_terms=search_terms)
+
+    if queryset is None:
+        filter_params = {}
+        if start_at:
+            filter_params.update({
+                'portfolio_double_optin_accounts__created_at__gte': start_at})
+        if ends_at:
+            filter_params.update({
+                'portfolio_double_optin_accounts__created_at__lt': ends_at})
+        if campaign:
+            filter_params.update({
+                'portfolio_double_optin_accounts__campaign': campaign})
+        if search_terms:
+            if '@' in search_terms:
+                domain = search_terms.split('@')[-1]
+                filter_params.update({
+                    'email__endswith': domain
+                })
+            else:
+                filter_params.update({
+                    'full_name__icontains': search_terms
+                })
+        queryset = get_account_model().objects.filter(
+            portfolio_double_optin_accounts__grantee__in=grantees,
+            portfolio_double_optin_accounts__state__in=(
+                PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
+                PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED,
+                PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED,
+                PortfolioDoubleOptIn.OPTIN_REQUEST_EXPIRED),
+                **filter_params).annotate(
+                requested_at=models.Min(
+                    'portfolio_double_optin_accounts__created_at'),
+                grant_key=models.Case(
+                models.When(
+                    portfolio_double_optin_accounts__state=0, then=True),
+                output_field=models.BooleanField())
+        ).distinct()
 
     return queryset
 
@@ -137,9 +192,9 @@ def get_benchmarks_enumerated(samples, questions, questions_by_key=None):
     # total number of answers
     for row in Answer.objects.filter(
             question__in=questions,
-            unit_id=F('question__default_unit_id'),
+            unit_id=models.F('question__default_unit_id'),
             sample_id__in=samples).values('question__id',
-                'question__path').annotate(Count('sample_id')):
+                'question__path').annotate(models.Count('sample_id')):
         question_pk = row['question__id']
         count = row['sample_id__count']
         path = row['question__path']
@@ -151,12 +206,12 @@ def get_benchmarks_enumerated(samples, questions, questions_by_key=None):
     # per-choice number of answers
     enum_answers = Answer.objects.filter(
             question__in=questions,
-            unit_id=F('question__default_unit_id'),
+            unit_id=models.F('question__default_unit_id'),
             sample_id__in=samples,
             question__default_unit__system__in=[Unit.SYSTEM_ENUMERATED,
                 Unit.SYSTEM_DATETIME], # XXX target year are stored as choices
-            unit__enums__id=F('measured')).values('question__id',
-                'unit__enums__text').annotate(Count('sample_id'))
+            unit__enums__id=models.F('measured')).values('question__id',
+                'unit__enums__text').annotate(models.Count('sample_id'))
     for row in enum_answers:
         question_pk = row['question__id']
         count = row['sample_id__count']

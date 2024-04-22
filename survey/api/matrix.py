@@ -25,6 +25,7 @@
 import logging, re
 from collections import OrderedDict
 
+from dateutil.relativedelta import relativedelta
 from django.db import transaction, IntegrityError
 from django.db.models import F, Max, Q
 from django.http import Http404
@@ -38,23 +39,84 @@ from .. import settings
 from ..compat import reverse, six
 from ..docs import extend_schema
 from ..filters import OrderingFilter, SearchFilter
+from ..helpers import get_extra
 from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
-    MatrixMixin, QuestionMixin, SampleMixin)
+    EditableFilterMixin, MatrixMixin, SampleMixin)
 from ..models import (Answer, Choice, Matrix, EditableFilter,
     EditableFilterEnumeratedAccounts, Sample, Unit, UnitEquivalences)
 from ..pagination import MetricsPagination
 from ..utils import (datetime_or_now, get_accessible_accounts,
     get_benchmarks_enumerated, get_account_model, get_question_model,
-    get_account_serializer, get_question_serializer, handle_uniq_error)
+    get_engaged_accounts, get_account_serializer, get_question_serializer,
+    handle_uniq_error)
 from .serializers import (AccountsByAnswerPredicateSerializer,
     AccountsFilterAddSerializer, CompareQuestionSerializer,
     EditableFilterSerializer, MatrixSerializer, SampleBenchmarksSerializer)
 
+
 LOGGER = logging.getLogger(__name__)
 
 
-class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
-                     AccountMixin):
+class AccountsDateRangeContextMixin(object):
+    """
+    Defines a date range to select accounts
+    """
+
+    @property
+    def accounts_ends_at(self):
+        """
+        End of the period when requested accounts were suppossed to respond
+        """
+        if not hasattr(self, '_accounts_ends_at'):
+            _accounts_ends_at = get_extra(self.account, 'ends_at', None)
+            at_time = datetime_or_now()
+            if _accounts_ends_at:
+                _accounts_ends_at = datetime_or_now(_accounts_ends_at)
+                if _accounts_ends_at > at_time:
+                    at_time = _accounts_ends_at
+            param_ends_at = self.get_query_param('accounts_ends_at',
+                self.get_query_param('ends_at'))
+            if param_ends_at is not None:
+                # When there are no specified `ends_at` in the query
+                # string, we will be defaulting to the value stored
+                # in `account.extra` or `now` whichever is grater.
+                at_time = param_ends_at.strip('"')
+            self._accounts_ends_at = datetime_or_now(at_time)
+        return self._accounts_ends_at
+
+    @property
+    def accounts_start_at(self):
+        """
+        Start of the period when requested accounts were invited
+        """
+        if not hasattr(self, '_accounts_start_at'):
+            self._accounts_start_at = get_extra(self.account, 'start_at', None)
+            if self._accounts_start_at:
+                self._accounts_start_at = datetime_or_now(
+                    self._accounts_start_at)
+            param_start_at = self.get_query_param('accounts_start_at',
+                self.get_query_param('start_at'))
+            if param_start_at is not None:
+                param_start_at = param_start_at.strip('"')
+                self._accounts_start_at = datetime_or_now(param_start_at)
+            # In general `ends_at` could be `None`,
+            # which would be a problem here.
+            accounts_ends_at = datetime_or_now(self.accounts_ends_at)
+            if (self._accounts_start_at and
+                self._accounts_start_at >= accounts_ends_at):
+                try:
+                    # fixing period to 12 months if for any reason the start
+                    # date is after the ends date.
+                    self._accounts_start_at = (
+                        accounts_ends_at - relativedelta(months=12))
+                except ValueError:
+                    # deal with a bogus ends_at date
+                    self._accounts_start_at = accounts_ends_at
+        return self._accounts_start_at
+
+
+
+class BenchmarkMixin(DateRangeContextMixin, CampaignMixin, AccountMixin):
     scale = 1
     default_unit = 'profiles'
     valid_units = ('percentage',)
@@ -70,8 +132,13 @@ class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
                 self._unit = param_unit
         return self._unit
 
-    def get_accessible_accounts(self, grantees):
-        return get_accessible_accounts(grantees, campaign=self.campaign)
+    def get_accounts(self):
+        """
+        By default return all accounts. This method is intended to be overriden
+        in subclasses to select specific set of accounts whose answers are
+        aggregated.
+        """
+        return get_account_model().objects.all()
 
     def get_questions(self, prefix):
         """
@@ -143,8 +210,8 @@ class BenchmarkMixin(QuestionMixin, DateRangeContextMixin, CampaignMixin,
             account = self.account
             account_slug = account.slug
             account_title = account.printable_name
-        accessible_accounts = self.get_accessible_accounts([account])
-        self._attach_results(questions_by_key, accessible_accounts,
+        accounts = self.get_accounts()
+        self._attach_results(questions_by_key, accounts,
             account_title, account_slug)
 
 
@@ -204,8 +271,28 @@ class BenchmarkIndexAPIView(BenchmarkAPIView):
         }
     """
 
+    @extend_schema(operation_id='benchmark_index')
+    def get(self, request, *args, **kwargs):
+        return super(BenchmarkIndexAPIView, self).get(request, *args, **kwargs)
 
-class AccessiblesBenchmarkAPIView(BenchmarkAPIView):
+
+class AccessiblesAccountsMixin(AccountsDateRangeContextMixin,
+                               CampaignMixin, AccountMixin):
+    """
+    Query accounts by 'accessibles' affinity
+    """
+
+    def get_accounts(self):
+        """
+        Returns account accessibles by a profile in a specific date range.
+        """
+        return get_accessible_accounts([self.account],
+            campaign=self.campaign,
+            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
+            aggregate_set=True)
+
+
+class AccessiblesBenchmarkAPIView(AccessiblesAccountsMixin, BenchmarkAPIView):
     """
     Aggregated benchmark for accessible profiles
 
@@ -248,8 +335,29 @@ class AccessiblesBenchmarkIndexAPIView(AccessiblesBenchmarkAPIView):
         }
     """
 
+    @extend_schema(operation_id='accessibles_benchmark_index')
+    def get(self, request, *args, **kwargs):
+        return super(AccessiblesBenchmarkIndexAPIView, self).get(
+            request, *args, **kwargs)
 
-class EngagedBenchmarkAPIView(BenchmarkAPIView):
+
+class EngagedAccountsMixin(AccountsDateRangeContextMixin,
+                           CampaignMixin, AccountMixin):
+    """
+    Query accounts by 'accessibles' affinity
+    """
+
+    def get_accounts(self):
+        """
+        Returns account accessibles by a profile in a specific date range.
+        """
+        return get_engaged_accounts([self.account],
+            campaign=self.campaign,
+            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
+            aggregate_set=True)
+
+
+class EngagedBenchmarkAPIView(EngagedAccountsMixin, BenchmarkAPIView):
     """
     Aggregated benchmark for engaged profiles
 
@@ -292,6 +400,92 @@ class EngagedBenchmarkIndexAPIView(EngagedBenchmarkAPIView):
         }
     """
 
+    @extend_schema(operation_id='engaged_benchmark_index')
+    def get(self, request, *args, **kwargs):
+        return super(EngagedBenchmarkIndexAPIView, self).get(
+            request, *args, **kwargs)
+
+
+class EditableFilterAccountsMixin(EditableFilterMixin,
+                                  AccountsDateRangeContextMixin,
+                                  CampaignMixin, AccountMixin):
+    """
+    Query accounts by 'accessibles' affinity
+    """
+
+    def get_accounts(self):
+        """
+        Returns account accessibles by a profile in a specific date range.
+        """
+        select_by_answers = EditableFilterEnumeratedAccounts.objects.filter(
+            editable_filter=self.editable_filter).exclude(
+                question__isnull=True)
+        if select_by_answers.exists():
+            # Select accounts based on answers to a question.
+            # XXX supports only one predicate
+            select_by = select_by_answers.first()
+            return get_account_model().objects.filter(
+              samples__is_frozen=True,
+              samples__answers__question=select_by.question,
+              samples__answers__unit=select_by.question.default_unit,
+              samples__answers__measured=select_by.measured)
+
+        # we are dealing with a nomminative group of accounts
+        return get_account_model().objects.filter(
+            filters__editable_filter=self.editable_filter)
+
+
+class EditableFilterBenchmarkAPIView(EditableFilterAccountsMixin,
+                                     BenchmarkAPIView):
+    """
+    Aggregated benchmark for a custom filter
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/benchmarks/tier1-suppliers/sustainability\
+ HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+
+
+class EditableFilterBenchmarkIndexAPIView(EditableFilterBenchmarkAPIView):
+    """
+    Aggregated benchmark for a custom filter
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/benchmarks/tier1-suppliers HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+
+        {
+          "count": 4,
+          "results": []
+        }
+    """
+
+    @extend_schema(operation_id='editable_filter_benchmark_index')
+    def get(self, request, *args, **kwargs):
+        return super(EditableFilterBenchmarkIndexAPIView, self).get(
+            request, *args, **kwargs)
+
+
 
 class SampleBenchmarkMixin(SampleMixin, BenchmarkMixin):
 
@@ -309,9 +503,6 @@ class SampleBenchmarkMixin(SampleMixin, BenchmarkMixin):
             self._ends_at = (self.sample.created_at if self.sample.is_frozen
                 else datetime_or_now())
         return self._ends_at
-
-    def get_accessible_accounts(self, grantees):
-        return get_account_model().objects.all()
 
 
 class SampleBenchmarksAPIView(SampleBenchmarkMixin, generics.ListAPIView):

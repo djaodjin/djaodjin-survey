@@ -1,5 +1,21 @@
 // components to enter survey data and display results.
 
+(function (root, factory) {
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define(['exports', 'jQuery'], factory);
+    } else if (typeof exports === 'object' && typeof exports.nodeName !== 'string') {
+        // CommonJS
+        factory(exports, require('jQuery'));
+    } else {
+        // Browser true globals added to `window`.
+        factory(root, root.jQuery);
+        // If we want to put the exports in a namespace, use the following line
+        // instead.
+        // factory((root.djResources = {}), root.jQuery);
+    }
+}(typeof self !== 'undefined' ? self : this, function (exports, jQuery) {
+
 Vue.component('campaign-list', {
     mixins: [
         itemListMixin
@@ -474,11 +490,6 @@ Vue.component('query-group-accounts', {
         }
     },
     methods: {
-        validate: function() {
-            var vm = this;
-            vm.$emit('updatedataset', {});
-            vm.$refs.account.reset();
-        },
         addAccount: function(dataset, newAccount) {
             var vm = this;
             newAccount['full_name'] = newAccount.printable_name;
@@ -537,6 +548,17 @@ Vue.component('query-group-accounts', {
                 return vm.items.results[vm.selectedItem].accounts.length === 0;
             }
             return true;
+        },
+        validate: function() {
+            var vm = this;
+            const group = vm.items.results[vm.selectedItem];
+            const title = group.title;
+            const url = vm._safeUrl(
+                vm.$urls.api_benchmarks_index, group.slug
+            ) + vm.getQueryString();
+            const dataset = {title: title, url: url};
+            vm.$emit('updatedataset', dataset);
+            vm.$refs.account.reset();
         },
     },
     mounted: function() {
@@ -686,10 +708,13 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
         },
         validate: function() {
             var vm = this;
-            vm.$emit('updatedataset', {
-                title: "",
-                url: null
-            });
+            const group = vm.items.results[vm.selectedItem];
+            const title = group.title;
+            const url = vm._safeUrl(
+                vm.$urls.api_benchmarks_index, group.slug
+            ) + vm.getQueryString();
+            const dataset = {title: title, url: url};
+            vm.$emit('updatedataset', dataset);
         },
     },
     computed: {
@@ -907,3 +932,7 @@ Vue.component('default-unit-typeahead', {
         }
     }
 });
+
+    exports.QueryAccountsByAffinity = QueryAccountsByAffinity;
+    exports.QueryAccountsByAnswers = QueryAccountsByAnswers;
+}));

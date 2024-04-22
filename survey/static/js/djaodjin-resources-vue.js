@@ -1206,15 +1206,19 @@ var itemListMixin = {
                     }
                 }
             } else {
-                cb = function(res){
+                cb = function(resp){
                     if(vm.mergeResults){
-                        res.results = vm.items.results.concat(res.results);
+                        resp.results = vm.items.results.concat(resp.results);
                     }
-                    vm.items = res;
+                    for( var key in resp ) {
+                        if( resp.hasOwnProperty(key) ) {
+                            vm.items[key] = resp[key];
+                        }
+                    }
                     vm.itemsLoaded = true;
 
-                    if( res.detail ) {
-                        vm.showMessages([res.detail], "warning");
+                    if( resp.detail ) {
+                        vm.showMessages([resp.detail], "warning");
                     }
 
                     if(vm[vm.getCompleteCb]){

@@ -580,4 +580,21 @@
     "rank": 1
   },
   "model": "survey.EditableFilterEnumeratedAccounts", "pk": 2
+},
+{
+  "fields": {
+    "slug": "smbs",
+    "title": "Small and Medium Businesses",
+    "account": 4
+  },
+  "model": "survey.editablefilter", "pk": 17
+},
+{
+  "fields": {
+    "editable_filter": 17,
+    "question": 3,
+    "measured": 500,
+    "rank": 1
+  },
+  "model": "survey.EditableFilterEnumeratedAccounts", "pk": 3
 }]

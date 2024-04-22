@@ -31,6 +31,7 @@ from django.conf import settings
 
 _SETTINGS = {
     'ACCESSIBLE_ACCOUNTS_CALLABLE': None,
+    'ENGAGED_ACCOUNTS_CALLABLE': None,
     'ACCOUNT_LOOKUP_FIELD': 'username',
     'ACCOUNT_MODEL': getattr(
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
@@ -57,6 +58,7 @@ _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 #: overrides the implementation of `survey.utils.get_accessible_accounts`
 #: This function must return an iterable over a set of unique ``ACCOUNT_MODEL``.
 ACCESSIBLE_ACCOUNTS_CALLABLE = _SETTINGS.get('ACCESSIBLE_ACCOUNTS_CALLABLE')
+ENGAGED_ACCOUNTS_CALLABLE = _SETTINGS.get('ENGAGED_ACCOUNTS_CALLABLE')
 ACCOUNT_LOOKUP_FIELD = _SETTINGS.get('ACCOUNT_LOOKUP_FIELD')
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
 ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')
