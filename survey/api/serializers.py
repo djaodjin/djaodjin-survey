@@ -38,37 +38,38 @@ from ..utils import (get_account_model, get_belongs_model, get_question_model,
     get_account_serializer)
 
 
-class EnumField(serializers.Field):
+class EnumField(serializers.ChoiceField):
     """
     Treat a ``PositiveSmallIntegerField`` as an enum.
     """
-    choices = {}
-    inverted_choices = {}
+    translated_choices = {}
 
     def __init__(self, choices, *args, **kwargs):
-        self.choices = dict(choices)
-        self.inverted_choices = {
-            slugify(val): key for key, val in six.iteritems(self.choices)}
-        super(EnumField, self).__init__(*args, **kwargs)
+        self.translated_choices = {key: slugify(val) for key, val in choices}
+        super(EnumField, self).__init__([(slugify(val), key)
+            for key, val in choices],
+            *args, **kwargs)
 
     def to_representation(self, value):
         if isinstance(value, list):
-            result = [slugify(self.choices.get(item, None)) for item in value]
+            result = [slugify(self.translated_choices.get(item, None))
+                for item in value]
         else:
-            result = slugify(self.choices.get(value, None))
+            result = slugify(self.translated_choices.get(value, None))
         return result
 
     def to_internal_value(self, data):
         if isinstance(data, list):
-            result = [self.inverted_choices.get(item, None) for item in data]
+            result = [self.choices.get(item, None) for item in data]
         else:
-            result = self.inverted_choices.get(data, None)
+            result = self.choices.get(data, None)
         if result is None:
             if not data:
                 raise ValidationError(_("This field cannot be blank."))
             raise ValidationError(_("'%(data)s' is not a valid choice."\
-                " Expected one of %(choices)s.") % {'data': data,
-                    'choices': list(six.iterkeys(self.inverted_choices))})
+                " Expected one of %(choices)s.") % {
+                    'data': data, 'choices': [str(choice)
+                    for choice in six.iterkeys(self.choices)]})
         return result
 
 
@@ -145,6 +146,23 @@ class AccountSerializer(serializers.ModelSerializer):
         return 0
 
 
+class AccountsDateRangeQueryParamSerializer(NoModelSerializer):
+
+    accounts_start_at = serializers.CharField(required=False,
+        help_text=_("start of the range as a date/time in ISO 8601 format"))
+    accounts_ends_at = serializers.CharField(required=False,
+        help_text=_("end of the range as a date/time in ISO 8601 format"))
+
+
+class UnitQueryParamSerializer(NoModelSerializer):
+    """
+    Serializer for `unit` query parameter
+    """
+    unit = serializers.SlugRelatedField(required=False,
+        queryset=Unit.objects.all(), slug_field='slug',
+        help_text=_("Unit to return values in"))
+
+
 class AnswerSerializer(serializers.ModelSerializer):
     """
     Serializer of ``Answer`` when used individually.
@@ -198,23 +216,23 @@ class ConvertUnitSerializer(UnitSerializer):
         fields = UnitSerializer.Meta.fields + ('value',)
         read_only_fields = UnitSerializer.Meta.read_only_fields + ('value',)
 
-    def get_value(self, obj):
+    def get_value(self, dictionary):
         request = self.context.get('request')
         view = self.context.get('view')
         if request and view:
             value = request.query_params.get('value', 1)
             try:
-                return convert_to_target_unit(
-                    value, obj.factor, obj.scale, obj.content)
+                return convert_to_target_unit(value,
+                    dictionary.factor, dictionary.scale, dictionary.content)
             except TypeError:
                 # We just pretent we can't convert to the target unit.
                 pass
         return None
 
 
-class QuestionCreateSerializer(serializers.ModelSerializer):
+class QuestionDetailSerializer(serializers.ModelSerializer):
 
-    title = serializers.CharField(allow_blank=True,
+    title = serializers.CharField(
         help_text=_("Title of the question as displayed in user interfaces"))
     text = serializers.CharField(required=False, allow_blank=True,
         help_text=_("Long form description about the question"))
@@ -226,49 +244,62 @@ class QuestionCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_question_model()
-        fields = ('title', 'text', 'default_unit', 'extra')
+        fields = ('title', 'text', 'default_unit', 'extra', 'path')
+        read_only_fields = ('path',)
 
 
-class QuestionDetailSerializer(QuestionCreateSerializer):
+class QuestionUpdateSerializer(QuestionDetailSerializer):
 
     title = serializers.CharField(required=False,
         help_text=_("Title of the question as displayed in user interfaces"))
+    default_unit = serializers.SlugRelatedField(required=False,
+        slug_field='slug', queryset=Unit.objects.all(),
+        help_text=_("Default unit for measured field when none is specified"))
 
-    class Meta:
-        model = QuestionCreateSerializer.Meta.model
-        fields = QuestionCreateSerializer.Meta.fields + ('path',)
-        read_only_fields = ('path',)
+    class Meta(QuestionDetailSerializer.Meta):
+        fields = QuestionDetailSerializer.Meta.fields
+
+
+class QuestionCreateSerializer(QuestionUpdateSerializer):
+
+    title = serializers.CharField(required=True,
+        help_text=_("Title of the question as displayed in user interfaces"))
+
+    class Meta(QuestionUpdateSerializer.Meta):
+        fields = QuestionUpdateSerializer.Meta.fields
 
 
 class QuestionSerializer(serializers.ModelSerializer):
     """
     Serializer of ``Question`` when used in a list of answers
     """
-    title = serializers.CharField(allow_blank=True,
+    title = serializers.CharField(required=False, allow_blank=True,
         help_text=_("Short description"))
     default_unit = UnitSerializer()
-    ui_hint = EnumField(choices=get_question_model().UI_HINTS,
+    ui_hint = EnumField(choices=get_question_model().UI_HINTS, required=False,
         help_text=_("Hint for the user interface on"\
             " how to present the input field"))
 
     class Meta:
         model = get_question_model()
         fields = ('path', 'title', 'default_unit', 'ui_hint')
+        read_only_fields = ('path',)
 
 
-class SampleAnswerSerializer(AnswerSerializer):
+class SampleAnswerSerializer(QuestionSerializer):
     """
     Serializer of ``Answer`` when used in list.
     """
-    question = QuestionSerializer(
-        help_text=_("Question the answer refers to"))
     required = serializers.BooleanField(required=False,
         help_text=_("Whether an answer is required or not."))
+    answers = serializers.ListField(child=AnswerSerializer(), required=False)
+    candidates = serializers.ListField(child=AnswerSerializer(), required=False)
 
     class Meta(object):
-        model = AnswerSerializer.Meta.model
-        fields = AnswerSerializer.Meta.fields + ('question', 'required')
-        read_only_fields = AnswerSerializer.Meta.read_only_fields + (
+        model = QuestionSerializer.Meta.model
+        fields = QuestionSerializer.Meta.fields + (
+            'required', 'answers', 'candidates')
+        read_only_fields = QuestionSerializer.Meta.read_only_fields + (
             'required',)
 
 
@@ -392,51 +423,32 @@ class EditableFilterValuesCreateSerializer(NoModelSerializer):
         fields = ('baseline_at', 'created_at', 'items',)
 
 
-class AccountsByAnswerPredicateSerializer(serializers.ModelSerializer):
-
-    question = QuestionSerializer(
-        help_text=_("Question the accounts filter refers to"))
-    measured = serializers.SerializerMethodField()
-
-    class Meta:
-        model = EditableFilterEnumeratedAccounts
-        fields = ('question', 'measured')
-
-    @staticmethod
-    def get_measured(obj):
-        return obj.as_choice()
-
-
 class EditableFilterSerializer(serializers.ModelSerializer):
 
-    slug = serializers.CharField(required=False)
-    likely_metric = serializers.SerializerMethodField()
-    accounts_by = AccountsByAnswerPredicateSerializer(many=True, required=False)
-    results = get_account_serializer()(many=True, required=False) # XXX do we still need this field?
-    extra = ExtraField(required=False, allow_null=True, allow_blank=True,
-        help_text=_("Extra meta data (can be stringify JSON)"))
+    account = serializers.SlugRelatedField(read_only=True,
+        slug_field=settings.BELONGS_LOOKUP_FIELD,
+        help_text=_("Account the group belongs to"))
 
     class Meta:
         model = EditableFilter
-        fields = ('slug', 'title', 'extra', 'accounts_by', 'likely_metric',
-                  'results')
+        fields = ('slug', 'title', 'account', 'extra')
+        read_only_fields = ('account',)
 
-    @staticmethod
-    def get_likely_metric(obj):
-        return getattr(obj, 'likely_metric', None)
 
-    def create(self, validated_data):
-        editable_filter = EditableFilter(**validated_data)
-        with transaction.atomic():
-            editable_filter.save()
-        return editable_filter
+class EditableFilterUpdateSerializer(EditableFilterSerializer):
 
-    def update(self, instance, validated_data):
-        with transaction.atomic():
-            instance.title = validated_data['title']
-            instance.extra = validated_data['extra']
-            instance.save()
-        return instance
+    slug = serializers.SlugField(required=False)
+    extra = ExtraField(required=False, allow_null=True, allow_blank=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
+
+    class Meta(EditableFilterSerializer.Meta):
+        fields = EditableFilterSerializer.Meta.fields
+
+
+class EditableFilterCreateSerializer(EditableFilterUpdateSerializer):
+
+    class Meta(EditableFilterUpdateSerializer.Meta):
+        fields = EditableFilterUpdateSerializer.Meta.fields
 
 
 class MatrixSerializer(serializers.ModelSerializer):
@@ -666,18 +678,43 @@ class PortfolioOptInSerializer(PortfolioReceivedSerializer):
             'extra',)
 
 
-class AccountsFilterAddSerializer(serializers.ModelSerializer):
+class CohortSerializer(serializers.ModelSerializer):
 
-    slug = serializers.CharField(required=False)
-    full_name = serializers.CharField(required=False)
-    extra = ExtraField(required=False,
+    slug = serializers.CharField(source='account.slug', required=False,
+        help_text=_("Unique identifier for the profile"))
+    full_name = serializers.CharField(source='account.full_name',
+        required=False,
+        help_text=_("Human readable name for the profile"))
+    path = serializers.CharField(source='question.path', required=False,
+        help_text=_("Path for the question used to filter profiles"))
+    measured = serializers.CharField(source='humanize_measured', required=False,
+        help_text=_("Answer to the question used to filter profiles"))
+    # XXX `source='account.extra'` because of how GHG Emissions factors
+    #     are encoded.
+    extra = ExtraField(source='account.extra', required=False,
         help_text=_("Extra meta data (can be stringify JSON)"))
-    path = serializers.CharField(required=False)
-    measured = serializers.CharField(required=False)
 
     class Meta:
-        model = get_account_model()
-        fields = ('slug', 'full_name', 'extra', 'path', 'measured')
+        model = EditableFilterEnumeratedAccounts
+        fields = ('slug', 'full_name', 'path', 'measured', 'extra')
+
+
+class CohortAddSerializer(CohortSerializer):
+
+    slug = serializers.CharField(required=False,
+        help_text=_("Unique identifier for the profile"))
+    full_name = serializers.CharField(required=False,
+        help_text=_("Human readable name for the profile"))
+    path = serializers.CharField(required=False,
+        help_text=_("Path for the question used to filter profiles"))
+    measured = serializers.CharField(required=False,
+        help_text=_("Answer to the question used to filter profiles"))
+    extra = ExtraField(required=False,
+        help_text=_("Extra meta data (can be stringify JSON)"))
+
+    class Meta:
+        model = CohortSerializer.Meta.model
+        fields = CohortSerializer.Meta.fields
 
     def validate(self, attrs):
         slug = attrs.get('slug', None)

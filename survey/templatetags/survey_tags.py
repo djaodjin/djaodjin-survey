@@ -26,7 +26,7 @@ from django import template
 from dateutil import rrule
 
 from ..compat import gettext_lazy as _
-from ..utils import datetime_or_now
+from ..helpers import datetime_or_now
 
 
 register = template.Library()

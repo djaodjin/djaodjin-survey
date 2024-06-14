@@ -34,14 +34,15 @@ from rest_framework.response import Response as HttpResponse
 from .. import settings, signals
 from ..compat import six, gettext_lazy as _
 from ..docs import OpenApiResponse, extend_schema
+from ..helpers import datetime_or_now
 from ..mixins import AccountMixin
 from ..models import Portfolio, PortfolioDoubleOptIn, Sample
-from .serializers import (NoModelSerializer, PortfolioReceivedSerializer,
+from .serializers import (PortfolioReceivedSerializer,
     PortfolioOptInSerializer, PortfolioOptInUpdateSerializer,
     PortfolioGrantCreateSerializer, PortfolioRequestCreateSerializer)
 from ..filters import (DateRangeFilter, DoubleOptInStateFilter, OrderingFilter,
      SearchFilter)
-from ..utils import datetime_or_now, get_account_model
+from ..utils import get_account_model
 
 
 LOGGER = logging.getLogger(__name__)
@@ -101,7 +102,7 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
                 "campaign": {
                     "slug": "sustainability",
                     "title": "ESG/Environmental practices",
-                    "account": "tspproject"
+                    "account": "djaopsp"
                 },
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-initiated",
@@ -195,7 +196,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
                   "campaign": {
                       "slug": "sustainability",
                       "title": "ESG/Environmental practices",
-                      "account": "tspproject"
+                      "account": "djaopsp"
                   },
                   "ends_at": "2022-01-01T00:00:00Z",
                   "state": "grant-initiated",
@@ -384,30 +385,38 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
         POST /api/energy-utility/portfolios/grants/0123456789abcef HTTP/1.1
 
-    .. code-block:: json
-
-        {}
-
     responds
 
     .. code-block:: json
 
-        {}
+        {
+            "grantee": "energy-utility",
+            "account": "supplier-1",
+            "campaign": {
+                "slug": "sustainability",
+                "title": "ESG/Environmental practices",
+                "account": "djaopsp"
+            },
+            "ends_at": "2025-01-01T00:00:00Z",
+            "state": "grant-accepted"
+        }
     """
     lookup_field = 'verification_key'
-    serializer_class = NoModelSerializer
+    serializer_class = PortfolioOptInSerializer
 
     def get_queryset(self):
         # Look up grant to be accepted through the 'verification_key'
         # so it OK to just filter by grantee.
         return PortfolioDoubleOptIn.objects.filter(grantee=self.account)
 
-    @extend_schema(operation_id='portfolios_grants_accept')
+    @extend_schema(operation_id='portfolios_grants_accept', request=None)
     def post(self, request, *args, **kwargs):
         #pylint:disable=unused-argument
         instance = self.get_object()
         self.perform_create(instance)
-        return HttpResponse(status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(instance=instance)
+        return HttpResponse(serializer.to_representation(instance),
+            status=status.HTTP_201_CREATED)
 
     def delete(self, request, *args, **kwargs):
         """
@@ -478,7 +487,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                 "campaign": {
                     "slug": "sustainability",
                     "title": "ESG/Environmental practices",
-                    "account": "tspproject"
+                    "account": "djaopsp"
                 },
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-denied",
@@ -490,7 +499,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                 "campaign": {
                     "slug": "sustainability",
                     "title": "ESG/Environmental practices",
-                    "account": "tspproject"
+                    "account": "djaopsp"
                 },
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-initiated",
@@ -503,7 +512,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                 "campaign": {
                     "slug": "sustainability",
                     "title": "ESG/Environmental practices",
-                    "account": "tspproject"
+                    "account": "djaopsp"
                 },
                 "ends_at": "2022-01-01T00:00:00Z",
                 "state": "request-initiated",
@@ -615,14 +624,14 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
 class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
     lookup_field = 'verification_key'
-    serializer_class = NoModelSerializer
+    serializer_class = PortfolioOptInSerializer
 
     def get_queryset(self):
         # Look up request to be accepted through the 'verification_key'
         # so it OK to just filter by account.
         return PortfolioDoubleOptIn.objects.filter(account=self.account)
 
-    @extend_schema(operation_id='portfolios_requests_accept')
+    @extend_schema(operation_id='portfolios_requests_accept', request=None)
     def post(self, request, *args, **kwargs):
         """
         Accepts request
@@ -643,20 +652,28 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
 
             POST /api/supplier-1/portfolios/requests/0123456789abcef HTTP/1.1
 
-        .. code-block:: json
-
-            {}
-
         responds
 
         .. code-block:: json
 
-            {}
+            {
+                "grantee": "energy-utility",
+                "account": "supplier-1",
+                "campaign": {
+                    "slug": "sustainability",
+                    "title": "ESG/Environmental practices",
+                    "account": "djaopsp"
+                },
+                "ends_at": "2025-01-01T00:00:00Z",
+                "state": "request-accepted"
+            }
         """
         #pylint:disable=unused-argument
         instance = self.get_object()
         self.perform_create(instance)
-        return HttpResponse(status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(instance=instance)
+        return HttpResponse(serializer.to_representation(instance),
+            status=status.HTTP_201_CREATED)
 
     def perform_create(self, instance):
         instance.request_accepted()
@@ -727,7 +744,7 @@ class PortfoliosUpdateAPIView(AccountMixin, generics.UpdateAPIView):
           "campaign": {
               "slug": "sustainability",
               "title": "ESG/Environmental practices",
-              "account": "tspproject"
+              "account": "djaopsp"
           },
           "ends_at": "2022-01-01T00:00:00Z",
           "state": "request-denied",

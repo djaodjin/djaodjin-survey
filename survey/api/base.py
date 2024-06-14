@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,27 +22,42 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from django.db import models
+from rest_framework import generics
 
-from survey.compat import gettext_lazy as _, python_2_unicode_compatible
-from survey.helpers import SlugifyFieldMixin
+from .. import settings
+from ..compat import six
 
-@python_2_unicode_compatible
-class Account(SlugifyFieldMixin, models.Model):
-    """
-    Testsite Account model
-    """
-    slugify_field = 'full_name'
 
-    slug = models.SlugField(max_length=150, unique=True, db_index=True,
-        help_text=_("Unique identifier that can be used in a URL"))
-    full_name = models.CharField(max_length=150,
-        help_text=_("Short description suitable for display"))
-    extra = models.TextField(null=True)
-
-    def __str__(self):
-        return str(self.slug)
+class QuestionListAPIView(generics.ListAPIView):
 
     @property
-    def printable_name(self):
-        return self.full_name
+    def db_path(self):
+        if not hasattr(self, '_db_path'):
+            #pylint:disable=attribute-defined-outside-init
+            self._db_path = self.kwargs.get(self.path_url_kwarg, '').replace(
+                settings.URL_PATH_SEP, settings.DB_PATH_SEP)
+            if not self._db_path.startswith(settings.DB_PATH_SEP):
+                self._db_path = settings.DB_PATH_SEP + self._db_path
+        return self._db_path
+
+
+    def get_questions_by_key(self, prefix=None, initial=None):
+        #pylint:disable=unused-argument
+        return initial if isinstance(initial, dict) else {}
+
+
+    def get_decorated_questions(self, prefix=None):
+        return list(six.itervalues(self.get_questions_by_key(
+            prefix=prefix if prefix else settings.DB_PATH_SEP)))
+
+
+    def get_queryset(self):
+        return self.get_decorated_questions(self.db_path)
+
+
+    def get_serializer_context(self):
+        context = super(QuestionListAPIView, self).get_serializer_context()
+        context.update({
+            'prefix': self.db_path if self.db_path else settings.DB_PATH_SEP,
+        })
+        return context

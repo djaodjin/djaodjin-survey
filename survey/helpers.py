@@ -28,16 +28,92 @@ not require to import `django` modules.
 See utils.py for functions useful throughout the whole project which depend
 on importing Django models.
 """
-import datetime, json
+import datetime, json, random
 
 from dateutil.relativedelta import relativedelta, SU
-from pytz import timezone, utc, UnknownTimeZoneError
+from django.db import transaction, IntegrityError
+from django.template.defaultfilters import slugify
+from django.utils.dateparse import parse_date, parse_datetime
+from django.utils.timezone import utc
+from pytz import timezone, UnknownTimeZoneError
 from pytz.tzinfo import DstTzInfo
+from rest_framework.exceptions import ValidationError
 
 from .compat import six
 
-def period_less_than(left, right, period='yearly'):
-    if period == 'monthly':
+HOURLY = 'hourly'
+DAILY = 'daily'
+WEEKLY = 'weekly'
+MONTHLY = 'monthly'
+YEARLY = 'yearly'
+
+
+class SlugifyFieldMixin(object):
+    """
+    Generate a unique slug from title on ``save()`` when none is specified.
+    """
+    slug_field = 'slug'
+    slugify_field = 'title'
+
+    def save(self, force_insert=False, force_update=False,
+             using=None, update_fields=None):
+        if getattr(self, self.slug_field):
+            # serializer will set created slug to '' instead of None.
+            return super(SlugifyFieldMixin, self).save(
+                force_insert=force_insert, force_update=force_update,
+                using=using, update_fields=update_fields)
+        max_length = self._meta.get_field(self.slug_field).max_length
+        slugified_value = getattr(self, self.slugify_field)
+        slug_base = slugify(slugified_value)
+        if len(slug_base) > max_length:
+            slug_base = slug_base[:max_length]
+        setattr(self, self.slug_field, slug_base)
+        for _ in range(1, 10):
+            try:
+                with transaction.atomic():
+                    return super(SlugifyFieldMixin, self).save(
+                        force_insert=force_insert, force_update=force_update,
+                        using=using, update_fields=update_fields)
+            except IntegrityError as err:
+                if 'uniq' not in str(err).lower():
+                    raise
+                suffix = '-%s' % "".join([random.choice("abcdef0123456789")
+                    for _ in range(7)])
+                if len(slug_base) + len(suffix) > max_length:
+                    setattr(self, self.slug_field,
+                        slug_base[:(max_length - len(suffix))] + suffix)
+                else:
+                    setattr(self, self.slug_field, slug_base + suffix)
+        raise ValidationError({'detail':
+            "Unable to create a unique URL slug from %s '%s'" % (
+                self.slugify_field, slugified_value)})
+
+
+def datetime_or_now(dtime_at=None, tzinfo=None):
+    if not tzinfo:
+        tzinfo = utc
+    as_datetime = dtime_at
+    if isinstance(dtime_at, six.string_types):
+        as_datetime = parse_datetime(dtime_at)
+        if not as_datetime:
+            as_date = parse_date(dtime_at)
+            if as_date:
+                as_datetime = datetime.datetime.combine(
+                    as_date, datetime.time.min)
+    elif (not isinstance(dtime_at, datetime.datetime) and
+          isinstance(dtime_at, datetime.date)):
+        as_datetime = datetime.datetime.combine(
+            dtime_at, datetime.time.min)
+    if not as_datetime:
+        as_datetime = datetime.datetime.now(tz=tzinfo)
+    if (as_datetime.tzinfo is None or
+        as_datetime.tzinfo.utcoffset(as_datetime) is None):
+        as_datetime = as_datetime.replace(tzinfo=tzinfo)
+    return as_datetime
+
+
+def period_less_than(left, right, period_type=YEARLY):
+    if period_type == MONTHLY:
         return left.year < right.year or (
             left.year == right.year and left.month < right.month)
     return left.year < right.year
@@ -120,15 +196,43 @@ def construct_yearly_periods(first_date, last_date, tzone=None):
     return period_ends_at
 
 
+def construct_periods(first_date, last_date, period_type=None, tzone=None):
+    if period_type == MONTHLY:
+        return construct_monthly_periods(first_date, last_date, tzone=tzone)
+    if period_type == YEARLY:
+        return construct_yearly_periods(first_date, last_date, tzone=tzone)
+    return [first_date, last_date]
+
+
+def convert_dates_to_utc(dates):
+    return [date.astimezone(utc) for date in dates]
+
+
 def extra_as_internal(obj):
-    if not hasattr(obj, 'extra'):
-        return {}
-    if isinstance(obj.extra, six.string_types):
-        try:
-            obj.extra = json.loads(obj.extra)
-        except (TypeError, ValueError):
-            pass
-    return obj.extra
+    try:
+        if not obj.extra:
+            return {}
+        if isinstance(obj.extra, six.string_types):
+            try:
+                obj.extra = json.loads(obj.extra)
+            except (TypeError, ValueError):
+                pass
+        return obj.extra
+    except AttributeError:
+        pass
+    try:
+        extra = obj.get('extra', {})
+        if not extra:
+            return {}
+        if isinstance(extra, six.string_types):
+            try:
+                obj.update({'extra': json.loads(extra)})
+            except (TypeError, ValueError):
+                pass
+        return obj.get('extra', {})
+    except AttributeError:
+        pass
+    return {}
 
 
 def get_extra(obj, attr_name, default=None):

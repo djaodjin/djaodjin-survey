@@ -1,24 +1,29 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # see LICENSE.
 """
 This file contains SQL statements as building blocks for benchmarking
 results in APIs, downloads, etc.
 """
-import datetime
-
 from django.apps import apps as django_apps
 from django.core.exceptions import ImproperlyConfigured
 from django.db import connections
 from django.db.utils import DEFAULT_DB_ALIAS
 from django.db.models.query import QuerySet, RawQuerySet
-from django.utils.dateparse import parse_date, parse_datetime
-from django.utils.timezone import utc
 
 from . import settings
-from .compat import six
+from .helpers import MONTHLY, YEARLY
 
-def as_sql_date_trunc(field_name, db_key=None, period='yearly'):
-    if period == 'monthly':
+
+UNIT_SYSTEM_STANDARD = 0
+UNIT_SYSTEM_IMPERIAL = 1
+UNIT_SYSTEM_RANK = 2
+UNIT_SYSTEM_ENUMERATED = 3
+UNIT_SYSTEM_FREETEXT = 4
+UNIT_SYSTEM_DATETIME = 5
+
+
+def as_sql_date_trunc(field_name, db_key=None, period_type=YEARLY):
+    if period_type == MONTHLY:
         return as_sql_date_trunc_month(field_name, db_key=db_key)
     return as_sql_date_trunc_year(field_name, db_key=db_key)
 
@@ -37,25 +42,6 @@ def as_sql_date_trunc_year(field_name, db_key=None):
         # by Django `convert_datetimefield_value` function
         return "strftime('%%Y-01-01T00:00:00Z', %s)" % field_name
     return "date_trunc('year', %s)" % field_name
-
-
-def datetime_or_now(dtime_at=None):
-    as_datetime = dtime_at
-    if isinstance(dtime_at, six.string_types):
-        as_datetime = parse_datetime(dtime_at)
-        if not as_datetime:
-            as_date = parse_date(dtime_at)
-            if as_date:
-                as_datetime = datetime.datetime.combine(
-                    as_date, datetime.time.min)
-    elif isinstance(dtime_at, datetime.date):
-        as_datetime = datetime.datetime.combine(
-            dtime_at, datetime.time.min)
-    if not as_datetime:
-        as_datetime = datetime.datetime.utcnow().replace(tzinfo=utc)
-    if as_datetime.tzinfo is None:
-        as_datetime = as_datetime.replace(tzinfo=utc)
-    return as_datetime
 
 
 def is_sqlite3(db_key=None):
@@ -78,6 +64,20 @@ def get_account_model():
 " that has not been installed" % settings.ACCOUNT_MODEL)
 
 
+def get_content_model():
+    """
+    Returns the ``Content`` model that is active in this project.
+    """
+    try:
+        return django_apps.get_model(settings.CONTENT_MODEL)
+    except ValueError:
+        raise ImproperlyConfigured(
+            "CONTENT_MODEL must be of the form 'app_label.model_name'")
+    except LookupError:
+        raise ImproperlyConfigured("CONTENT_MODEL refers to model '%s'"\
+" that has not been installed" % settings.CONTENT_MODEL)
+
+
 def get_question_model():
     """
     Returns the ``Question`` model that is active in this project.
@@ -97,10 +97,10 @@ def sql_latest_frozen_by_accounts(campaign=None,
                                   tags=None, pks_only=False):
     """
     Returns the most recent frozen sample in an optionally specified
-    date range, indexed by account.
+    date range [``start_at``, ``ends_at``[, indexed by account.
 
-    The returned queryset can be further filtered by a campaign and
-    a set of tags.
+    The returned queryset can be further filtered by a ``campaign`` and
+    a set of ``tags``.
     """
     #pylint:disable=too-many-arguments
     campaign_clause = ""
@@ -383,4 +383,87 @@ ORDER BY questions.id, answers.unit_id, %(accounts_table)s.full_name""" % {
       'additional_filters': additional_filters,
       'accounts_table': get_account_model()._meta.db_table,
   }
+    return sql_query
+
+
+def get_benchmarks_counts(samples, prefix="/", period_type=None):
+    """
+    Returns a SQL statement that aggregates enumerated choices, optionally
+    per period ('yearly' or 'monthly'), over a set of `samples`
+    for each question that starts with `prefix`.
+    """
+    samples_sql = ""
+    if samples:
+        if isinstance(samples, list):
+            samples_sql = ','.join([
+                str(sample_id) for sample_id in samples])
+        elif isinstance(samples, RawQuerySet):
+            samples_sql = "SELECT id FROM (%s) AS samples" % samples.query.sql
+
+    group_by_period = ""
+    if period_type:
+        group_by_period = as_sql_date_trunc('survey_sample.created_at',
+            period_type=period_type)
+
+    sql_query = """
+WITH answers_by_question_choice AS (
+SELECT
+  survey_answer.sample_id AS sample_id,
+  survey_answer.question_id AS question_id,
+  survey_question.path AS question_path,
+  %(content_table)s.title AS question_title,
+  survey_unit.slug AS question_default_unit_slug,
+  survey_unit.title AS question_default_unit_title,
+  survey_unit.system AS question_default_unit_system,
+  CASE WHEN survey_unit.system IN (%(enum_systems)s) THEN survey_choice.text
+  ELSE 'present' END AS choice
+FROM survey_answer
+INNER JOIN survey_question
+  ON survey_answer.question_id = survey_question.id
+INNER JOIN survey_unit
+  ON survey_question.default_unit_id = survey_unit.id
+INNER JOIN %(content_table)s
+  ON survey_question.content_id = %(content_table)s.id
+LEFT OUTER JOIN survey_choice
+  ON (survey_unit.id = survey_choice.unit_id AND
+  survey_choice.id = survey_answer.measured)
+WHERE
+  survey_question.default_unit_id = survey_answer.unit_id AND
+  survey_question.path LIKE '%(prefix)s%%%%' AND
+  survey_answer.sample_id IN (%(samples)s)
+)
+SELECT
+  question_id AS id,
+  question_path,
+  question_title,
+  question_default_unit_slug,
+  question_default_unit_title,
+  question_default_unit_system,
+  choice,
+  %(select_period)s
+  COUNT(answers_by_question_choice.sample_id) AS nb_samples
+FROM answers_by_question_choice
+INNER JOIN survey_sample
+  ON answers_by_question_choice.sample_id = survey_sample.id
+GROUP BY
+ %(group_by_period)s
+  question_id,
+  question_path,
+  question_title,
+  question_default_unit_slug,
+  question_default_unit_title,
+  question_default_unit_system,
+  choice
+ORDER BY question_id ASC,%(group_by_period)s choice ASC;""" % {
+    'enum_systems': ",".join([str(system) for system in [
+        UNIT_SYSTEM_ENUMERATED, UNIT_SYSTEM_DATETIME]]),
+                        # XXX target year are stored as choices
+    'prefix': prefix,
+    'samples': samples_sql,
+    'select_period': (
+        "%s AS period," % group_by_period if group_by_period else ""),
+    'group_by_period': (
+        " %s," % group_by_period if group_by_period else ""),
+    'content_table': get_content_model()._meta.db_table,
+    }
     return sql_query

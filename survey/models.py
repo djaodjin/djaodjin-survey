@@ -36,15 +36,17 @@ import datetime, hashlib, random, uuid
 
 from django import VERSION as DJANGO_VERSION
 from django.contrib.auth import get_user_model
-from django.db import models, transaction, IntegrityError
+from django.db import models, transaction
 from django.template.defaultfilters import slugify
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
 
 from . import settings
 from .compat import (gettext_lazy as _, import_string,
     python_2_unicode_compatible)
-from .queries import (datetime_or_now, get_account_model, get_question_model,
+from .helpers import datetime_or_now, SlugifyFieldMixin
+from .queries import (UNIT_SYSTEM_STANDARD, UNIT_SYSTEM_IMPERIAL,
+    UNIT_SYSTEM_RANK, UNIT_SYSTEM_ENUMERATED, UNIT_SYSTEM_FREETEXT,
+    UNIT_SYSTEM_DATETIME, get_account_model, get_question_model,
     sql_completed_at_by, sql_latest_frozen_by_accounts, sql_frozen_answers)
 
 
@@ -55,47 +57,6 @@ def get_extra_field_class():
     elif isinstance(extra_class, str):
         extra_class = import_string(extra_class)
     return extra_class
-
-
-class SlugifyFieldMixin(object):
-    """
-    Generate a unique slug from title on ``save()`` when none is specified.
-    """
-    slug_field = 'slug'
-    slugify_field = 'title'
-
-    def save(self, force_insert=False, force_update=False,
-             using=None, update_fields=None):
-        if getattr(self, self.slug_field):
-            # serializer will set created slug to '' instead of None.
-            return super(SlugifyFieldMixin, self).save(
-                force_insert=force_insert, force_update=force_update,
-                using=using, update_fields=update_fields)
-        max_length = self._meta.get_field(self.slug_field).max_length
-        slugified_value = getattr(self, self.slugify_field)
-        slug_base = slugify(slugified_value)
-        if len(slug_base) > max_length:
-            slug_base = slug_base[:max_length]
-        setattr(self, self.slug_field, slug_base)
-        for _ in range(1, 10):
-            try:
-                with transaction.atomic():
-                    return super(SlugifyFieldMixin, self).save(
-                        force_insert=force_insert, force_update=force_update,
-                        using=using, update_fields=update_fields)
-            except IntegrityError as err:
-                if 'uniq' not in str(err).lower():
-                    raise
-                suffix = '-%s' % "".join([random.choice("abcdef0123456789")
-                    for _ in range(7)])
-                if len(slug_base) + len(suffix) > max_length:
-                    setattr(self, self.slug_field,
-                        slug_base[:(max_length - len(suffix))] + suffix)
-                else:
-                    setattr(self, self.slug_field, slug_base + suffix)
-        raise ValidationError({'detail':
-            "Unable to create a unique URL slug from %s '%s'" % (
-                self.slugify_field, slugified_value)})
 
 
 @python_2_unicode_compatible
@@ -122,12 +83,12 @@ class Unit(models.Model):
     +----+------------+------------------------------------------------------+
     """
 
-    SYSTEM_STANDARD = 0
-    SYSTEM_IMPERIAL = 1
-    SYSTEM_RANK = 2
-    SYSTEM_ENUMERATED = 3
-    SYSTEM_FREETEXT = 4
-    SYSTEM_DATETIME = 5
+    SYSTEM_STANDARD = UNIT_SYSTEM_STANDARD
+    SYSTEM_IMPERIAL = UNIT_SYSTEM_IMPERIAL
+    SYSTEM_RANK = UNIT_SYSTEM_RANK
+    SYSTEM_ENUMERATED = UNIT_SYSTEM_ENUMERATED
+    SYSTEM_FREETEXT = UNIT_SYSTEM_FREETEXT
+    SYSTEM_DATETIME = UNIT_SYSTEM_DATETIME
 
     SYSTEMS = [
             (SYSTEM_STANDARD, 'standard'),
@@ -694,11 +655,12 @@ class EditableFilter(SlugifyFieldMixin, models.Model):
     of the rows of a model type
     """
     slug = models.SlugField(unique=True,
-        help_text="Unique identifier for the sample. It can be used in a URL.")
+      help_text=_("Unique identifier for the group that can be used in a URL"))
     title = models.CharField(max_length=255,
-        help_text="Title for the filter")
+        help_text=_("Title for the group"))
     account = models.ForeignKey(settings.BELONGS_MODEL,
-        on_delete=models.PROTECT, null=True)
+        on_delete=models.PROTECT, null=True,
+        help_text=_("account the group belongs to"))
     extra = get_extra_field_class()(null=True, blank=True,
         help_text=_("Extra meta data (can be stringify JSON)"))
 
@@ -767,17 +729,21 @@ class EditableFilterEnumeratedAccounts(models.Model):
     def __str__(self):
         return '%s-%d' % (self.editable_filter.slug, int(self.rank))
 
-    def as_choice(self):
-        if (self.question and
-            self.question.default_unit.system == Unit.SYSTEM_ENUMERATED):
-            try:
-                return Choice.objects.get(
-                    models.Q(question__isnull=True)
-                    | models.Q(question=self.question),
-                    unit=self.question.default_unit, pk=self.measured).text
-            except Choice.DoesNotExist:
-                return 'invalid'
-        return self.measured
+    @property
+    def humanize_measured(self):
+        if not hasattr(self, '_humanize_measured'):
+            #pylint:disable=attribute-defined-outside-init
+            self._humanize_measured = self.measured
+            if (self.question and
+                self.question.default_unit.system == Unit.SYSTEM_ENUMERATED):
+                try:
+                    self._humanize_measured = Choice.objects.get(
+                        models.Q(question__isnull=True)
+                        | models.Q(question=self.question),
+                        unit=self.question.default_unit, pk=self.measured).text
+                except Choice.DoesNotExist:
+                    self._humanize_measured = 'invalid'
+        return self._humanize_measured
 
 
 @python_2_unicode_compatible

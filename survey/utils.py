@@ -42,9 +42,10 @@ from rest_framework.exceptions import ValidationError
 
 from . import settings
 from .compat import gettext_lazy as _, import_string, urlparse, urlunparse
+from .helpers import datetime_or_now
 from .models import Answer, PortfolioDoubleOptIn, Unit
 #pylint:disable=unused-import
-from .queries import datetime_or_now, get_account_model, get_question_model
+from .queries import get_account_model, get_content_model, get_question_model
 
 LOGGER = logging.getLogger(__name__)
 
@@ -269,20 +270,6 @@ def get_belongs_model():
     except LookupError:
         raise ImproperlyConfigured("BELONGS_MODEL refers to model '%s'"\
 " that has not been installed" % settings.BELONGS_MODEL)
-
-
-def get_content_model():
-    """
-    Returns the ``Content`` model that is active in this project.
-    """
-    try:
-        return django_apps.get_model(settings.CONTENT_MODEL)
-    except ValueError:
-        raise ImproperlyConfigured(
-            "CONTENT_MODEL must be of the form 'app_label.model_name'")
-    except LookupError:
-        raise ImproperlyConfigured("CONTENT_MODEL refers to model '%s'"\
-" that has not been installed" % settings.CONTENT_MODEL)
 
 
 def get_question_serializer():

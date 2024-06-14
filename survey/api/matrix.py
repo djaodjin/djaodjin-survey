@@ -22,105 +22,74 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging, re
+import datetime, logging, re
 from collections import OrderedDict
 
-from dateutil.relativedelta import relativedelta
-from django.db import transaction, IntegrityError
-from django.db.models import F, Max, Q
+from django.db import transaction, IntegrityError, models
 from django.http import Http404
-from django.shortcuts import get_object_or_404
+from django.template.defaultfilters import slugify
 from rest_framework import generics, response as http, status
 from rest_framework.exceptions import ValidationError
-from rest_framework.mixins import CreateModelMixin
-from rest_framework.pagination import PageNumberPagination
+from rest_framework.mixins import DestroyModelMixin, UpdateModelMixin
 
 from .. import settings
 from ..compat import reverse, six
 from ..docs import extend_schema
-from ..filters import OrderingFilter, SearchFilter
-from ..helpers import get_extra
+from ..filters import AggregateByPeriodFilter, OrderingFilter, SearchFilter
+from ..helpers import construct_periods, convert_dates_to_utc
 from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
-    EditableFilterMixin, MatrixMixin, SampleMixin)
+    EditableFilterMixin as EditableFilterBaseMixin, MatrixMixin, SampleMixin)
 from ..models import (Answer, Choice, Matrix, EditableFilter,
     EditableFilterEnumeratedAccounts, Sample, Unit, UnitEquivalences)
 from ..pagination import MetricsPagination
+from ..queries import get_benchmarks_counts
 from ..utils import (datetime_or_now, get_accessible_accounts,
-    get_benchmarks_enumerated, get_account_model, get_question_model,
+    get_account_model, get_question_model,
     get_engaged_accounts, get_account_serializer, get_question_serializer,
     handle_uniq_error)
-from .serializers import (AccountsByAnswerPredicateSerializer,
-    AccountsFilterAddSerializer, CompareQuestionSerializer,
-    EditableFilterSerializer, MatrixSerializer, SampleBenchmarksSerializer)
+from .base import QuestionListAPIView
+from .serializers import (AccountsDateRangeQueryParamSerializer,
+    UnitQueryParamSerializer, CohortSerializer, CohortAddSerializer,
+    CompareQuestionSerializer,
+    EditableFilterSerializer, EditableFilterCreateSerializer,
+    EditableFilterUpdateSerializer,
+    MatrixSerializer, SampleBenchmarksSerializer)
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class AccountsDateRangeContextMixin(object):
-    """
-    Defines a date range to select accounts
-    """
+class EditableFilterMixin(AccountMixin, EditableFilterBaseMixin):
 
     @property
-    def accounts_ends_at(self):
-        """
-        End of the period when requested accounts were suppossed to respond
-        """
-        if not hasattr(self, '_accounts_ends_at'):
-            _accounts_ends_at = get_extra(self.account, 'ends_at', None)
-            at_time = datetime_or_now()
-            if _accounts_ends_at:
-                _accounts_ends_at = datetime_or_now(_accounts_ends_at)
-                if _accounts_ends_at > at_time:
-                    at_time = _accounts_ends_at
-            param_ends_at = self.get_query_param('accounts_ends_at',
-                self.get_query_param('ends_at'))
-            if param_ends_at is not None:
-                # When there are no specified `ends_at` in the query
-                # string, we will be defaulting to the value stored
-                # in `account.extra` or `now` whichever is grater.
-                at_time = param_ends_at.strip('"')
-            self._accounts_ends_at = datetime_or_now(at_time)
-        return self._accounts_ends_at
-
-    @property
-    def accounts_start_at(self):
-        """
-        Start of the period when requested accounts were invited
-        """
-        if not hasattr(self, '_accounts_start_at'):
-            self._accounts_start_at = get_extra(self.account, 'start_at', None)
-            if self._accounts_start_at:
-                self._accounts_start_at = datetime_or_now(
-                    self._accounts_start_at)
-            param_start_at = self.get_query_param('accounts_start_at',
-                self.get_query_param('start_at'))
-            if param_start_at is not None:
-                param_start_at = param_start_at.strip('"')
-                self._accounts_start_at = datetime_or_now(param_start_at)
-            # In general `ends_at` could be `None`,
-            # which would be a problem here.
-            accounts_ends_at = datetime_or_now(self.accounts_ends_at)
-            if (self._accounts_start_at and
-                self._accounts_start_at >= accounts_ends_at):
-                try:
-                    # fixing period to 12 months if for any reason the start
-                    # date is after the ends date.
-                    self._accounts_start_at = (
-                        accounts_ends_at - relativedelta(months=12))
-                except ValueError:
-                    # deal with a bogus ends_at date
-                    self._accounts_start_at = accounts_ends_at
-        return self._accounts_start_at
+    def editable_filter(self):
+        if not hasattr(self, '_editable_filter'):
+            slug = self.kwargs.get(self.editable_filter_url_kwarg)
+            self._editable_filter = generics.get_object_or_404(
+                EditableFilter.objects.all(),
+                account=self.account, slug=slug)
+        return self._editable_filter
 
 
-
-class BenchmarkMixin(DateRangeContextMixin, CampaignMixin, AccountMixin):
+class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
+    """
+    Base class to aggregate answers
+    """
+    period_type_param = 'period_type'
+    nb_periods_param = 'nb_periods'
     scale = 1
     default_unit = 'profiles'
     valid_units = ('percentage',)
     title = "Benchmarks"
+
+    filter_backends = (AggregateByPeriodFilter,)
+
+    @property
+    def period_type(self):
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_period_type'):
+            self._period_type = self.get_query_param(self.period_type_param)
+        return self._period_type
 
     @property
     def unit(self):
@@ -132,6 +101,11 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin, AccountMixin):
                 self._unit = param_unit
         return self._unit
 
+
+    def get_title(self):
+        return self.title
+
+
     def get_accounts(self):
         """
         By default return all accounts. This method is intended to be overriden
@@ -140,91 +114,199 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin, AccountMixin):
         """
         return get_account_model().objects.all()
 
-    def get_questions(self, prefix):
+
+    def _flush_choices(self, questions_by_key, row, choices):
         """
-        Overrides CampaignContentMixin.get_questions to return a list
-        of questions based on the answers available in the benchmarks samples.
+        Populates `questions_by_key` with benchmark data aggregated in choices.
         """
-        qualified_prefix = prefix
-        if not qualified_prefix.endswith(settings.DB_PATH_SEP):
-            qualified_prefix = qualified_prefix + settings.DB_PATH_SEP
-
-        questions_queryset = get_question_model().objects.filter(
-            Q(path=prefix) | Q(path__startswith=qualified_prefix)).values(
-            'pk', 'path', 'ui_hint', 'content__title',
-            'default_unit__slug', 'default_unit__title',
-            'default_unit__system')
-        questions_by_key = {question['pk']: {
-            'path': question['path'],
-            'title': question['content__title'],
-            'ui_hint': question['ui_hint'],
-            'default_unit': Unit(
-                slug=question['default_unit__slug'],
-                title=question['default_unit__title'],
-                system=question['default_unit__system']),
-        } for question in questions_queryset}
-
-        self.attach_results(questions_by_key)
-
-        return list(six.itervalues(questions_by_key))
-
-    def _attach_results(self, questions_by_key, accessible_accounts,
-                        title, slug):
-        samples = []
-        if accessible_accounts:
-            # Calling `get_completed_assessments_at_by` with an `accounts`
-            # arguments evaluating to `False` will return all the latest
-            # frozen samples.
-            samples = Sample.objects.get_completed_assessments_at_by(
-                self.campaign,
-                start_at=self.start_at, ends_at=self.ends_at,
-                accounts=accessible_accounts)
-
-        # samples that will be counted in the benchmark
-        if samples:
-            questions_by_key = get_benchmarks_enumerated(
-                samples, questions_by_key.keys(), questions_by_key)
-            for question in six.itervalues(questions_by_key):
-                if not 'benchmarks' in question:
-                    question['benchmarks'] = []
-                account_benchmark = {
-                    'slug': slug,
-                    'title': title,
-                    'values': []
-                }
-                dkey = 'rate' if self.unit == 'percentage' else 'counts'
-                for key, val in six.iteritems(question.get(dkey, {})):
-                    account_benchmark['values'] += [(key, int(val))]
-                question['benchmarks'] += [account_benchmark]
+        question_id = row.pk
+        start_at = getattr(row, 'period', None)
+        if question_id not in questions_by_key:
+            question_path = row.question_path
+            question_title = row.question_title
+            default_unit = Unit(
+                slug=row.question_default_unit_slug,
+                title=row.question_default_unit_title,
+                system=row.question_default_unit_system)
+            questions_by_key[question_id] = {
+                'path': question_path,
+                'title': question_title,
+                'ui_hint': None, # XXX unnecessary in benchmarks
+                'default_unit': default_unit
+            }
+        question = questions_by_key[question_id]
+        if not 'benchmarks' in question:
+            question['benchmarks'] = [{
+                'slug': slugify(self.get_title()),
+                'title': self.get_title(),
+                'values': []
+            }]
+        assert len(question['benchmarks']) == 1
+        values = question['benchmarks'][0].get('values')
+        if start_at:
+            values += [(start_at, choices)]
         else:
-            # We need a 'benchamrks' key, otherwise the serializer
-            # will raise a `KeyError` exception leading to a 500 error.
-            for question in six.itervalues(questions_by_key):
-                if not 'benchmarks' in question:
-                    question['benchmarks'] = []
+            values += choices
 
-    def attach_results(self, questions_by_key, account=None):
-        account_slug = "all"
-        account_title = "All"
-        if not account:
-            account = self.account
-            account_slug = account.slug
-            account_title = account.printable_name
+
+    def get_questions_by_key(self, prefix=None, initial=None):
+        """
+        Returns a dictionnary of questions indexed by `pk` populated
+        with aggregated benchmarks.
+        """
+        #pylint:disable=too-many-locals
+        questions_by_key = super(BenchmarkMixin, self).get_questions_by_key(
+            prefix=prefix, initial=initial)
+
         accounts = self.get_accounts()
-        self._attach_results(questions_by_key, accounts,
-            account_title, account_slug)
+        self.nb_accounts = accounts.count()
+        if self.nb_accounts < 1:
+            return questions_by_key
+
+        period_type = self.period_type
+        first_date = self.start_at
+        if not first_date:
+            first_sample = Sample.objects.filter(campaign=self.campaign,
+                is_frozen=True, account__in=accounts).order_by(
+                'created_at').first()
+            if first_sample:
+                # `construct_periods` will create periods that lands
+                # on the same month/day each year.
+                first_date = datetime.datetime(first_sample.created_at.year,
+                    1, 1, tzinfo=first_sample.created_at.tzinfo)
+            else:
+                # XXX default because we need a date to pass
+                # to `construct_periods`.
+                first_date = datetime_or_now(
+                    datetime.datetime(2018, 1, 1))
+
+        date_periods = convert_dates_to_utc(
+            construct_periods(first_date, self.ends_at,
+                period_type=period_type, tzone=self.timezone))
+
+        start_at = date_periods[0]
+        for ends_at in date_periods[1:]:
+            samples = []
+            if accounts:
+                # Calling `get_completed_assessments_at_by` with an `accounts`
+                # arguments evaluating to `False` will return all the latest
+                # frozen samples.
+                samples = Sample.objects.get_completed_assessments_at_by(
+                    self.campaign, start_at=start_at, ends_at=ends_at,
+                    accounts=accounts)
+
+            # samples that will be counted in the benchmark
+            if samples:
+                sql_query = get_benchmarks_counts(samples, prefix=prefix,
+                    period_type=period_type)
+                queryset = get_question_model().objects.raw(sql_query)
+
+                choices = []
+                prev_row = None
+                prev_period_start_at = None
+                for question in queryset:
+                    question_id = question.pk
+                    choice = question.choice
+                    count = question.nb_samples
+                    period_start_at = getattr(question, 'period', None)
+                    if ((prev_row and prev_row.pk != question_id) or
+                        (period_start_at and (prev_period_start_at and
+                        prev_period_start_at != period_start_at))):
+                        self._flush_choices(
+                            questions_by_key, prev_row, choices)
+                        choices = []
+                    prev_period_start_at = period_start_at
+                    prev_row = question
+                    choices += [(choice, count)]
+                if prev_row:
+                    self._flush_choices(
+                        questions_by_key, prev_row, choices)
+
+            start_at = ends_at
+
+        return questions_by_key
 
 
-class BenchmarkAPIView(BenchmarkMixin, generics.ListAPIView):
+class BenchmarkAPIView(BenchmarkMixin, QuestionListAPIView):
     """
-    Aggregated benchmark for requested accounts
+    Benchmarks against all profiles for a subset of questions
+
+    Returns a list of questions decorated with a 'benchmarks' field
+    that contains aggregated statistics accross the set of all profiles
+    on the platform.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
 
     **Examples**:
 
     .. code-block:: http
 
-        GET /api/energy-utility/benchmarks\
-/sustainability HTTP/1.1
+        GET /api/energy-utility/benchmarks/all/sustainability/\
+esg-strategy-heading/formalized-esg-strategy HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "title": "All",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "all",
+                "title": "All",
+                "values": [
+                  ["2018-01-01T00:00:00Z", ["Yes", 1] ]
+                ]
+              }]
+           }]
+        }
+    """
+    serializer_class = SampleBenchmarksSerializer
+    pagination_class = MetricsPagination
+    title = "All"
+
+
+class BenchmarkAllIndexAPIView(BenchmarkAPIView):
+    """
+    Benchmarks against all profiles
+
+    Returns a list of questions decorated with a 'benchmarks' field
+    that contains aggregated statistics accross the set of all profiles
+    on the platform.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/benchmarks/all HTTP/1.1
 
     responds
 
@@ -232,27 +314,56 @@ class BenchmarkAPIView(BenchmarkMixin, generics.ListAPIView):
 
 
         {
-          "count": 4,
-          "results": []
+            "title": "All",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 2,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "all",
+                "title": "All",
+                "values": [
+                  ["2018-01-01T00:00:00Z", ["Yes", 1] ]
+                ]
+              }]
+            }, {
+         "path": "/sustainability/esg-strategy-heading/esg-point-person",
+              "title": "1.1 Does your company have a ESG point person?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "all",
+                "title": "All",
+                "values": [
+                  ["2018-01-01T00:00:00Z", ["Yes", 1] ]
+                ]
+              }]
+           }]
         }
     """
-    serializer_class = SampleBenchmarksSerializer
-    pagination_class = MetricsPagination
 
-    def get_serializer_context(self):
-        context = super(BenchmarkAPIView, self).get_serializer_context()
-        context.update({
-            'prefix': self.db_path if self.db_path else settings.DB_PATH_SEP,
-        })
-        return context
-
-    def get_queryset(self):
-        return self.get_questions(self.db_path)
+    @extend_schema(operation_id='benchmark_all_index')
+    def get(self, request, *args, **kwargs):
+        return super(BenchmarkAllIndexAPIView, self).get(
+            request, *args, **kwargs)
 
 
-class BenchmarkIndexAPIView(BenchmarkAPIView):
+class BenchmarkIndexAPIView(BenchmarkAllIndexAPIView):
     """
-    Aggregated benchmark for requested accounts
+    Benchmarks against all profiles
 
     **Examples**:
 
@@ -276,8 +387,7 @@ class BenchmarkIndexAPIView(BenchmarkAPIView):
         return super(BenchmarkIndexAPIView, self).get(request, *args, **kwargs)
 
 
-class AccessiblesAccountsMixin(AccountsDateRangeContextMixin,
-                               CampaignMixin, AccountMixin):
+class AccessiblesAccountsMixin(CampaignMixin, AccountMixin):
     """
     Query accounts by 'accessibles' affinity
     """
@@ -286,37 +396,108 @@ class AccessiblesAccountsMixin(AccountsDateRangeContextMixin,
         """
         Returns account accessibles by a profile in a specific date range.
         """
+        query_serializer = AccountsDateRangeQueryParamSerializer(
+            data=self.request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        accounts_start_at = query_serializer.validated_data.get(
+            'accounts_start_at', None)
+        accounts_ends_at = query_serializer.validated_data.get(
+            'accounts_ends_at', None)
         return get_accessible_accounts([self.account],
             campaign=self.campaign,
-            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
+            start_at=accounts_start_at, ends_at=accounts_ends_at,
             aggregate_set=True)
 
 
 class AccessiblesBenchmarkAPIView(AccessiblesAccountsMixin, BenchmarkAPIView):
     """
-    Aggregated benchmark for accessible profiles
+    Benchmarks against accessible profiles for a subset of questions
+
+    Returns a list of questions whose path is prefixed by `{path}`,
+    decorated with a 'benchmarks' field that contains aggregated statistics
+    accross the set of profiles accessible to a grantee `profile`.
+
+    The set of profiles whose responses are taken into account in
+    the aggregate can be reduced to a subset of profiles accessbile
+    in the time period [accounts_start_at, accounts_ends_at[.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
 
     **Examples**:
 
     .. code-block:: http
 
-        GET /api/energy-utility/benchmarks/accessibles/sustainability HTTP/1.1
+        GET /api/energy-utility/benchmarks/accessibles/sustainability/\
+esg-strategy-heading/formalized-esg-strategy HTTP/1.1
 
     responds
 
     .. code-block:: json
 
-
         {
-          "count": 4,
-          "results": []
+            "title": "Accessibles",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "accessibles",
+                "title": "Accessibles",
+                "values": [
+                  ["2018-01-01T00:00:00Z", {"Yes": 1}]
+                ]
+              }]
+           }]
         }
     """
+    title = "Tracked"
+
+    def get_title(self):
+        return self.account.printable_name
+
+    @extend_schema(parameters=[AccountsDateRangeQueryParamSerializer,
+        UnitQueryParamSerializer])
+    def get(self, request, *args, **kwargs):
+        return super(AccessiblesBenchmarkAPIView, self).get(
+            request, *args, **kwargs)
 
 
 class AccessiblesBenchmarkIndexAPIView(AccessiblesBenchmarkAPIView):
     """
-    Aggregated benchmark for accessible profiles
+    Benchmarks against accessible profiles
+
+    Returns a list of questions decorated with a 'benchmarks' field
+    that contains aggregated statistics accross the set of profiles
+    accessible to a grantee `{profile}`.
+
+    The set of profiles whose responses are taken into account in
+    the aggregate can be reduced to a subset of profiles accessbile
+    in the time period [accounts_start_at, accounts_ends_at[.
+
+    Aggregation can be done for samples created in the time period
+    [start_at, ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
 
     **Examples**:
 
@@ -328,21 +509,41 @@ class AccessiblesBenchmarkIndexAPIView(AccessiblesBenchmarkAPIView):
 
     .. code-block:: json
 
-
         {
-          "count": 4,
-          "results": []
+            "title": "Accessibles",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "accessibles",
+                "title": "Accessibles",
+                "values": [
+                  ["2018-01-01T00:00:00Z", {"Yes": 1}]
+                ]
+              }]
+           }]
         }
     """
 
-    @extend_schema(operation_id='accessibles_benchmark_index')
+    @extend_schema(operation_id='accessibles_benchmark_index',
+        parameters=[AccountsDateRangeQueryParamSerializer,
+            UnitQueryParamSerializer])
     def get(self, request, *args, **kwargs):
         return super(AccessiblesBenchmarkIndexAPIView, self).get(
             request, *args, **kwargs)
 
 
-class EngagedAccountsMixin(AccountsDateRangeContextMixin,
-                           CampaignMixin, AccountMixin):
+class EngagedAccountsMixin(CampaignMixin, AccountMixin):
     """
     Query accounts by 'accessibles' affinity
     """
@@ -351,37 +552,108 @@ class EngagedAccountsMixin(AccountsDateRangeContextMixin,
         """
         Returns account accessibles by a profile in a specific date range.
         """
+        query_serializer = AccountsDateRangeQueryParamSerializer(
+            data=self.request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        accounts_start_at = query_serializer.validated_data.get(
+            'accounts_start_at', None)
+        accounts_ends_at = query_serializer.validated_data.get(
+            'accounts_ends_at', None)
         return get_engaged_accounts([self.account],
             campaign=self.campaign,
-            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
+            start_at=accounts_start_at, ends_at=accounts_ends_at,
             aggregate_set=True)
 
 
 class EngagedBenchmarkAPIView(EngagedAccountsMixin, BenchmarkAPIView):
     """
-    Aggregated benchmark for engaged profiles
+    Benchmarks against engaged profiles for a subset of questions
+
+    Returns a list of questions whose path is prefixed by `{path}`,
+    decorated with a 'benchmarks' field that contains aggregated statistics
+    accross the set of profiles engaged by a `profile`.
+
+    The set of profiles whose responses are taken into account in
+    the aggregate can be reduced to a subset of profiles engaged
+    in the time period [accounts_start_at, accounts_ends_at[.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
 
     **Examples**:
 
     .. code-block:: http
 
-        GET /api/energy-utility/benchmarks/engaged/sustainability HTTP/1.1
+        GET /api/energy-utility/benchmarks/engaged/sustainability/\
+esg-strategy-heading/formalized-esg-strategy HTTP/1.1
 
     responds
 
     .. code-block:: json
 
-
         {
-          "count": 4,
-          "results": []
+            "title": "Engaged",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "engaged",
+                "title": "Engaged",
+                "values": [
+                  ["2018-01-01T00:00:00Z", {"Yes": 1}]
+                ]
+              }]
+           }]
         }
     """
+    title = "Engaged"
+
+    def get_title(self):
+        return self.account.printable_name
+
+    @extend_schema(parameters=[AccountsDateRangeQueryParamSerializer,
+        UnitQueryParamSerializer])
+    def get(self, request, *args, **kwargs):
+        return super(EngagedBenchmarkAPIView, self).get(
+            request, *args, **kwargs)
 
 
 class EngagedBenchmarkIndexAPIView(EngagedBenchmarkAPIView):
     """
-    Aggregated benchmark for engaged profiles
+    Benchmarks against engaged profiles
+
+    Returns a list of questions decorated with a 'benchmarks' field
+    that contains aggregated statistics accross the set of profiles
+    engaged by a `profile`.
+
+    The set of profiles whose responses are taken into account in
+    the aggregate can be reduced to a subset of profiles engaged
+    in the time period [accounts_start_at, accounts_ends_at[.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
 
     **Examples**:
 
@@ -393,42 +665,75 @@ class EngagedBenchmarkIndexAPIView(EngagedBenchmarkAPIView):
 
     .. code-block:: json
 
-
         {
-          "count": 4,
-          "results": []
+            "title": "Engaged",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "engaged",
+                "title": "Engaged",
+                "values": [
+                  ["2018-01-01T00:00:00Z", {"Yes": 1}]
+                ]
+              }]
+           }]
         }
     """
 
-    @extend_schema(operation_id='engaged_benchmark_index')
+    @extend_schema(operation_id='engaged_benchmark_index',
+        parameters=[AccountsDateRangeQueryParamSerializer,
+            UnitQueryParamSerializer])
     def get(self, request, *args, **kwargs):
         return super(EngagedBenchmarkIndexAPIView, self).get(
             request, *args, **kwargs)
 
 
-class EditableFilterAccountsMixin(EditableFilterMixin,
-                                  AccountsDateRangeContextMixin,
-                                  CampaignMixin, AccountMixin):
+class EditableFilterAccountsMixin(CampaignMixin, EditableFilterMixin):
     """
-    Query accounts by 'accessibles' affinity
+    Query accounts for a custom filter
     """
 
     def get_accounts(self):
         """
         Returns account accessibles by a profile in a specific date range.
         """
+        query_serializer = AccountsDateRangeQueryParamSerializer(
+            data=self.request.query_params)
+        query_serializer.is_valid(raise_exception=True)
+        accounts_start_at = query_serializer.validated_data.get(
+            'accounts_start_at', None)
+        accounts_ends_at = query_serializer.validated_data.get(
+            'accounts_ends_at', None)
+
         select_by_answers = EditableFilterEnumeratedAccounts.objects.filter(
             editable_filter=self.editable_filter).exclude(
                 question__isnull=True)
         if select_by_answers.exists():
             # Select accounts based on answers to a question.
+            kwargs = {}
+            if accounts_start_at:
+                kwargs.update({'samples__created_at__gte': accounts_start_at})
+            if accounts_ends_at:
+                kwargs.update({'samples__created_at__lt': accounts_ends_at})
             # XXX supports only one predicate
             select_by = select_by_answers.first()
             return get_account_model().objects.filter(
-              samples__is_frozen=True,
-              samples__answers__question=select_by.question,
-              samples__answers__unit=select_by.question.default_unit,
-              samples__answers__measured=select_by.measured)
+                samples__is_frozen=True,
+                samples__answers__question=select_by.question,
+                samples__answers__unit=select_by.question.default_unit,
+                samples__answers__measured=select_by.measured,
+                *kwargs)
 
         # we are dealing with a nomminative group of accounts
         return get_account_model().objects.filter(
@@ -438,30 +743,91 @@ class EditableFilterAccountsMixin(EditableFilterMixin,
 class EditableFilterBenchmarkAPIView(EditableFilterAccountsMixin,
                                      BenchmarkAPIView):
     """
-    Aggregated benchmark for a custom filter
+    Benchmarks against selected profiles for a subset of questions
+
+    Returns a list of questions whose path is prefixed by `{path}`,
+    decorated with a 'benchmarks' field that contains aggregated statistics
+    accross the set of profiles selected by the `{editable_filter}` filter.
+
+    The set of profiles whose responses are taken into account in
+    the aggregate can be reduced to a subset of profiles created
+    in the time period [accounts_start_at, accounts_ends_at[.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
 
     **Examples**:
 
     .. code-block:: http
 
         GET /api/energy-utility/benchmarks/tier1-suppliers/sustainability\
- HTTP/1.1
+esg-strategy-heading/formalized-esg-strategy HTTP/1.1
 
     responds
 
     .. code-block:: json
 
-
         {
-          "count": 4,
-          "results": []
+            "title": "Tier1 suppliers",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "tier1-suppliers",
+                "title": "Tier1 suppliers",
+                "values": [
+                  ["2018-01-01T00:00:00Z", {"Yes": 1}]
+                ]
+              }]
+           }]
         }
     """
+    def get_title(self):
+        return self.editable_filter.title
+
+    @extend_schema(parameters=[AccountsDateRangeQueryParamSerializer,
+        UnitQueryParamSerializer])
+    def get(self, request, *args, **kwargs):
+        return super(EditableFilterBenchmarkAPIView, self).get(
+            request, *args, **kwargs)
 
 
 class EditableFilterBenchmarkIndexAPIView(EditableFilterBenchmarkAPIView):
     """
-    Aggregated benchmark for a custom filter
+    Benchmarks against selected profiles
+
+    Returns a list of questions decorated with a 'benchmarks' field
+    that contains aggregated statistics accross the set of profiles
+    selected by the `{editable_filter}` filter.
+
+    The set of profiles whose responses are taken into account in
+    the aggregate can be reduced to a subset of profiles created
+    in the time period [accounts_start_at, accounts_ends_at[.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
 
     **Examples**:
 
@@ -473,14 +839,35 @@ class EditableFilterBenchmarkIndexAPIView(EditableFilterBenchmarkAPIView):
 
     .. code-block:: json
 
-
         {
-          "count": 4,
-          "results": []
+            "title": "Tier1 suppliers",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "tier1-suppliers",
+                "title": "Tier1 suppliers",
+                "values": [
+                  ["2018-01-01T00:00:00Z", {"Yes": 1}]
+                ]
+              }]
+           }]
         }
     """
 
-    @extend_schema(operation_id='editable_filter_benchmark_index')
+    @extend_schema(operation_id='editable_filter_benchmark_index',
+        parameters=[AccountsDateRangeQueryParamSerializer,
+            UnitQueryParamSerializer])
     def get(self, request, *args, **kwargs):
         return super(EditableFilterBenchmarkIndexAPIView, self).get(
             request, *args, **kwargs)
@@ -488,6 +875,9 @@ class EditableFilterBenchmarkIndexAPIView(EditableFilterBenchmarkAPIView):
 
 
 class SampleBenchmarkMixin(SampleMixin, BenchmarkMixin):
+
+    filter_backends = tuple([])
+    title = "All"
 
     @property
     def campaign(self):
@@ -504,45 +894,89 @@ class SampleBenchmarkMixin(SampleMixin, BenchmarkMixin):
                 else datetime_or_now())
         return self._ends_at
 
+    @property
+    def period_type(self):
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_period_type'):
+            self._period_type = None # does not take period_type into account
+                                     # when sampling all from a benchmark.
+        return self._period_type
 
-class SampleBenchmarksAPIView(SampleBenchmarkMixin, generics.ListAPIView):
+
+class SampleBenchmarksAPIView(SampleBenchmarkMixin, QuestionListAPIView):
     """
-    Benchmark a sub-tree of questions against peers
+    Benchmarks against all peers for a subset of questions
+
+    Returns a list of questions whose path is prefixed by `{path}`,
+    decorated with a 'benchmarks' field that contains aggregated statistics
+    accross the set of all profiles on the platform at the time the `{sample}`
+    was created.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
 
     **Examples**:
 
     .. code-block:: http
 
         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/benchmarks\
-/sustainability HTTP/1.1
+/sustainability/esg-strategy-heading/formalized-esg-strategy HTTP/1.1
 
     responds
 
     .. code-block:: json
 
-
         {
-          "count": 4,
-          "results": []
+            "title": "All",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "all",
+                "title": "All",
+                "values": [
+                  ["2018-01-01T00:00:00Z", ["Yes", 1] ]
+                ]
+              }]
+           }]
         }
     """
     serializer_class = SampleBenchmarksSerializer
     pagination_class = MetricsPagination
 
-    def get_serializer_context(self):
-        context = super(SampleBenchmarksAPIView, self).get_serializer_context()
-        context.update({
-            'prefix': self.db_path if self.db_path else settings.DB_PATH_SEP,
-        })
-        return context
-
-    def get_queryset(self):
-        return self.get_questions(self.db_path)
-
 
 class SampleBenchmarksIndexAPIView(SampleBenchmarksAPIView):
     """
-    Benchmark against peers
+    Benchmarks against all peers
+
+    Returns a list of questions decorated with a 'benchmarks' field
+    that contains aggregated statistics accross the set of all profiles
+    on the platform at the time the `{sample}` was created.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
 
     **Examples**:
 
@@ -555,16 +989,35 @@ class SampleBenchmarksIndexAPIView(SampleBenchmarksAPIView):
 
     .. code-block:: json
 
-
         {
-          "count": 4,
-          "results": []
+            "title": "All",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "all",
+                "title": "All",
+                "values": [
+                  ["2018-01-01T00:00:00Z", ["Yes", 1] ]
+                ]
+              }]
+           }]
         }
     """
 
 
 class CompareAPIView(DateRangeContextMixin, CampaignMixin, AccountMixin,
-                     generics.ListAPIView):
+                     QuestionListAPIView):
     """
     Lists compared samples
 
@@ -771,30 +1224,22 @@ class CompareAPIView(DateRangeContextMixin, CampaignMixin, AccountMixin,
                 'values': self.equiv_default_unit(values)})
 
 
-    def get_questions(self, prefix):
+    def get_questions_by_key(self, prefix=None, initial=None):
         """
-        Overrides CampaignContentMixin.get_questions to return a list
-        of questions based on the answers available in the compared samples.
+        Returns a list of questions based on the answers available
+        in the compared samples.
         """
-        if not prefix.endswith(settings.DB_PATH_SEP):
-            prefix = prefix + settings.DB_PATH_SEP
+        questions_by_key = super(CompareAPIView, self).get_questions_by_key(
+            prefix=prefix, initial=initial)
 
-        questions_by_key = {}
         if self.samples:
             self.attach_results(
                 questions_by_key,
                 Answer.objects.get_frozen_answers(
                     self.campaign, self.samples, prefix=prefix))
 
-        return list(six.itervalues(questions_by_key))
+        return questions_by_key
 
-
-    def get_serializer_context(self):
-        context = super(CompareAPIView, self).get_serializer_context()
-        context.update({
-            'prefix': self.db_path if self.db_path else settings.DB_PATH_SEP,
-        })
-        return context
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -813,9 +1258,6 @@ class CompareAPIView(DateRangeContextMixin, CampaignMixin, AccountMixin,
             ('units', {}),
             ('labels', self.labels),
         ]))
-
-    def get_queryset(self):
-        return self.get_questions(self.db_path)
 
 
 class CompareIndexAPIView(CompareAPIView):
@@ -1036,7 +1478,7 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
                         nb_correct_answers = Answer.objects.filter(
                             question__in=questions,
                             sample__account__in=qs_accounts).filter(
-                                measured=F('question__correct_answer')).count()
+                                measured=models.F('question__correct_answer')).count()
                         score = nb_correct_answers * 100 / (
                             nb_questions * nb_accounts)
                         LOGGER.debug("score for '%s' = (%d * 100) "\
@@ -1085,7 +1527,8 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
             metric = self.matrix.metric
         else:
             parts = self.kwargs.get(self.matrix_url_kwarg).split('/')
-            metric = get_object_or_404(EditableFilter, slug=parts[-1])
+            metric = generics.get_object_or_404(EditableFilter.objects.all(),
+                slug=parts[-1])
             matrix = Matrix.objects.filter(slug=parts[0]).first()
         if not matrix:
             raise Http404()
@@ -1143,7 +1586,8 @@ class EditableFilterQuerysetMixin(AccountMixin):
 
     def get_queryset(self):
         return EditableFilter.objects.filter(
-            Q(account__isnull=True) | Q(account=self.account)).order_by('slug')
+            models.Q(account__isnull=True) |
+            models.Q(account=self.account)).order_by('slug')
 
 
 class EditableFilterListAPIView(EditableFilterQuerysetMixin,
@@ -1170,15 +1614,7 @@ class EditableFilterListAPIView(EditableFilterQuerysetMixin,
           "results": [{
               "slug": "boxes-and-enclosures",
               "title": "Boxes & enclosures",
-              "extra": "",
-              "predicates": [{
-                  "rank": 0,
-                  "operator": "startswith",
-                  "operand": "/metal/boxes-and-enclosures",
-                  "field": "extra",
-                  "selector": "keepmatching"
-              }],
-              "likely_metric": null
+              "extra": ""
           }]
       }
     """
@@ -1190,40 +1626,19 @@ class EditableFilterListAPIView(EditableFilterQuerysetMixin,
     filter_backends = (SearchFilter, OrderingFilter)
 
 
-class EditableFilterDetailAPIView(AccountMixin,
-                                  generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = EditableFilterSerializer
-    lookup_field = 'slug'
-    lookup_url_kwarg = 'editable_filter'
-
-    @property
-    def editable_filter(self):
-        #pylint:disable=attribute-defined-outside-init
-        if not hasattr(self, '_editable_filter'):
-            self._editable_filter = get_object_or_404(
-                EditableFilter.objects.all(),
-                account=self.account,
-                slug=self.kwargs.get(self.lookup_url_kwarg))
-        return self._editable_filter
-
-    def get_object(self):
-        editable_filter = self.editable_filter
-        editable_filter.results = get_account_model().objects.filter(
-            filters__editable_filter=self.editable_filter).annotate(
-                rank=Max('filters__rank')).order_by('rank')
-        editable_filter.accounts_by = \
-            EditableFilterEnumeratedAccounts.objects.filter(
-                editable_filter=self.editable_filter).exclude(
-                question__isnull=True).order_by('rank')
-        return editable_filter
-
-
-class AccountsFilterDetailAPIView(CreateModelMixin,
-                                  EditableFilterDetailAPIView):
+class AccountsFilterDetailAPIView(EditableFilterMixin,
+                                  DestroyModelMixin,
+                                  UpdateModelMixin,
+                                  generics.ListCreateAPIView):
     """
-    Retrieves a profiles fitler
+    Lists profiles in a group
 
-    **Tags**: reporting
+    Returns a list of {{PAGE_SIZE}} nomminative profiles and
+    select-profiles-by-answer filters that form the group.
+
+    `{profile}` must be the owner of the `{editable_filter}`.
+
+    **Tags**: cohorts
 
     **Examples**
 
@@ -1236,11 +1651,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
     .. code-block:: json
 
          {
-           "slug": "suppliers",
-           "title": "Energy utility suppliers",
-           "extra": null,
-           "predicates": [],
-           "likely_metric": null,
+           "count": 1,
            "results": [{
                 "facility": "Main factory",
                 "fuel_type": "natural-gas",
@@ -1252,16 +1663,30 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
             }]
         }
     """
+    model = EditableFilterEnumeratedAccounts
+    serializer_class = CohortSerializer
+
+    def get_queryset(self):
+        return self.model.objects.filter(
+            editable_filter=self.editable_filter).order_by('rank')
+
     def get_serializer_class(self):
         if self.request.method.lower() == 'post':
-            return AccountsFilterAddSerializer
+            return CohortAddSerializer
+        if self.request.method.lower() == 'put':
+            return EditableFilterUpdateSerializer
         return super(AccountsFilterDetailAPIView, self).get_serializer_class()
 
+    @extend_schema(request=EditableFilterUpdateSerializer)
     def put(self, request, *args, **kwargs):
         """
-        Updates a fitler
+        Renames a group of profiles
 
-        **Tags**: reporting
+        Updates the name of a group of profiles.
+
+        `{profile}` must be the owner of the `{editable_filter}`.
+
+        **Tags**: cohorts
 
         **Examples**
 
@@ -1272,8 +1697,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
         .. code-block:: json
 
             {
-                "title": "Energy utility suppliers",
-                "predicates": []
+                "title": "Energy utility suppliers"
             }
 
         responds
@@ -1283,29 +1707,19 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
          {
            "slug": "suppliers",
            "title": "Energy utility suppliers",
-           "extra": null,
-           "predicates": [],
-           "likely_metric": null,
-           "results": [{
-                "facility": "Main factory",
-                "fuel_type": "natural-gas",
-                "allocation": "Energy utility",
-                "created_at": null,
-                "ends_at": null,
-                "amount": 100,
-                "unit": "mmbtu"
-            }]
-        }
+           "extra": null
+         }
         """
-        #pylint:disable=useless-super-delegation
-        return super(AccountsFilterDetailAPIView, self).put(
-            request, *args, **kwargs)
+        return self.update(request, *args, **kwargs)
+
 
     def delete(self, request, *args, **kwargs):
         """
-        Deletes a profiles fitler
+        Deletes a group of profiles
 
-        **Tags**: reporting
+        `{profile}` must be the owner of the `{editable_filter}`.
+
+        **Tags**: cohorts
 
         **Examples**
 
@@ -1313,16 +1727,31 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
 
              DELETE /api/energy-utility/filters/accounts/suppliers HTTP/1.1
         """
-        #pylint:disable=useless-super-delegation
-        return super(AccountsFilterDetailAPIView, self).delete(
-            request, *args, **kwargs)
+        return self.destroy(request, *args, **kwargs)
+
+    @extend_schema(operation_id='filters_accounts_list_item')
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
 
     @extend_schema(operation_id='filters_accounts_add_item')
     def post(self, request, *args, **kwargs):
         """
-        Updates a profiles fitler
+        Adds a profile to a group
 
-        **Tags**: reporting
+        Either `full_name` (optionally `slug`) or a pair
+        (`question`, `measured`) must be specified.
+
+        When a `full_name`/`slug` is specified, the associated nomminative
+        profile will be added to the group.
+
+        When a (`question`, `measured`) pair is specified,
+        a select-profiles-by-answer filter will be used
+        to add all profiles that answered `measured` to a `question`
+        to the group.
+
+        `{profile}` must be the owner of the `{editable_filter}`.
+
+        **Tags**: cohorts
 
         **Examples**
 
@@ -1348,27 +1777,41 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
         #pylint:disable=useless-super-delegation
         return self.create(request, *args, **kwargs)
 
-    def create(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs): # XXX unnecessary?
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        instance = self.perform_create(serializer)
+        data = self.serializer_class(
+            context=self.get_serializer_context()).to_representation(instance)
+        headers = self.get_success_headers(data)
+        return http.Response(data, status=status.HTTP_201_CREATED,
+            headers=headers)
 
+
+    def perform_create(self, serializer):
         full_name = serializer.validated_data.get('full_name')
         account_slug = serializer.validated_data.get('slug')
         if full_name or account_slug:
-            return self.create_nominative_predicate(serializer.validated_data)
-        return self.create_by_answers_predicate(serializer.validated_data)
+            return self.get_or_create_nominative_predicate(
+                serializer.validated_data)
+        return self.create_by_answers_predicate(
+            serializer.validated_data)
 
-    def create_nominative_predicate(self, validated_data):
+
+    def get_or_create_nominative_predicate(self, validated_data):
         # Create the `Account` (if necessary) and add it to the filter.
         full_name = validated_data.get('full_name')
         account_slug = validated_data.get('slug')
         with transaction.atomic():
             extra = validated_data.get('extra')
             if account_slug:
-                account_queryset = get_account_model().objects.all()
+                # We can only add nomminative accounts that we track.
+                account_queryset = get_account_model().objects.filter(
+                    portfolios__grantee=self.account)
                 account_lookup_field = settings.ACCOUNT_LOOKUP_FIELD
                 filter_args = {account_lookup_field: account_slug}
-                account = get_object_or_404(account_queryset, **filter_args)
+                account = generics.get_object_or_404(account_queryset,
+                    **filter_args)
             else:
                 try:
                     # We rely on the account model to create a unique slug
@@ -1380,7 +1823,7 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
                     handle_uniq_error(err)
             last_rank = EditableFilterEnumeratedAccounts.objects.filter(
                 editable_filter=self.editable_filter).aggregate(
-                Max('rank')).get('rank__max')
+                models.Max('rank')).get('rank__max')
             if not last_rank:
                 last_rank = 0
             enum_account = EditableFilterEnumeratedAccounts.objects.create(
@@ -1388,21 +1831,17 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
                 editable_filter=self.editable_filter,
                 rank=last_rank + 1)
             account.rank = enum_account.rank
-
-        account_serializer = get_account_serializer()(instance=account)
-        headers = self.get_success_headers(account_serializer.data)
-        return http.Response(account_serializer.to_representation(account),
-            status=status.HTTP_201_CREATED, headers=headers)
+        return enum_account
 
 
     def create_by_answers_predicate(self, validated_data):
-        question = get_object_or_404(
-            get_question_model(), path=validated_data.get('path'))
+        question = generics.get_object_or_404(
+            get_question_model().objects.all(), path=validated_data.get('path'))
         measured = validated_data.get('measured')
         with transaction.atomic():
             last_rank = EditableFilterEnumeratedAccounts.objects.filter(
                 editable_filter=self.editable_filter).aggregate(
-                Max('rank')).get('rank__max')
+                models.Max('rank')).get('rank__max')
             if not last_rank:
                 last_rank = 0
 
@@ -1424,17 +1863,26 @@ class AccountsFilterDetailAPIView(CreateModelMixin,
                 measured=measured,
                 editable_filter=self.editable_filter,
                 rank=last_rank + 1)
-
-        serializer = AccountsByAnswerPredicateSerializer()
-        return http.Response(serializer.to_representation(enum_account),
-            status=status.HTTP_201_CREATED)
+        return enum_account
 
 
-class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
+    def destroy(self, request, *args, **kwargs):
+        instance = self.editable_filter
+        self.perform_destroy(instance)
+        return http.Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AccountsFilterEnumeratedAPIView(EditableFilterMixin,
+                                      generics.RetrieveUpdateDestroyAPIView):
     """
-    Retrieves a profile in an enumerated profiles filter
+    Retrieves a selector in a group
 
-    **Tags**: reporting
+    Returns the nominative profile or select-profiles-by-answer filter
+    at index `{rank}` in the group `{editable_filter}`.
+
+    `{profile}` must be the owner of the `{editable_filter}`.
+
+    **Tags**: cohorts
 
     **Examples**
 
@@ -1452,53 +1900,42 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
          }
     """
     lookup_field = 'rank'
-    serializer_class = AccountsFilterAddSerializer
+    serializer_class = CohortSerializer
 
     @extend_schema(operation_id='filters_accounts_retrieve_item')
     def get(self, request, *args, **kwargs):
-        return super(AccountsFilterEnumeratedAPIView, self).get(
-            request, *args, **kwargs)
+        return self.retrieve(request, *args, **kwargs)
+
 
     def get_queryset(self):
         queryset = EditableFilterEnumeratedAccounts.objects.filter(
-            editable_filter__slug=self.kwargs.get('editable_filter'))
+            editable_filter__account=self.account,
+            editable_filter__slug=self.kwargs.get(
+                self.editable_filter_url_kwarg))
         return queryset
 
-    def get_object(self):
-        """
-        Returns the object the view is displaying.
-
-        You may want to override this if you need to provide non-standard
-        queryset lookups.  Eg if objects are referenced using multiple
-        keyword arguments in the url conf.
-        """
-        queryset = self.filter_queryset(self.get_queryset())
-
-        # Perform the lookup filtering.
-        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-
-        assert lookup_url_kwarg in self.kwargs, (
-            'Expected view %s to be called with a URL keyword argument '
-            'named "%s". Fix your URL conf, or set the `.lookup_field` '
-            'attribute on the view correctly.' %
-            (self.__class__.__name__, lookup_url_kwarg)
-        )
-
-        filter_kwargs = {self.lookup_field: self.kwargs[lookup_url_kwarg]}
-        obj = get_object_or_404(queryset, **filter_kwargs)
-
-        # May raise a permission denied
-        self.check_object_permissions(self.request, obj)
-
-        return obj
+    def perform_update(self, serializer):
+        if 'account' in serializer.validated_data:
+            full_name = serializer.validated_data.get(
+                'account').get('full_name')
+            # XXX We shouldn't be able to update a supplier name
+            #     unless we have a role for that supplier.
+            serializer.instance.account.full_name = full_name
+            serializer.instance.account.save()
 
 
     @extend_schema(operation_id='filters_accounts_update_item')
     def put(self, request, *args, **kwargs):
         """
-        Updates a profile in an enumerated profiles filter
+        Updates a selector in a group
 
-        **Tags**: reporting
+        Updates the selector at `{rank}` in the group `{editable_filter}`,
+        and returns the updated nominative profile or select-profiles-by-answer
+        filter.
+
+        `{profile}` must be the owner of the `{editable_filter}`.
+
+        **Tags**: cohorts
 
         **Examples**
 
@@ -1521,22 +1958,26 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
                 "full_name": "Main factory"
             }
         """
-        #pylint:disable=useless-parent-delegation
-        return super(AccountsFilterEnumeratedAPIView, self).put(
-            request, *args, **kwargs)
+        return self.update(request, *args, **kwargs)
+
 
     @extend_schema(operation_id='filters_accounts_partial_update_item')
     def patch(self, request, *args, **kwargs):
-        #pylint:disable=useless-parent-delegation
-        return super(AccountsFilterEnumeratedAPIView, self).patch(
-            request, *args, **kwargs)
+        return self.partial_update(request, *args, **kwargs)
+
 
     @extend_schema(operation_id='filters_accounts_remove_item')
     def delete(self, request, *args, **kwargs):
         """
-        Deletes a profile in an enumerated profiles filter
+        Removes a selector from a group
 
-        **Tags**: reporting
+        Upon successful completion, the nomminative profile, or
+        select-profiles-by-answer filter, at index `{rank}` will
+        no longer be present in the group `{editable_filter}`.
+
+        `{profile}` must be the owner of the `{editable_filter}`.
+
+        **Tags**: cohorts
 
         **Examples**
 
@@ -1544,40 +1985,23 @@ class AccountsFilterEnumeratedAPIView(generics.RetrieveUpdateDestroyAPIView):
 
              DELETE /api/energy-utility/filters/accounts/suppliers/1 HTTP/1.1
         """
-        #pylint:disable=useless-parent-delegation
-        return super(AccountsFilterEnumeratedAPIView, self).delete(
-            request, *args, **kwargs)
-
-
-class EditableFilterPagination(PageNumberPagination):
-
-    def paginate_queryset(self, queryset, request, view=None):
-        #pylint:disable=attribute-defined-outside-init
-        self.editable_filter = view.editable_filter
-        return super(EditableFilterPagination, self).paginate_queryset(
-            queryset, request, view=view)
-
-    def get_paginated_response(self, data):
-        return http.Response(OrderedDict([
-            ('editable_filter', EditableFilterSerializer().to_representation(
-                self.editable_filter)),
-            ('count', self.page.paginator.count),
-            ('next', self.get_next_link()),
-            ('previous', self.get_previous_link()),
-            ('results', data)
-        ]))
+        return self.destroy(request, *args, **kwargs)
 
 
 class EditableFilterObjectsAPIView(AccountMixin, generics.ListCreateAPIView):
     """
     Base class to filter accounts and questions
     """
-#    pagination_class = EditableFilterPagination
     serializer_class = None # override in subclasses
     lookup_field = 'slug'
     lookup_url_kwarg = 'editable_filter'
-
     filter_backends = (SearchFilter, OrderingFilter)
+
+    search_fields = (
+        'slug',
+        'title'
+    )
+
     ordering = ('title',)
 
     def get_queryset(self):
@@ -1602,15 +2026,6 @@ class EditableFilterObjectsAPIView(AccountMixin, generics.ListCreateAPIView):
                 "slug": "construction",
                 "title": "Construction",
                 "tags": "cohort",
-                "predicates": [
-                {
-                    "rank": 0,
-                    "operator": "contains",
-                    "operand": "construction",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }
-                ],
                 "likely_metric": null
             }
 
@@ -1622,15 +2037,6 @@ class EditableFilterObjectsAPIView(AccountMixin, generics.ListCreateAPIView):
                 "slug": "construction",
                 "title": "Construction",
                 "tags": "cohort",
-                "predicates": [
-                {
-                    "rank": 0,
-                    "operator": "contains",
-                    "operand": "construction",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }
-                ],
                 "likely_metric": null
             }
         """
@@ -1645,9 +2051,14 @@ class EditableFilterObjectsAPIView(AccountMixin, generics.ListCreateAPIView):
 
 class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
     """
-    Lists profiles filters
+    Lists defined group of profiles
 
-    **Tags**: reporting
+    Returns a list of {{PAGE_SIZE}} groups that belong to `{profile}`.
+
+    The queryset can be further refined to match a search filter (``q``)
+    and sorted on specific fields (``o``).
+
+    **Tags**: cohorts
 
     **Examples**:
 
@@ -1667,26 +2078,33 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
             {
                "slug": "supplier-1",
                "title": "Supplier 1",
-               "extra": null,
-               "predicates": [],
-               "likely_metric": [],
-               "results": []
+               "extra": null
            }]
         }
     """
     serializer_class = EditableFilterSerializer
 
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return EditableFilterCreateSerializer
+        return super(AccountsFilterListAPIView, self).get_serializer_class()
+
     def get_queryset(self):
         queryset = super(AccountsFilterListAPIView, self).get_queryset()
         if self.account:
             queryset = queryset.filter(account=self.account)
-        return queryset
+        return queryset.order_by('title')
 
     def post(self, request, *args, **kwargs):
         """
-        Creates a profiles fitler
+        Creates a group of profiles
 
-        **Tags**: reporting
+        After the group is created, nomminative profiles or
+        select-profiles-by-answer filters can be added to it
+        through :ref:`Adds a profile to a group <#filters_accounts_add_item>`
+        endpoint.
+
+        **Tags**: cohorts
 
         **Examples**
 
@@ -1706,11 +2124,7 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
 
             {
                "slug": "supplier-1",
-               "title": "Supplier 1",
-               "extra": null,
-               "predicates": [],
-               "likely_metric": [],
-               "results": []
+               "title": "Supplier 1"
             }
         """
         return self.create(request, *args, **kwargs)
@@ -1784,6 +2198,14 @@ class QuestionsFilterListAPIView(EditableFilterObjectsAPIView):
             request, *args, **kwargs)
 
 
+class EditableFilterDetailAPIView(EditableFilterQuerysetMixin,
+                                  DestroyModelMixin,
+                                  UpdateModelMixin,
+                                  generics.ListCreateAPIView):
+
+    serializer_class = None
+
+
 class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
     """
     Retrieves a questions fitler
@@ -1802,16 +2224,10 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
 
         {
             "slug": "governance",
-            "title": "Governance questions",
-            "predicates": [{
-                "rank": 1,
-                "operator": "contains",
-                "operand": "Energy",
-                "field": "extra",
-                "selector": "keepmatching"
-            }]
+            "title": "Governance questions"
         }
     """
+    serializer_class = EditableFilterSerializer
 
     def put(self, request, *args, **kwargs):
         """
@@ -1829,14 +2245,7 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
 
             {
                 "slug": "governance",
-                "title": "Governance questions",
-                "predicates": [{
-                    "rank": 1,
-                    "operator": "contains",
-                    "operand": "Energy",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }]
+                "title": "Governance questions"
             }
 
         responds
@@ -1845,19 +2254,11 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
 
             {
                 "slug": "governance",
-                "title": "Governance questions",
-                "predicates": [{
-                    "rank": 1,
-                    "operator": "contains",
-                    "operand": "Energy",
-                    "field": "extra",
-                    "selector": "keepmatching"
-                }]
+                "title": "Governance questions"
             }
         """
         #pylint:disable=useless-super-delegation
-        return super(QuestionsFilterDetailAPIView, self).put(
-            request, *args, **kwargs)
+        return self.update(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
         """
@@ -1872,5 +2273,4 @@ class QuestionsFilterDetailAPIView(EditableFilterDetailAPIView):
              DELETE /api/energy-utility/filters/questions/governance HTTP/1.1
         """
         #pylint:disable=useless-super-delegation
-        return super(QuestionsFilterDetailAPIView, self).delete(
-            request, *args, **kwargs)
+        return self.destroy(request, *args, **kwargs)

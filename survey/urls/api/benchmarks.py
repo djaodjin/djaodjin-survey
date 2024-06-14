@@ -22,7 +22,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...api.matrix import (BenchmarkAPIView, BenchmarkIndexAPIView,
+from ...api.matrix import (BenchmarkIndexAPIView,
+    BenchmarkAPIView, BenchmarkAllIndexAPIView,
     AccessiblesBenchmarkAPIView, AccessiblesBenchmarkIndexAPIView,
     EngagedBenchmarkAPIView, EngagedBenchmarkIndexAPIView,
     EditableFilterBenchmarkAPIView, EditableFilterBenchmarkIndexAPIView)
@@ -45,7 +46,7 @@ urlpatterns = [
     path('benchmarks/all/<path:path>',
         BenchmarkAPIView.as_view(), name='survey_api_benchmarks_all'),
     path('benchmarks/all',
-        BenchmarkIndexAPIView.as_view(),
+        BenchmarkAllIndexAPIView.as_view(),
         name='survey_api_benchmarks_all_index'),
     path('benchmarks/<slug:editable_filter>/<path:path>',
         EditableFilterBenchmarkAPIView.as_view(),

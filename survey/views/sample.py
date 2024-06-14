@@ -35,9 +35,10 @@ from rest_framework.exceptions import ValidationError
 from ..api.sample import update_or_create_answer
 from ..compat import is_authenticated, reverse
 from ..forms import AnswerForm, SampleCreateForm, SampleUpdateForm
+from ..helpers import datetime_or_now
 from ..mixins import AccountMixin, CampaignMixin, SampleMixin
 from ..models import Answer, Choice, EnumeratedQuestions, Sample
-from ..utils import datetime_or_now, get_question_model
+from ..utils import get_question_model
 
 
 LOGGER = logging.getLogger(__name__)

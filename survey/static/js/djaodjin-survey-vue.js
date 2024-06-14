@@ -429,11 +429,21 @@ Vue.component('query-individual-account', {
     mixins: [
         itemMixin
     ],
+    props: [
+        'disabled',
+        'period',
+        'prefix'
+    ],
     data: function() {
         return {
             account: null,
             samples: [],
-            selectedSample: -1
+            selectedSample: -1,
+            params: {
+                start_at: null,
+                ends_at: null,
+                period_type: null
+            }
         }
     },
     methods: {
@@ -455,8 +465,8 @@ Vue.component('query-individual-account', {
                 for( let idx = 0; idx < resp.results.length; ++idx ) {
                     if( resp.results[idx].is_frozen ) {
                         const title = resp.results[idx].created_at.toString() + (resp.results[idx].verified_status !== 'no-review' ? " - Verified" : "" );
-                        const url = vm._safeUrl(
-                            vm.$urls.api_version + '/' + vm.account.slug + '/sample/' + resp.results[idx].slug, 'content');
+                        const url = vm._safeUrl(vm._safeUrl(
+                            vm.$urls.api_version + '/' + vm.account.slug + '/sample/' + resp.results[idx].slug, 'content'), vm.prefix);
                         vm.samples.push({
                             title: title,
                             url: url
@@ -481,12 +491,22 @@ Vue.component('query-group-accounts', {
     mixins: [
         itemListMixin
     ],
+    props: [
+        'disabled',
+        'period',
+        'prefix'
+    ],
     data: function() {
         return {
             url: this.$urls.api_account_groups,
             newItem: {title: ""},
             selectedItem: -1,
             addAccountEnabled: false,
+            params: {
+                start_at: null,
+                ends_at: null,
+                period_type: null
+            }
         }
     },
     methods: {
@@ -553,9 +573,9 @@ Vue.component('query-group-accounts', {
             var vm = this;
             const group = vm.items.results[vm.selectedItem];
             const title = group.title;
-            const url = vm._safeUrl(
-                vm.$urls.api_benchmarks_index, group.slug
-            ) + vm.getQueryString();
+            const url = vm._safeUrl(vm._safeUrl(
+                vm.$urls.api_benchmarks_index, group.slug),
+                vm.prefix) + vm.getQueryString();
             const dataset = {title: title, url: url};
             vm.$emit('updatedataset', dataset);
             vm.$refs.account.reset();
@@ -571,23 +591,33 @@ var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
     mixins: [
         itemMixin
     ],
+    props: [
+        'disabled',
+        'period',
+        'prefix'
+    ],
     data: function() {
         return {
-            affinityType: "",
+            affinityType: "all",
             params: {
                 start_at: null,
-                ends_at: null
+                ends_at: null,
+                period_type: null
             }
         }
     },
     methods: {
-        _getAffinityBaseDataset: function() {
+        _getAffinityBaseDataset: function(affinityType) {
             var vm = this;
+            if( !affinityType ) {
+                affinityType = vm.affinityType;
+            }
+            vm.params.period_type = vm.period ? vm.period : null;
             const title = vm.$el.querySelector(
-                '[value="' + vm.affinityType + '"]').textContent;
-            const url = vm._safeUrl(
-                vm.$urls.api_benchmarks_index, vm.affinityType
-            ) + vm.getQueryString();
+                '[value="' + affinityType + '"]').textContent;
+            const url = vm._safeUrl(vm._safeUrl(
+                vm.$urls.api_benchmarks_index, affinityType),
+                vm.prefix) + vm.getQueryString();
             return {title: title, url: url};
         },
         validate: function() {
@@ -602,6 +632,11 @@ var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
 var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
     mixins: [
         itemListMixin
+    ],
+    props: [
+        'disabled',
+        'period',
+        'prefix'
     ],
     data: function() {
         return {
@@ -618,7 +653,8 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
             questions: [],
             params: {
                 start_at: null,
-                ends_at: null
+                ends_at: null,
+                period_type: null
             },
             cachedUnits: {}
         }
@@ -710,9 +746,9 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
             var vm = this;
             const group = vm.items.results[vm.selectedItem];
             const title = group.title;
-            const url = vm._safeUrl(
+            const url = vm._safeUrl(vm._safeUrl(
                 vm.$urls.api_benchmarks_index, group.slug
-            ) + vm.getQueryString();
+            ), vm.prefix) + vm.getQueryString();
             const dataset = {title: title, url: url};
             vm.$emit('updatedataset', dataset);
         },

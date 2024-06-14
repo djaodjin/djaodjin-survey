@@ -37,20 +37,22 @@ from rest_framework.exceptions import ValidationError
 
 from ..compat import gettext_lazy as _, six
 from ..docs import extend_schema
-from ..filters import DateRangeFilter
-from ..helpers import get_extra
+from ..filters import AggregateByPeriodFilter, DateRangeFilter
+from ..helpers import datetime_or_now, get_extra
 from ..mixins import AccountMixin, EditableFilterMixin, QuestionMixin
 from ..models import Answer, Sample, Unit
 from .serializers import (AnswerSerializer, DatapointSerializer,
-    EditableFilterValuesCreateSerializer)
-from ..utils import datetime_or_now, get_question_model
+    EditableFilterValuesCreateSerializer, UnitQueryParamSerializer)
+from ..utils import get_question_model
 
 LOGGER = logging.getLogger(__name__)
 
 
 class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
     """
-    Retrieves aggregated metric over a time period
+    Retrieves aggregated quantitative measurements over a time period
+
+    Returns the aggregate of quantitative data for question `{path}`.
 
     **Tags**: reporting
 
@@ -67,11 +69,11 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
         {
             "created_at": "2020-01-01T00:00:00Z",
             "measured": 12,
-            "unit": "tons"
+            "unit": "t"
         }
     """
     serializer_class = AnswerSerializer
-    filter_backends = (DateRangeFilter,)
+    filter_backends = (AggregateByPeriodFilter,)
 
     @property
     def unit(self):
@@ -99,6 +101,7 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
             sample__account__filters__editable_filter__account=self.account)
         return queryset
 
+    @extend_schema(parameters=[UnitQueryParamSerializer])
     def get(self, request, *args, **kwargs):
         #pylint:disable=useless-super-delegation
         queryset = self.filter_queryset(self.get_queryset())
@@ -112,9 +115,12 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
 
 class AccountsValuesAPIView(AccountMixin, ListAPIView):
     """
-    Lists values in an account
+    Lists quantitative measurements
 
-    **Tags**: reporting
+    Returns a list of {{page_size}} records.
+    XXX What was entered in the system?
+
+    **Tags**: assessments
 
     **Examples**
 
@@ -133,7 +139,7 @@ class AccountsValuesAPIView(AccountMixin, ListAPIView):
           "results": [{
             "created_at": "2020-01-01T00:00:00Z",
             "measured": 12,
-            "unit": "tons"
+            "unit": "t"
           }]
         }
     """
@@ -150,9 +156,12 @@ class AccountsValuesAPIView(AccountMixin, ListAPIView):
 
 class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
     """
-    Lists quantitative measurements
+    Lists quantitative measurements for a group
 
-    **Tags**: reporting
+    Returns a list of {{page_size}} records.
+    XXX What was entered in the system?
+
+    **Tags**: assessments
 
     **Examples**
 
@@ -171,7 +180,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
           "results": [{
             "created_at": "2020-01-01T00:00:00Z",
             "measured": 12,
-            "unit": "tons"
+            "unit": "t"
           }]
         }
     """
@@ -234,7 +243,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
               "items": [{
                 "slug": "main-factory",
                 "measured": 12,
-                "unit": "tons"
+                "unit": "t"
               }]
             }
 
@@ -247,7 +256,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
               "items": [{
                 "slug": "main-factory",
                 "measured": 12,
-                "unit": "tons"
+                "unit": "t"
               }]
             }
         """

@@ -358,7 +358,8 @@ class SampleMixin(QuestionMixin, AccountMixin):
                         slug=sample_slug)
                 sample = queryset.select_related('campaign').distinct().get()
             except Sample.DoesNotExist:
-                raise Http404("Cannot find Sample(slug='%s')" % sample_slug)
+                raise Http404(_("Cannot find Sample(slug='%(sample)s')") % {
+                    'sample': sample_slug})
         else:
             # Well no id, let's see if we can find a sample from
             # a campaign slug and a account
@@ -369,8 +370,11 @@ class SampleMixin(QuestionMixin, AccountMixin):
                         campaign__slug=campaign_slug).select_related(
                         'campaign').get()
                 except Sample.DoesNotExist:
-                    raise Http404("Cannot find Sample(account__slug='%s',"\
-                        " campaign__slug='%s')" % (self.account, campaign_slug))
+                    raise Http404(_("Cannot find Sample("\
+                        "account__slug='%(account)s',"\
+                        " campaign__slug='%(campaign)s')") % {
+                        'account': self.account,
+                        'campaign': campaign_slug})
         return sample
 
 

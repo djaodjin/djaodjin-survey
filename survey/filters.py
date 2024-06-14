@@ -28,6 +28,8 @@ from functools import reduce
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
+from django.db.models.functions import TruncMonth, TruncYear
+from django.db.models.query import RawQuerySet
 from django.utils.timezone import utc
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter, BaseFilterBackend)
@@ -35,9 +37,8 @@ from rest_framework.compat import distinct
 
 from . import settings
 from .compat import force_str, six
-from .helpers import parse_tz
+from .helpers import datetime_or_now, parse_tz
 from .models import PortfolioDoubleOptIn
-from .utils import datetime_or_now
 
 LOGGER = logging.getLogger(__name__)
 
@@ -423,7 +424,7 @@ class DateRangeFilter(BaseFilterBackend):
             'name': self.start_at_param,
             'required': False,
             'in': 'query',
-            'description': force_str("date/time in ISO format"),
+            'description': force_str("date/time in ISO 8601 format"),
             'schema': {
                 'type': 'string',
             },
@@ -433,9 +434,70 @@ class DateRangeFilter(BaseFilterBackend):
                 'name': self.ends_at_param,
                 'required': False,
                 'in': 'query',
-                'description': force_str("date/time in ISO format"),
+                'description': force_str("date/time in ISO 8601 format"),
                 'schema': {
                     'type': 'string',
+                },
+            }]
+        return fields
+
+
+class AggregateByPeriodFilter(DateRangeFilter):
+
+    period_type_param = 'period_type'
+    nb_periods_param = 'nb_periods'
+
+    def filter_queryset(self, request, queryset, view):
+        if isinstance(queryset, (RawQuerySet, list)):
+            return queryset
+
+        period_type = request.GET.get(self.period_type_param)
+        if period_type == 'yearly':
+            queryset = queryset.annotate(
+                period=TruncYear('sample__created_at')).values(
+                    'question_id',
+                    'question_path',
+                    'question_title',
+                    'question_default_unit_slug',
+                    'question_default_unit_title',
+                    'question_default_unit_system',
+                    'choice',
+                    'period')
+        elif period_type == 'monthly':
+            queryset = queryset.annotate(
+                period=TruncMonth('sample__created_at')).values(
+                    'question_id',
+                    'question_path',
+                    'question_title',
+                    'question_default_unit_slug',
+                    'question_default_unit_title',
+                    'question_default_unit_system',
+                    'choice',
+                    'period')
+        # XXX Calling QuerySet.annotate() after union() is not supported.
+        return queryset.annotate(count=models.Count('sample_id'))
+
+
+    def get_schema_operation_parameters(self, view):
+        fields = super(AggregateByPeriodFilter,
+            self).get_schema_operation_parameters(view)
+        fields += [{
+            'name': self.period_type_param,
+            'required': False,
+            'in': 'query',
+            'description': force_str("aggregate period (yearly or monthly)"),
+            'schema': {
+                'type': 'string',
+            },
+        }]
+        if self.nb_periods_param:
+            fields += [{
+                'name': self.nb_periods_param,
+                'required': False,
+                'in': 'query',
+                'description': force_str("number of periods"),
+                'schema': {
+                    'type': 'integer',
                 },
             }]
         return fields

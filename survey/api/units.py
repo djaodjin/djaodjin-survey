@@ -28,6 +28,7 @@ from django.db.models import F
 from rest_framework import generics
 from rest_framework.filters import BaseFilterBackend
 
+from ..docs import extend_schema
 from ..filters import SearchFilter
 from ..models import Unit
 from .serializers import ConvertUnitSerializer, UnitSerializer
@@ -194,7 +195,20 @@ class UnitListAPIView(generics.ListAPIView):
     filter_backends = (EquivalenceFilter, SearchFilter)
     queryset = Unit.objects.all().order_by('slug')
 
+    def get_query_param(self, key, default_value=None):
+        try:
+            return self.request.query_params.get(key, default_value)
+        except AttributeError:
+            pass
+        return self.request.GET.get(key, default_value)
+
+
     def get_serializer_class(self):
-        if self.request.query_params.get('eq'):
+        if self.get_query_param('eq'):
             return ConvertUnitSerializer
         return super(UnitListAPIView, self).get_serializer_class()
+
+
+    @extend_schema(operation_id='units_index')
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)

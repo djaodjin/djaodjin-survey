@@ -23,12 +23,12 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pylint:disable=too-many-lines
 
-import decimal, json, logging
+import copy, decimal, logging
 from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import F, Max
 from django.db.utils import DataError
 from rest_framework import generics, mixins
 from rest_framework import response as http
@@ -39,15 +39,115 @@ from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 from ..compat import six, is_authenticated
 from ..docs import OpenApiResponse, extend_schema
 from ..filters import DateRangeFilter, OrderingFilter, SampleStateFilter
+from ..helpers import datetime_or_now, extra_as_internal
 from ..mixins import AccountMixin, SampleMixin
 from ..models import Answer, Choice, Portfolio, Sample, Unit, UnitEquivalences
 from ..queries import is_sqlite3
-from ..utils import datetime_or_now, get_question_model, get_user_serializer
+from ..utils import get_question_model, get_user_serializer
+from .base import QuestionListAPIView
 from .serializers import (AnswerSerializer, NoModelSerializer,
     SampleAnswerSerializer, SampleCreateSerializer, SampleSerializer)
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def attach_answers(units, questions_by_key, queryset,
+                   extra_fields=None, key='answers'):
+    """
+    Populates `units` and `questions_by_key` from a `queryset` of answers.
+    """
+    #pylint:disable=too-many-locals
+    if extra_fields is None:
+        extra_fields = []
+    enum_units = {}
+    for resp in queryset:
+        # First we gather all information required
+        # to display the question properly.
+        question = resp.question
+        path = question.path
+        question_pk = question.pk
+        value = questions_by_key.get(question_pk)
+        if not value:
+            default_unit = question.default_unit
+            units.update({default_unit.slug: default_unit})
+            if default_unit.system == Unit.SYSTEM_ENUMERATED:
+                # Enum units might have a per-question choice description.
+                # We try to reduce the number of database queries by
+                # loading the unit choices here and the per-question choices
+                # in a single pass later on.
+                default_unit_dict = enum_units.get(default_unit.pk)
+                if not default_unit_dict:
+                    default_unit_dict = {
+                        'slug': default_unit.slug,
+                        'title': default_unit.title,
+                    'system': default_unit.system,
+                        'choices':[{
+                            'pk': choice.pk,
+                            'text': choice.text,
+                    'descr': choice.descr if choice.descr else choice.text
+                        } for choice in default_unit.choices]}
+                    enum_units[default_unit.pk] = default_unit_dict
+                default_unit = copy.deepcopy(default_unit_dict)
+            value = {
+                'path': path,
+                'rank': resp.rank,
+                'frozen': bool(getattr(resp, 'frozen', False)),
+                'required': (
+                    resp.required if hasattr(resp, 'required') else True),
+                'default_unit': default_unit,
+                'ui_hint': question.ui_hint,
+            }
+            for field_name in extra_fields:
+                value.update({field_name: getattr(question, field_name)})
+            questions_by_key.update({question_pk: value})
+        if resp.pk:
+            # We have an actual answer to the question,
+            # so let's populate it.
+            answers = value.get(key, [])
+            answers += [{
+                'measured': resp.measured_text,
+                'unit': resp.unit,
+                'created_at': resp.created_at,
+                'collected_by': resp.collected_by,
+            }]
+            units.update({resp.unit.slug: resp.unit})
+            if key not in value:
+                value.update({key: answers})
+    # We re-order the answers so the default_unit (i.e. primary)
+    # is first.
+    for question in six.itervalues(questions_by_key):
+        default_unit = question.get('default_unit')
+        if isinstance(default_unit, Unit):
+            default_units = [default_unit.slug]
+            if default_unit.system in Unit.NUMERICAL_SYSTEMS:
+                equiv_qs = UnitEquivalences.objects.filter(
+                    source__slug=default_unit.slug).values_list(
+                    'target__slug', flat=True)
+                default_units += list(equiv_qs)
+        else:
+            default_units = [default_unit.get('slug')]
+        primary = []
+        remainders = []
+        for answer in question.get(key, []):
+            if str(answer.get('unit')) in default_units:
+                primary = [answer]
+            else:
+                remainders += [answer]
+        question.update({key: primary + remainders})
+
+    # Let's populate the per-question choices as necessary.
+    # This is done in a single pass to reduce the number of db queries.
+    for choice in Choice.objects.filter(
+            question__in=questions_by_key,
+            unit=F('question__default_unit')).order_by(
+                'question', 'unit', 'rank'):
+        default_unit = questions_by_key[choice.question_id].get(
+            'default_unit')
+        for default_unit_choice in default_unit.get('choices'):
+            if choice.text == default_unit_choice.get('text'):
+                default_unit_choice.update({'descr': choice.descr})
+                break
 
 
 def update_or_create_answer(datapoint, question, sample, created_at,
@@ -88,7 +188,7 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                         # Pick the first freetext `Unit` we find to store
                         # the overflow as a textual representation.
                         overflow_unit = Unit.objects.filter(
-                            system=Unit.SYSTEM_FREETEXT).order_by('pk')
+                            system=Unit.SYSTEM_FREETEXT).order_by('pk').first()
                     unit = overflow_unit
 
             if unit.system not in Unit.NUMERICAL_SYSTEMS:
@@ -157,7 +257,7 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
         {
             "created_at": "2020-01-01T00:00:00Z",
             "measured": 12,
-            "unit": "tons"
+            "unit": "t"
         }
     """
     serializer_class = AnswerSerializer
@@ -331,14 +431,6 @@ class SampleAPIView(SampleMixin, generics.RetrieveAPIView):
 
 class SampleAnswersMixin(SampleMixin):
 
-    @staticmethod
-    def _as_extra_dict(extra):
-        try:
-            extra = json.loads(extra)
-        except (TypeError, ValueError):
-            extra = {}
-        return extra
-
     def get_answers(self, prefix=None, sample=None, excludes=None):
         """
         Returns answers on a sample. In case the sample is still active,
@@ -503,460 +595,21 @@ LEFT OUTER JOIN answers
       'unit', 'collected_by', 'question', 'question__content',
       'question__default_unit')
 
-
-
-class SampleAnswersAPIView(SampleAnswersMixin, generics.ListCreateAPIView):
-    """
-    Lists answers matching prefix
-
-    The list returned contains at least one measurement for each question
-    in the campaign. If there are no measurement yet on a question, ``measured``
-    will be null.
-
-    There might be more than one measurement per question as long as there are
-    no duplicated ``unit`` per question. For example, to the question
-    ``adjust-air-fuel-ratio``, there could be a measurement with unit
-    ``assessment`` (Mostly Yes/ Yes / No / Mostly No) and a measurement with
-    unit ``freetext`` (i.e. a comment).
-
-    The {sample} must belong to {organization}.
-
-    {path} can be used to filter the tree of questions by a prefix.
-
-    **Tags**: assessments
-
-    **Examples**
-
-    .. code-block:: http
-
-         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/answers\
-/construction HTTP/1.1
-
-    responds
-
-    .. code-block:: json
-
-    {
-        "count": 3,
-        "previous": null,
-        "next": null,
-        "results": [
-            {
-                "question": {
-                    "path": "/construction/governance/the-assessment\
--process-is-rigorous",
-                    "title": "The assessment process is rigorous",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "required": true,
-                "measured": "yes",
-                "unit": "assessment",
-                "created_at": "2020-09-28T00:00:00.000000Z",
-                "collected_by": "steve"
-            },
-            {
-                "question": {
-                    "path": "/construction/governance/the-assessment\
--process-is-rigorous",
-                    "title": "The assessment process is rigorous",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "measured": "Policy document on the public website",
-                "unit": "freetext",
-                "created_at": "2020-09-28T00:00:00.000000Z",
-                "collected_by": "steve"
-            },
-            {
-                "question": {
-                    "path": "/construction/production/adjust-air-fuel\
--ratio",
-                    "title": "Adjust Air fuel ratio",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "required": true,
-                "measured": null,
-                "unit": null
-            }
-         ]
-    }
-    """
-    serializer_class = SampleAnswerSerializer
-
-    # Used to POST and create an answer.
-    @property
-    def question(self):
-        #pylint:disable=attribute-defined-outside-init
-        if not hasattr(self, '_question'):
-            self._question = get_object_or_404(
-                get_question_model().objects.all(), path=self.path)
-        return self._question
-
-    def get_queryset(self):
-        return self.get_answers()
-
-    def get_serializer_class(self):
-        if self.request.method.lower() == 'post':
-            return AnswerSerializer
-        return super(SampleAnswersAPIView, self).get_serializer_class()
-
-    def get_serializer(self, *args, **kwargs):
-        if isinstance(self.request.data, list):
-            kwargs.update({'many': True})
-        return super(SampleAnswersAPIView, self).get_serializer(
-            *args, **kwargs)
-
-    def post(self, request, *args, **kwargs):
+    def get_questions_by_key(self, prefix=None, initial=None):
         """
-        Updates an answer
-
-        This API end-point attaches a measurement (``measured`` field)
-        in ``unit`` (meters, kilograms, etc.) to a question (also called metric)
-        named {path} as part of a {sample}.
-
-        If a measurement with that ``unit`` already exists for the couple
-        ({path}, {sample}), the previous measurement is replaced, otherwise it
-        is added.
-
-        If ``unit`` is not specified, the default unit for the question is used.
-
-        The {sample} must belong to {organization} and be updatable.
-
-        **Tags**: assessments
-
-        **Examples**
-
-        .. code-block:: http
-
-            POST /api/supplier-1/sample/4c6675a5d5af46c796b8033a7731a86e/\
-answers/code-of-conduct HTTP/1.1
-
-        .. code-block:: json
-
-            {
-               "measured": "Yes"
-            }
-
-        responds
-
-        .. code-block:: json
-
-            [
-              {
-                "created_at": "2020-09-28T00:00:00.000000Z",
-                "collected_by": "steve",
-                "measured": "Yes",
-                "unit": "yes-no"
-              }
-            ]
+        Returns a dictionnary of questions indexed by `pk` populated
+        with an 'answers' field.
         """
-        #pylint:disable=useless-super-delegation
-        return super(SampleAnswersAPIView, self).post(request, *args, **kwargs)
+        extra_fields = getattr(self.serializer_class.Meta, 'extra_fields', [])
+        units = {}
+        questions_by_key = initial if isinstance(initial, dict) else {}
+        attach_answers(
+            units,
+            questions_by_key,
+            self.get_answers(prefix=prefix, sample=self.sample),
+            extra_fields=extra_fields)
 
-    def create(self, request, *args, **kwargs):
-        #pylint:disable=unused-argument,too-many-locals,too-many-statements
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data
-        if not isinstance(serializer.validated_data, list):
-            validated_data = [serializer.validated_data]
-
-        user = self.request.user if is_authenticated(self.request) else None
-        created_at = datetime_or_now()
-        at_least_one_created = False
-        results = []
-        errors = []
-
-        if self.sample.is_frozen:
-            raise ValidationError({
-                'detail': "cannot update answers in a frozen sample"})
-
-        for datapoint in validated_data:
-            measured = datapoint.get('measured', None)
-            if not measured:
-                continue
-            try:
-                answer, created = update_or_create_answer(
-                    datapoint, question=self.question,
-                    sample=self.sample, created_at=created_at,
-                    collected_by=user)
-                results += [answer]
-                if created:
-                    at_least_one_created = True
-            except ValidationError as err:
-                errors += [err]
-        if errors:
-            raise ValidationError(errors)
-
-        first_answer = False #XXX
-        headers = self.get_success_headers(serializer.data)
-        return self.get_http_response(results,
-            status=HTTP_201_CREATED if at_least_one_created else HTTP_200_OK,
-            headers=headers, first_answer=first_answer)
-
-    @staticmethod
-    def _expand_choices(results):
-        choices = []
-        for answer in results:
-            unit = (answer.unit if answer.unit
-                else answer.question.default_unit)
-            if unit.system not in Unit.NUMERICAL_SYSTEMS:
-                choices += [int(answer.measured)]
-        choices = dict(Choice.objects.filter(
-            pk__in=choices).values_list('pk', 'text'))
-        for answer in results:
-            if unit.system not in Unit.NUMERICAL_SYSTEMS:
-                answer.measured = choices.get(int(answer.measured))
-        return results
-
-    def get_http_response(self, results, status=HTTP_200_OK, headers=None,
-                          first_answer=False):#pylint:disable=unused-argument
-        self._expand_choices(results)
-        serializer = self.get_serializer(results, many=True)
-        return http.Response(serializer.data, status=status, headers=headers)
-
-
-class SampleAnswersIndexAPIView(SampleAnswersAPIView):
-    """
-    Lists answers
-
-    The list returned contains at least one measurement for each question
-    in the campaign. If there are no measurement yet on a question, ``measured``
-    will be null.
-
-    There might be more than one measurement per question as long as there are
-    no duplicated ``unit`` per question. For example, to the question
-    ``adjust-air-fuel-ratio``, there could be a measurement with unit
-    ``assessment`` (Mostly Yes/ Yes / No / Mostly No) and a measurement with
-    unit ``freetext`` (i.e. a comment).
-
-    The {sample} must belong to {organization}.
-
-    {path} can be used to filter the tree of questions by a prefix.
-
-    **Tags**: assessments
-
-    **Examples**
-
-    .. code-block:: http
-
-         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/answers HTTP/1.1
-
-    responds
-
-    .. code-block:: json
-
-    {
-        "count": 3,
-        "previous": null,
-        "next": null,
-        "results": [
-            {
-                "question": {
-                    "path": "/construction/governance/the-assessment\
--process-is-rigorous",
-                    "title": "The assessment process is rigorous",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "required": true,
-                "measured": "yes",
-                "unit": "assessment",
-                "created_at": "2020-09-28T00:00:00.000000Z",
-                "collected_by": "steve"
-            },
-            {
-                "question": {
-                    "path": "/construction/governance/the-assessment\
--process-is-rigorous",
-                    "title": "The assessment process is rigorous",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "measured": "Policy document on the public website",
-                "unit": "freetext",
-                "created_at": "2020-09-28T00:00:00.000000Z",
-                "collected_by": "steve"
-            },
-            {
-                "question": {
-                    "path": "/construction/production/adjust-air-fuel\
--ratio",
-                    "title": "Adjust Air fuel ratio",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "required": true,
-                "measured": null,
-                "unit": null
-            }
-         ]
-    }
-    """
-    http_method_names = ['get', 'head', 'options']
-
-    @extend_schema(operation_id='sample_answers_retrieve_index')
-    def get(self, request, *args, **kwargs):
-        return super(SampleAnswersIndexAPIView, self).get(
-            request, *args, **kwargs)
+        return questions_by_key
 
 
 class SampleCandidatesMixin(SampleMixin):
@@ -1070,10 +723,439 @@ class SampleCandidatesMixin(SampleMixin):
             'question', 'question__default_unit', 'unit', 'collected_by')
 
 
-class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
-                              generics.ListCreateAPIView):
+    def get_questions_by_key(self, prefix=None, initial=None):
+        """
+        Returns a dictionnary of questions indexed by `pk` populated
+        with an 'answers' field (and optionally a 'candidates' field).
+        """
+        extra_fields = getattr(self.serializer_class.Meta, 'extra_fields', [])
+        units = {}
+        questions_by_key = initial if isinstance(initial, dict) else {}
+        attach_answers(
+            units,
+            questions_by_key,
+            self.get_candidates(prefix=prefix),
+            extra_fields=extra_fields,
+            key='candidates')
+
+        return questions_by_key
+
+
+class SampleAnswersAPIView(SampleAnswersMixin, mixins.CreateModelMixin,
+                           QuestionListAPIView):
     """
-    Lists candidate answers matching prefix
+    Lists answers for a subset of questions
+
+    The list returned contains at least one measurement for each question
+    in the campaign. If there are no measurement yet on a question, ``measured``
+    will be null.
+
+    There might be more than one measurement per question as long as there are
+    no duplicated ``unit`` per question. For example, to the question
+    ``adjust-air-fuel-ratio``, there could be a measurement with unit
+    ``assessment`` (Mostly Yes/ Yes / No / Mostly No) and a measurement with
+    unit ``freetext`` (i.e. a comment).
+
+    The {sample} must belong to {organization}.
+
+    {path} can be used to filter the tree of questions by a prefix.
+
+    **Tags**: assessments
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/answers\
+/construction HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+    {
+        "count": 3,
+        "previous": null,
+        "next": null,
+        "results": [{
+            "path": "/construction/governance/the-assessment\
+-process-is-rigorous",
+            "title": "The assessment process is rigorous",
+            "default_unit": {
+                "slug": "assessment",
+                "title": "assessments",
+                "system": "enum",
+                "choices": [{
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                }, {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }, {
+                    "rank": 3,
+                    "text": "no",
+                    "descr": "No"
+                }, {
+                    "rank": 4,
+                    "text": "mostly-no",
+                    "descr": "Mostly no"
+                }]
+            },
+            "ui_hint": "radio",
+            "required": true,
+            "answers": [{
+                "measured": "yes",
+                "unit": "assessment",
+                "created_at": "2020-09-28T00:00:00.000000Z",
+                "collected_by": "steve"
+            }]
+        }, {
+            "path": "/construction/governance/the-assessment\
+-process-is-rigorous",
+            "title": "The assessment process is rigorous",
+            "default_unit": {
+                "slug": "assessment",
+                "title": "assessments",
+                "system": "enum",
+                "choices": [{
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                }, {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }, {
+                    "rank": 3,
+                    "text": "no",
+                    "descr": "No"
+                }, {
+                    "rank": 4,
+                    "text": "mostly-no",
+                    "descr": "Mostly no"
+                }]
+            },
+            "ui_hint": "radio",
+            "required": true,
+            "answers": [{
+                "measured": "Policy document on the public website",
+                "unit": "freetext",
+                "created_at": "2020-09-28T00:00:00.000000Z",
+                "collected_by": "steve"
+            }]
+        }, {
+            "path": "/construction/production/adjust-air-fuel-ratio",
+            "title": "Adjust Air fuel ratio",
+            "default_unit": {
+                "slug": "assessment",
+                "title": "assessments",
+                "system": "enum",
+                "choices": [{
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                }, {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }, {
+                    "rank": 3,
+                    "text": "no",
+                    "descr": "No"
+                }, {
+                    "rank": 4,
+                    "text": "mostly-no",
+                    "descr": "Mostly no"
+                }]
+            },
+            "ui_hint": "radio",
+            "required": true,
+            "answers": []
+         }]
+    }
+    """
+    serializer_class = SampleAnswerSerializer
+
+    # Used to POST and create an answer.
+    @property
+    def question(self):
+        #pylint:disable=attribute-defined-outside-init
+        if not hasattr(self, '_question'):
+            self._question = get_object_or_404(
+                get_question_model().objects.all(), path=self.path)
+        return self._question
+
+
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return AnswerSerializer
+        return super(SampleAnswersAPIView, self).get_serializer_class()
+
+
+    def get_serializer(self, *args, **kwargs):
+        try:
+            if isinstance(self.request.data, list):
+                kwargs.update({'many': True})
+        except AttributeError:
+            pass
+        return super(SampleAnswersAPIView, self).get_serializer(
+            *args, **kwargs)
+
+
+    def post(self, request, *args, **kwargs):
+        """
+        Updates an answer
+
+        This API end-point attaches a measurement (``measured`` field)
+        in ``unit`` (meters, kilograms, etc.) to a question (also called metric)
+        named {path} as part of a {sample}.
+
+        If a measurement with that ``unit`` already exists for the couple
+        ({path}, {sample}), the previous measurement is replaced, otherwise it
+        is added.
+
+        If ``unit`` is not specified, the default unit for the question is used.
+
+        The {sample} must belong to {organization} and be updatable.
+
+        **Tags**: assessments
+
+        **Examples**
+
+        .. code-block:: http
+
+            POST /api/supplier-1/sample/4c6675a5d5af46c796b8033a7731a86e/\
+answers/code-of-conduct HTTP/1.1
+
+        .. code-block:: json
+
+            {
+               "measured": "Yes"
+            }
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "created_at": "2020-09-28T00:00:00.000000Z",
+                "collected_by": "steve",
+                "measured": "Yes",
+                "unit": "yes-no"
+            }
+        """
+        return self.create(request, *args, **kwargs)
+
+    def create(self, request, *args, **kwargs):
+        #pylint:disable=unused-argument,too-many-locals,too-many-statements
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated_data = serializer.validated_data
+        if not isinstance(serializer.validated_data, list):
+            validated_data = [serializer.validated_data]
+
+        user = self.request.user if is_authenticated(self.request) else None
+        created_at = datetime_or_now()
+        at_least_one_created = False
+        results = []
+        errors = []
+
+        if self.sample.is_frozen:
+            raise ValidationError({
+                'detail': "cannot update answers in a frozen sample"})
+
+        for datapoint in validated_data:
+            measured = datapoint.get('measured', None)
+            if not measured:
+                continue
+            try:
+                answer, created = update_or_create_answer(
+                    datapoint, question=self.question,
+                    sample=self.sample, created_at=created_at,
+                    collected_by=user)
+                results += [answer]
+                if created:
+                    at_least_one_created = True
+            except ValidationError as err:
+                errors += [err]
+        if errors:
+            raise ValidationError(errors)
+
+        first_answer = False #XXX
+        headers = self.get_success_headers(serializer.data)
+        return self.get_http_response(results,
+            status=HTTP_201_CREATED if at_least_one_created else HTTP_200_OK,
+            headers=headers, first_answer=first_answer)
+
+    @staticmethod
+    def _expand_choices(results):
+        choices = []
+        for answer in results:
+            unit = (answer.unit if answer.unit
+                else answer.question.default_unit)
+            if unit.system not in Unit.NUMERICAL_SYSTEMS:
+                choices += [int(answer.measured)]
+        choices = dict(Choice.objects.filter(
+            pk__in=choices).values_list('pk', 'text'))
+        for answer in results:
+            if unit.system not in Unit.NUMERICAL_SYSTEMS:
+                answer.measured = choices.get(int(answer.measured))
+        return results
+
+    def get_http_response(self, results, status=HTTP_200_OK, headers=None,
+                          first_answer=False):#pylint:disable=unused-argument
+        self._expand_choices(results)
+        serializer = self.get_serializer(results, many=True)
+        return http.Response(serializer.data, status=status, headers=headers)
+
+
+class SampleAnswersIndexAPIView(SampleAnswersAPIView):
+    """
+    Lists answers
+
+    The list returned contains at least one measurement for each question
+    in the campaign. If there are no measurement yet on a question, ``measured``
+    will be null.
+
+    There might be more than one measurement per question as long as there are
+    no duplicated ``unit`` per question. For example, to the question
+    ``adjust-air-fuel-ratio``, there could be a measurement with unit
+    ``assessment`` (Mostly Yes/ Yes / No / Mostly No) and a measurement with
+    unit ``freetext`` (i.e. a comment).
+
+    The {sample} must belong to {organization}.
+
+    {path} can be used to filter the tree of questions by a prefix.
+
+    **Tags**: assessments
+
+    **Examples**
+
+    .. code-block:: http
+
+         GET /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/answers HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+    {
+        "count": 3,
+        "previous": null,
+        "next": null,
+        "results": [{
+            "path": "/construction/governance/the-assessment\
+-process-is-rigorous",
+            "title": "The assessment process is rigorous",
+            "default_unit": {
+                "slug": "assessment",
+                "title": "assessments",
+                "system": "enum",
+                "choices": [{
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                }, {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }, {
+                    "rank": 3,
+                    "text": "no",
+                    "descr": "No"
+                }, {
+                    "rank": 4,
+                    "text": "mostly-no",
+                    "descr": "Mostly no"
+                }]
+            },
+            "ui_hint": "radio",
+            "required": true,
+            "answers": [{
+                "measured": "yes",
+                "unit": "assessment",
+                "created_at": "2020-09-28T00:00:00.000000Z",
+                "collected_by": "steve"
+            }]
+        }, {
+            "path": "/construction/governance/the-assessment\
+-process-is-rigorous",
+            "title": "The assessment process is rigorous",
+            "default_unit": {
+                "slug": "assessment",
+                "title": "assessments",
+                "system": "enum",
+                "choices": [{
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                }, {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }, {
+                    "rank": 3,
+                    "text": "no",
+                    "descr": "No"
+                }, {
+                    "rank": 4,
+                    "text": "mostly-no",
+                    "descr": "Mostly no"
+                }]
+            },
+            "ui_hint": "radio",
+            "required": true,
+            "answers": [{
+                "measured": "Policy document on the public website",
+                "unit": "freetext",
+                "created_at": "2020-09-28T00:00:00.000000Z",
+                "collected_by": "steve"
+            }]
+        }, {
+            "path": "/construction/production/adjust-air-fuel-ratio",
+            "title": "Adjust Air fuel ratio",
+            "default_unit": {
+                "slug": "assessment",
+                "title": "assessments",
+                "system": "enum",
+                "choices": [{
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                }, {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }, {
+                    "rank": 3,
+                    "text": "no",
+                    "descr": "No"
+                }, {
+                    "rank": 4,
+                    "text": "mostly-no",
+                    "descr": "Mostly no"
+                }]
+            },
+            "ui_hint": "radio",
+            "required": true,
+            "answers": []
+         }]
+    }
+    """
+    http_method_names = ['get', 'head', 'options']
+
+    @extend_schema(operation_id='sample_answers_retrieve_index')
+    def get(self, request, *args, **kwargs):
+        return super(SampleAnswersIndexAPIView, self).get(
+            request, *args, **kwargs)
+
+
+class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
+                              mixins.CreateModelMixin, QuestionListAPIView):
+    """
+    Lists candidate answers for a subset of questions
 
     The list returned contains at least one answer for each question
     in the campaign. If there are no answer yet on a question, ``measured``
@@ -1103,128 +1185,71 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
     .. code-block:: json
 
     {
-        "count": 3,
+        "count": 2,
         "previous": null,
         "next": null,
-        "results": [
-            {
-                "question": {
-                    "path": "/construction/governance/the-assessment\
+        "results": [{
+            "path": "/construction/governance/the-assessment\
 -process-is-rigorous",
-                    "title": "The assessment process is rigorous",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "required": true,
+            "title": "The assessment process is rigorous",
+            "default_unit": {
+                "slug": "assessment",
+                "title": "assessments",
+                "system": "enum",
+                "choices": [{
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                }, {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }, {
+                    "rank": 3,
+                    "text": "no",
+                    "descr": "No"
+                }, {
+                    "rank": 4,
+                    "text": "mostly-no",
+                    "descr": "Mostly no"
+                }]
+            },
+            "ui_hint": "radio",
+            "required": true,
+            "candidates": [{
                 "measured": "yes",
                 "unit": "assessment",
                 "created_at": "2020-09-28T00:00:00.000000Z",
                 "collected_by": "steve"
+            }]
+        }, {
+            "path": "/construction/production/adjust-air-fuel-ratio",
+            "title": "Adjust Air fuel ratio",
+            "default_unit": {
+                "slug": "assessment",
+                "title": "assessments",
+                "system": "enum",
+                "choices": [{
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                }, {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }, {
+                    "rank": 3,
+                    "text": "no",
+                    "descr": "No"
+                }, {
+                    "rank": 4,
+                    "text": "mostly-no",
+                    "descr": "Mostly no"
+                }]
             },
-            {
-                "question": {
-                    "path": "/construction/governance/the-assessment\
--process-is-rigorous",
-                    "title": "The assessment process is rigorous",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "measured": "Policy document on the public website",
-                "unit": "freetext",
-                "created_at": "2020-09-28T00:00:00.000000Z",
-                "collected_by": "steve"
-            },
-            {
-                "question": {
-                    "path": "/construction/production/adjust-air-fuel\
--ratio",
-                    "title": "Adjust Air fuel ratio",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "required": true,
-                "measured": null,
-                "unit": null
-            }
-         ]
+            "ui_hint": "radio",
+            "candidates": []
+        }]
     }
     """
     serializer_class = SampleAnswerSerializer
@@ -1277,7 +1302,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
                     'rank': answer.rank,
                     'title': question.content.title,
                     'picture': question.content.picture,
-                    'extra': self._as_extra_dict(question.content.extra),
+                    'extra': extra_as_internal(question.content),
                     'environmental_value': question.environmental_value,
                     'business_value': question.business_value,
                     'implementation_ease': question.implementation_ease,
@@ -1336,8 +1361,6 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
                           first_answer=False):#pylint:disable=unused-argument
         return http.Response(results, status=status, headers=headers)
 
-    def get_queryset(self):
-        return self.get_candidates()
 
     @extend_schema(responses={
         201: OpenApiResponse(SampleAnswerSerializer(many=True))})
@@ -1501,9 +1524,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
              ]
         }
         """
-        #pylint:disable=useless-super-delegation
-        return super(SampleCandidatesAPIView, self).post(
-            request, *args, **kwargs)
+        return self.create(request, *args, **kwargs)
 
 
 class SampleCandidatesIndexAPIView(SampleCandidatesAPIView):
@@ -1537,128 +1558,71 @@ class SampleCandidatesIndexAPIView(SampleCandidatesAPIView):
     .. code-block:: json
 
     {
-        "count": 3,
+        "count": 2,
         "previous": null,
         "next": null,
-        "results": [
-            {
-                "question": {
-                    "path": "/construction/governance/the-assessment\
+        "results": [{
+            "path": "/construction/governance/the-assessment\
 -process-is-rigorous",
-                    "title": "The assessment process is rigorous",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "required": true,
+            "title": "The assessment process is rigorous",
+            "default_unit": {
+                "slug": "assessment",
+                "title": "assessments",
+                "system": "enum",
+                "choices": [{
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                }, {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }, {
+                    "rank": 3,
+                    "text": "no",
+                    "descr": "No"
+                }, {
+                    "rank": 4,
+                    "text": "mostly-no",
+                    "descr": "Mostly no"
+                }]
+            },
+            "ui_hint": "radio",
+            "required": true,
+            "candidates": [{
                 "measured": "yes",
                 "unit": "assessment",
                 "created_at": "2020-09-28T00:00:00.000000Z",
                 "collected_by": "steve"
+            }]
+        }, {
+            "path": "/construction/production/adjust-air-fuel-ratio",
+            "title": "Adjust Air fuel ratio",
+            "default_unit": {
+                "slug": "assessment",
+                "title": "assessments",
+                "system": "enum",
+                "choices": [{
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                }, {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }, {
+                    "rank": 3,
+                    "text": "no",
+                    "descr": "No"
+                }, {
+                    "rank": 4,
+                    "text": "mostly-no",
+                    "descr": "Mostly no"
+                }]
             },
-            {
-                "question": {
-                    "path": "/construction/governance/the-assessment\
--process-is-rigorous",
-                    "title": "The assessment process is rigorous",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "measured": "Policy document on the public website",
-                "unit": "freetext",
-                "created_at": "2020-09-28T00:00:00.000000Z",
-                "collected_by": "steve"
-            },
-            {
-                "question": {
-                    "path": "/construction/production/adjust-air-fuel\
--ratio",
-                    "title": "Adjust Air fuel ratio",
-                    "default_unit": {
-                        "slug": "assessment",
-                        "title": "assessments",
-                        "system": "enum",
-                        "choices": [
-                        {
-                            "rank": 1,
-                            "text": "mostly-yes",
-                            "descr": "Mostly yes"
-                        },
-                        {
-                            "rank": 2,
-                            "text": "yes",
-                            "descr": "Yes"
-                        },
-                        {
-                            "rank": 3,
-                            "text": "no",
-                            "descr": "No"
-                        },
-                        {
-                            "rank": 4,
-                            "text": "mostly-no",
-                            "descr": "Mostly no"
-                        }
-                        ]
-                    },
-                    "ui_hint": "radio"
-                },
-                "required": true,
-                "measured": null,
-                "unit": null
-            }
-         ]
+            "ui_hint": "radio",
+            "candidates": []
+        }]
     }
     """
     @extend_schema(operation_id='sample_candidates_index')
@@ -1670,7 +1634,7 @@ class SampleCandidatesIndexAPIView(SampleCandidatesAPIView):
         201: OpenApiResponse(SampleAnswerSerializer(many=True))})
     def post(self, request, *args, **kwargs):
         """
-        Uses candidate answers matching prefix
+        Uses candidate answers for a subset of questions
 
         The list returned contains at least one answer for each question
         in the campaign. If there are no answer yet on a question, ``measured``
@@ -1878,11 +1842,13 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
 
 class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
     """
-    Clears answers matching prefix
+    Clears answers for a subset of questions
 
-    The ``sample`` must belong to ``organization``.
+    Clears answers for ``{sample}`` for which ``{path}`` is a prefix
+    of the question's path.
 
-    ``path`` can be used to filter the tree of questions by a prefix.
+    ``{sample}`` must belong to ``{profile}`` otherwise no action
+    is taken and an error is returned.
 
     **Tags**: assessments
 
@@ -1909,6 +1875,10 @@ class SampleResetAPIView(SampleMixin, generics.CreateAPIView):
     """
     serializer_class = SampleSerializer
 
+    @extend_schema(request=None)
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
     def create(self, request, *args, **kwargs):
         if self.sample.is_frozen:
             raise ValidationError({
@@ -1933,9 +1903,10 @@ class SampleResetIndexAPIView(SampleResetAPIView):
     """
     Clears answers
 
-    The ``sample`` must belong to ``organization``.
+    Clears all answers for ``{sample}``.
 
-    ``path`` can be used to filter the tree of questions by a prefix.
+    ``{sample}`` must belong to ``{profile}`` otherwise no action
+    is taken and an error is returned.
 
     **Tags**: assessments
 
@@ -1961,11 +1932,9 @@ class SampleResetIndexAPIView(SampleResetAPIView):
         }
     """
 
-    @extend_schema(operation_id='sample_reset_create_index')
+    @extend_schema(operation_id='sample_reset_create_index', request=None)
     def post(self, request, *args, **kwargs):
-        return super(SampleResetIndexAPIView, self).post(
-            request, *args, **kwargs)
-
+        return self.create(request, *args, **kwargs)
 
 
 class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
@@ -2098,7 +2067,7 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
 
 class SampleRespondentsAPIView(SampleMixin, generics.ListAPIView):
     """
-    Lists respondents matching prefix
+    Lists respondents for a subset of questions
 
     The list returned contains the information about the users who answered
     at least one question.
