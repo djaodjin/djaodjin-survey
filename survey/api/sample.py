@@ -28,7 +28,7 @@ from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F, Max
+from django.db.models import F, Q, Max
 from django.db.utils import DataError
 from rest_framework import generics, mixins
 from rest_framework import response as http
@@ -36,7 +36,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
-from ..compat import six, is_authenticated
+from ..compat import six, is_authenticated, gettext_lazy as _
 from ..docs import OpenApiResponse, extend_schema
 from ..filters import DateRangeFilter, OrderingFilter, SampleStateFilter
 from ..helpers import datetime_or_now, extra_as_internal
@@ -199,8 +199,8 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                     except Choice.DoesNotExist:
                         choices = Choice.objects.filter(question__isnull=True,
                             unit=unit)
-                        raise ValidationError("'%s' is not a valid choice."\
-                            " Expected one of %s." % (measured,
+                        raise ValidationError(_("'%s' is not a valid choice."\
+                            " Expected one of %s.") % (measured,
                             [choice.get('text', "")
                              for choice in six.itervalues(choices)]))
                 else:
@@ -225,7 +225,7 @@ def update_or_create_answer(datapoint, question, sample, created_at,
     except DataError as err:
         LOGGER.exception(err)
         raise ValidationError(
-            "\"%(measured)s\": %(err)s for '%(unit)s'" % {
+            _("\"%(measured)s\": %(err)s for '%(unit)s'") % {
                 'measured': measured.replace('"', '\\"'),
                 'err': str(err).strip(),
                 'unit': unit.title})
@@ -1831,9 +1831,56 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
     """
     serializer_class = SampleSerializer
 
+    def get_required_unanswered_questions(self, prefixes=None):
+        """
+        Returns a queryset of questions with a required answer which
+        have no answer.
+        """
+        if not prefixes:
+            prefixes = []
+        filtered_in = None
+        #pylint:disable=superfluous-parens
+        for prefix in prefixes:
+            filtered_q = Q(path__startswith=prefix)
+            if filtered_in:
+                filtered_in |= filtered_q
+            else:
+                filtered_in = filtered_q
+
+        answered_questions = get_question_model().objects.filter(
+          Q(default_unit_id=F('answer__unit_id')) |
+          Q(default_unit__source_equivalences__target_id=F('answer__unit_id')),
+            enumeratedquestions__campaign=self.sample.campaign,
+            answer__sample=self.sample).distinct()
+
+        if filtered_in:
+            queryset = get_question_model().objects.filter(
+                filtered_in,
+                enumeratedquestions__campaign=self.sample.campaign,
+                enumeratedquestions__required=True)
+        else:
+            queryset = get_question_model().objects.filter(
+                enumeratedquestions__campaign=self.sample.campaign,
+                enumeratedquestions__required=True)
+
+        return queryset.exclude(pk__in=answered_questions)
+
+
     def create(self, request, *args, **kwargs):
+        # Basic sanity checks:
+        # 1. The sample is not yet frozen.
+        # 2. All questions with a required answer have been answered.
         if self.sample.is_frozen:
-            raise ValidationError({'detail': "sample is already frozen"})
+            raise ValidationError({'detail': _("sample is already frozen")})
+
+        required_unanswered_questions = \
+            self.get_required_unanswered_questions(
+                prefixes=[self.db_path] if self.db_path else None)
+        if required_unanswered_questions.exists():
+            raise ValidationError({'detail': _("%d questions with a required"\
+" answer have yet to be answered.") % required_unanswered_questions.count(),
+                'results': list(required_unanswered_questions)})
+
         self.sample.is_frozen = True
         self.sample.save()
         serializer = self.get_serializer(self.sample)
