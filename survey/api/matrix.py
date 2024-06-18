@@ -166,9 +166,12 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
         period_type = self.period_type
         first_date = self.start_at
         if not first_date:
-            first_sample = Sample.objects.filter(campaign=self.campaign,
-                is_frozen=True, account__in=accounts).order_by(
-                'created_at').first()
+            first_sample_queryset = Sample.objects.filter(
+                is_frozen=True, account__in=accounts).order_by('created_at')
+            if self.campaign:
+                first_sample_queryset = first_sample_queryset.filter(
+                    campaign=self.campaign)
+            first_sample = first_sample_queryset.first()
             if first_sample:
                 # `construct_periods` will create periods that lands
                 # on the same month/day each year.
