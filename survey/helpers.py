@@ -35,11 +35,9 @@ from django.db import transaction, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.dateparse import parse_date, parse_datetime
 from django.utils.timezone import utc
-from pytz import timezone, UnknownTimeZoneError
-from pytz.tzinfo import DstTzInfo
 from rest_framework.exceptions import ValidationError
 
-from .compat import six
+from .compat import parse_tz, six
 
 HOURLY = 'hourly'
 DAILY = 'daily'
@@ -126,13 +124,11 @@ def construct_monthly_periods(first_date, last_date, years=0, tzone=None):
         tzinfo = utc
     months_ends_at = []
     while at_time < last_date:
+        # we are interested in 00:00 local time, if we don't have
+        # local time zone, fall back to 00:00 utc time
+        # in case we have local timezone, replace utc with it
         ends_at = datetime.datetime(
-            year=at_time.year, month=at_time.month, day=1)
-        if tzinfo:
-            # we are interested in 00:00 local time, if we don't have
-            # local time zone, fall back to 00:00 utc time
-            # in case we have local timezone, replace utc with it
-            ends_at = tzinfo.localize(ends_at.replace(tzinfo=None))
+            year=at_time.year, month=at_time.month, day=1, tzinfo=tzinfo)
         years_shifted = ends_at + relativedelta(years=years)
         months_ends_at += [years_shifted]
         at_time += relativedelta(months=1)
@@ -143,11 +139,12 @@ def _construct_weekly_period(at_time, years=0, tzone=None):
     # discarding time, keeping utc tzinfo (00:00:00 utc)
     today = at_time.replace(hour=0, minute=0, second=0, microsecond=0)
     tzinfo = parse_tz(tzone)
-    if tzinfo:
-        # we are interested in 00:00 local time, if we don't have
-        # local time zone, fall back to 00:00 utc time
-        # in case we have local timezone, replace utc with it
-        today = tzinfo.localize(today.replace(tzinfo=None))
+    if not tzinfo:
+        tzinfo = utc
+    # we are interested in 00:00 local time, if we don't have
+    # local time zone, fall back to 00:00 utc time
+    # in case we have local timezone, replace utc with it
+    today = today.replace(tzinfo=tzinfo)
     if today.weekday() == SU:
         sunday = today
     else:
@@ -185,22 +182,23 @@ def construct_yearly_periods(first_date, last_date, tzone=None):
         tzinfo = utc
     period_ends_at = []
     while at_time <= last_date:
-        ends_at = datetime.datetime(year=at_time.year, month=1, day=1)
-        if tzinfo:
-            # we are interested in 00:00 local time, if we don't have
-            # local time zone, fall back to 00:00 utc time
-            # in case we have local timezone, replace utc with it
-            ends_at = tzinfo.localize(ends_at.replace(tzinfo=None))
+        # we are interested in 00:00 local time, if we don't have
+        # local time zone, fall back to 00:00 utc time
+        # in case we have local timezone, replace utc with it
+        ends_at = datetime.datetime(year=at_time.year, month=1, day=1,
+            tzinfo=tzinfo)
         period_ends_at += [ends_at]
         at_time += relativedelta(years=1)
     return period_ends_at
 
 
 def construct_periods(first_date, last_date, period_type=None, tzone=None):
-    if period_type == MONTHLY:
-        return construct_monthly_periods(first_date, last_date, tzone=tzone)
     if period_type == YEARLY:
         return construct_yearly_periods(first_date, last_date, tzone=tzone)
+    if period_type == MONTHLY:
+        return construct_monthly_periods(first_date, last_date, tzone=tzone)
+    if period_type == WEEKLY:
+        return construct_weekly_periods(first_date, last_date, tzone=tzone)
     return [first_date, last_date]
 
 
@@ -244,17 +242,6 @@ def get_extra(obj, attr_name, default=None):
         except (TypeError, ValueError):
             return default
     return obj.extra.get(attr_name, default) if obj.extra else default
-
-
-def parse_tz(tzone):
-    if issubclass(type(tzone), DstTzInfo):
-        return tzone
-    if tzone:
-        try:
-            return timezone(tzone)
-        except UnknownTimeZoneError:
-            pass
-    return None
 
 
 def update_context_urls(context, urls):

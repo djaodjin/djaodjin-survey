@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,43 @@ import six
 #pylint:disable=no-name-in-module,import-error
 from six.moves.urllib.parse import urlparse, urlunparse
 from six import StringIO
+
+
+try:
+    import zoneinfo
+
+    def parse_tz(tzone):
+        if issubclass(type(tzone), zoneinfo.ZoneInfo):
+            return tzone
+        if tzone:
+            return zoneinfo.ZoneInfo(tzone)
+        return None
+
+except ImportError:
+    try:
+        from backports import zoneinfo
+
+        def parse_tz(tzone):
+            if issubclass(type(tzone), zoneinfo.ZoneInfo):
+                return tzone
+            if tzone:
+                return zoneinfo.ZoneInfo(tzone)
+            return None
+
+    except ImportError:
+        import pytz
+        from pytz.tzinfo import DstTzInfo
+
+        def parse_tz(tzone):
+            if issubclass(type(tzone), DstTzInfo):
+                return tzone
+            if tzone:
+                try:
+                    return pytz.timezone(tzone)
+                except pytz.UnknownTimeZoneError:
+                    pass
+            return None
+
 
 try:
     from django.apps import apps
