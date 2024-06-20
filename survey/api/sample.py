@@ -46,7 +46,8 @@ from ..queries import is_sqlite3
 from ..utils import get_question_model, get_user_serializer
 from .base import QuestionListAPIView
 from .serializers import (AnswerSerializer, NoModelSerializer,
-    SampleAnswerSerializer, SampleCreateSerializer, SampleSerializer)
+    QueryParamForceSerializer, SampleAnswerSerializer, SampleCreateSerializer,
+    SampleSerializer)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -1798,38 +1799,18 @@ class SampleCandidatesIndexAPIView(SampleCandidatesAPIView):
 
 
 class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
-    """
-    Freezes answers
 
-    The ``sample`` must belong to ``organization``.
-
-    ``path`` can be used to filter the tree of questions by a prefix.
-
-    **Tags**: assessments
-
-    **Examples**
-
-    .. code-block:: http
-
-        POST /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/freeze\
-/construction HTTP/1.1
-
-    .. code-block:: json
-
-        {}
-
-    responds
-
-    .. code-block:: json
-
-        {
-            "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
-            "created_at": "2018-01-24T17:03:34.926193Z",
-            "campaign": "sustainability",
-            "is_frozen": true
-        }
-    """
     serializer_class = SampleSerializer
+
+    @property
+    def force(self):
+        if not hasattr(self, '_force'):
+            query_serializer = QueryParamForceSerializer(
+                data=self.request.query_params)
+            query_serializer.is_valid(raise_exception=True)
+            #pylint:disable=attribute-defined-outside-init
+            self._force = query_serializer.validated_data.get('force', False)
+        return self._force
 
     def get_required_unanswered_questions(self, prefixes=None):
         """
@@ -1870,6 +1851,7 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
         # Basic sanity checks:
         # 1. The sample is not yet frozen.
         # 2. All questions with a required answer have been answered.
+        # 3. Unless forced, answers are different from previous frozen sample.
         if self.sample.is_frozen:
             raise ValidationError({'detail': _("sample is already frozen")})
 
@@ -1881,10 +1863,56 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
 " answer have yet to be answered.") % required_unanswered_questions.count(),
                 'results': list(required_unanswered_questions)})
 
+        if not self.force:
+            latest_completed = Sample.objects.filter(
+                is_frozen=True,
+                campaign=self.sample.campaign,
+                extra=self.sample.extra).order_by('created_at').first()
+            if latest_completed:
+                if self.sample.has_identical_answers(latest_completed):
+                    raise ValidationError({'detail': _("This sample contains"\
+                    "the same answers has the previously frozen sample.")})
+
         self.sample.is_frozen = True
         self.sample.save()
         serializer = self.get_serializer(self.sample)
         return http.Response(serializer.data)
+
+
+    @extend_schema(parameters=[QueryParamForceSerializer], request=None)
+    def post(self, request, *args, **kwargs):
+        """
+        Freezes answers
+
+        The ``sample`` must belong to ``organization``.
+
+        ``path`` can be used to filter the tree of questions by a prefix.
+
+        **Tags**: assessments
+
+        **Examples**
+
+        .. code-block:: http
+
+            POST /api/supplier-1/sample/46f66f70f5ad41b29c4df08f683a9a7a/freeze\
+    /construction HTTP/1.1
+
+        .. code-block:: json
+
+            {}
+
+        responds
+
+        .. code-block:: json
+
+            {
+                "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
+                "created_at": "2018-01-24T17:03:34.926193Z",
+                "campaign": "sustainability",
+                "is_frozen": true
+            }
+        """
+        return self.create(request, *args, **kwargs)
 
 
 class SampleResetAPIView(SampleMixin, generics.CreateAPIView):

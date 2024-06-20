@@ -47,7 +47,8 @@ from .helpers import datetime_or_now, SlugifyFieldMixin
 from .queries import (UNIT_SYSTEM_STANDARD, UNIT_SYSTEM_IMPERIAL,
     UNIT_SYSTEM_RANK, UNIT_SYSTEM_ENUMERATED, UNIT_SYSTEM_FREETEXT,
     UNIT_SYSTEM_DATETIME, get_account_model, get_question_model,
-    sql_completed_at_by, sql_latest_frozen_by_accounts, sql_frozen_answers)
+    sql_completed_at_by, sql_has_different_answers,
+    sql_latest_frozen_by_accounts, sql_frozen_answers)
 
 
 def get_extra_field_class():
@@ -490,6 +491,12 @@ class Sample(models.Model):
                 question__enumeratedquestions__required=True,
                 question__enumeratedquestions__campaign=self.campaign).count()
         return self._nb_required_answers
+
+
+    def has_identical_answers(self, right):
+        return not(self.objects.raw(sql_has_different_answers(self, right)) or
+            self.objects.raw(sql_has_different_answers(right, self)))
+
 
     def save(self, force_insert=False, force_update=False,
              using=None, update_fields=None):

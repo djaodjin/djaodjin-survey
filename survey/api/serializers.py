@@ -731,3 +731,9 @@ class CohortAddSerializer(CohortSerializer):
             raise ValidationError(
                 _("Question with the specificed path does not exist."))
         return obj
+
+
+class QueryParamForceSerializer(NoModelSerializer):
+
+    force = serializers.BooleanField(required=False,
+        help_text=_("Forces freeze of sample"))

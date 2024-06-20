@@ -23,12 +23,10 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #pylint:disable=too-many-lines
 
-import datetime, logging
+import logging
 
 from django.db import transaction
 from django.db.models import F, Sum
-from django.utils.dateparse import parse_date, parse_datetime
-from django.utils.timezone import utc
 from rest_framework import status
 from rest_framework.generics import (get_object_or_404, RetrieveAPIView,
     ListAPIView)
@@ -271,14 +269,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
         created_at = datetime_or_now(serializer.validated_data['created_at'])
         baseline_at = serializer.validated_data.get('baseline_at')
         if baseline_at:
-            baseline_at = parse_datetime(
-                serializer.validated_data['baseline_at'])
-            if not baseline_at:
-                baseline_at = datetime.datetime.combine(
-                    parse_date(serializer.validated_data['baseline_at']),
-                    datetime.time.min)
-            if baseline_at and baseline_at.tzinfo is None:
-                baseline_at = baseline_at.replace(tzinfo=utc)
+            baseline_at = datetime_or_now(baseline_at)
 
         at_time = datetime_or_now()
         measures_by_accounts = {}

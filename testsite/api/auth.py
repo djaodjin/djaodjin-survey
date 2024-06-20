@@ -29,7 +29,7 @@ import jwt
 from rest_framework import exceptions, status, serializers
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
-from survey.utils import as_timestamp, datetime_or_now
+from survey.helpers import as_timestamp, datetime_or_now
 
 
 class CredentialsSerializer(serializers.Serializer):

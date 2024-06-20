@@ -36,17 +36,16 @@ from .. import settings
 from ..compat import reverse, six
 from ..docs import extend_schema
 from ..filters import AggregateByPeriodFilter, OrderingFilter, SearchFilter
-from ..helpers import construct_periods, convert_dates_to_utc
+from ..helpers import construct_periods, convert_dates_to_utc, datetime_or_now
 from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
     EditableFilterMixin as EditableFilterBaseMixin, MatrixMixin, SampleMixin)
 from ..models import (Answer, Choice, Matrix, EditableFilter,
     EditableFilterEnumeratedAccounts, Sample, Unit, UnitEquivalences)
 from ..pagination import MetricsPagination
 from ..queries import get_benchmarks_counts
-from ..utils import (datetime_or_now, get_accessible_accounts,
-    get_account_model, get_question_model,
-    get_engaged_accounts, get_account_serializer, get_question_serializer,
-    handle_uniq_error)
+from ..utils import (get_accessible_accounts, get_account_model,
+    get_question_model, get_engaged_accounts, get_account_serializer,
+    get_question_serializer, handle_uniq_error)
 from .base import QuestionListAPIView
 from .serializers import (AccountsDateRangeQueryParamSerializer,
     UnitQueryParamSerializer, CohortSerializer, CohortAddSerializer,

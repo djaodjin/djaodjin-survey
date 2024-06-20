@@ -28,7 +28,7 @@ on importing Django models.
 See helpers.py for functions useful throughout the whole project which do
 not require to import `django` modules.
 """
-import datetime, logging, re
+import logging, re
 from importlib import import_module
 
 from django.apps import apps as django_apps
@@ -37,24 +37,15 @@ from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.http.request import split_domain_port, validate_host
-from django.utils.timezone import utc
 from rest_framework.exceptions import ValidationError
 
 from . import settings
 from .compat import gettext_lazy as _, import_string, urlparse, urlunparse
-from .helpers import datetime_or_now
 from .models import Answer, PortfolioDoubleOptIn, Unit
 #pylint:disable=unused-import
 from .queries import get_account_model, get_content_model, get_question_model
 
 LOGGER = logging.getLogger(__name__)
-
-
-def as_timestamp(dtime_at=None):
-    if not dtime_at:
-        dtime_at = datetime_or_now()
-    return int((
-        dtime_at - datetime.datetime(1970, 1, 1, tzinfo=utc)).total_seconds())
 
 
 def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,

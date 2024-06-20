@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,14 +30,13 @@ from django.core.exceptions import FieldDoesNotExist
 from django.db import models
 from django.db.models.functions import TruncMonth, TruncYear
 from django.db.models.query import RawQuerySet
-from django.utils.timezone import utc
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter, BaseFilterBackend)
 from rest_framework.compat import distinct
 
 from . import settings
 from .compat import force_str, six
-from .helpers import datetime_or_now, parse_tz
+from .helpers import datetime_or_now, timezone_or_utc
 from .models import PortfolioDoubleOptIn
 
 LOGGER = logging.getLogger(__name__)
@@ -376,9 +375,7 @@ class DateRangeFilter(BaseFilterBackend):
     ends_at_param = 'ends_at'
 
     def get_params(self, request, view):
-        tz_ob = parse_tz(request.GET.get('timezone'))
-        if not tz_ob:
-            tz_ob = utc
+        tzinfo = timezone_or_utc(request.GET.get('timezone'))
         ends_at = None
         if self.ends_at_param:
             ends_at = request.GET.get(self.ends_at_param)
@@ -389,10 +386,10 @@ class DateRangeFilter(BaseFilterBackend):
             if ends_at is not None:
                 ends_at = ends_at.strip('"')
             ends_at = datetime_or_now(ends_at)
-            ends_at = ends_at.astimezone(tz_ob)
+            ends_at = ends_at.astimezone(tzinfo)
         if start_at:
             start_at = datetime_or_now(start_at.strip('"'))
-            start_at = start_at.astimezone(tz_ob)
+            start_at = start_at.astimezone(tzinfo)
         return start_at, ends_at
 
     def get_date_field(self, model):

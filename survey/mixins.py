@@ -36,10 +36,11 @@ from rest_framework.generics import get_object_or_404
 
 from . import settings
 from .compat import gettext_lazy as _, is_authenticated
+from .helpers import datetime_or_now
 from .models import (Campaign, EnumeratedQuestions, EditableFilter, Matrix,
     Sample)
-from .utils import (datetime_or_now, get_account_model, get_belongs_model,
-    get_question_model, is_portfolios_bypass)
+from .utils import (get_account_model, get_belongs_model, get_question_model,
+    is_portfolios_bypass)
 
 
 LOGGER = logging.getLogger(__name__)

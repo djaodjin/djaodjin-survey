@@ -34,10 +34,9 @@ from dateutil.relativedelta import relativedelta, SU
 from django.db import transaction, IntegrityError
 from django.template.defaultfilters import slugify
 from django.utils.dateparse import parse_date, parse_datetime
-from django.utils.timezone import utc
 from rest_framework.exceptions import ValidationError
 
-from .compat import parse_tz, six
+from .compat import timezone_or_utc, six
 
 HOURLY = 'hourly'
 DAILY = 'daily'
@@ -87,9 +86,16 @@ class SlugifyFieldMixin(object):
                 self.slugify_field, slugified_value)})
 
 
+def as_timestamp(dtime_at=None):
+    if not dtime_at:
+        dtime_at = datetime_or_now()
+    return int((
+        dtime_at - datetime.datetime(1970, 1, 1,
+            tzinfo=timezone_or_utc())).total_seconds())
+
+
 def datetime_or_now(dtime_at=None, tzinfo=None):
-    if not tzinfo:
-        tzinfo = utc
+    tzinfo = timezone_or_utc(tzinfo)
     as_datetime = dtime_at
     if isinstance(dtime_at, six.string_types):
         as_datetime = parse_datetime(dtime_at)
@@ -119,9 +125,7 @@ def period_less_than(left, right, period_type=YEARLY):
 
 def construct_monthly_periods(first_date, last_date, years=0, tzone=None):
     at_time = first_date
-    tzinfo = parse_tz(tzone)
-    if not tzinfo:
-        tzinfo = utc
+    tzinfo = timezone_or_utc(tzone)
     months_ends_at = []
     while at_time < last_date:
         # we are interested in 00:00 local time, if we don't have
@@ -138,9 +142,7 @@ def construct_monthly_periods(first_date, last_date, years=0, tzone=None):
 def _construct_weekly_period(at_time, years=0, tzone=None):
     # discarding time, keeping utc tzinfo (00:00:00 utc)
     today = at_time.replace(hour=0, minute=0, second=0, microsecond=0)
-    tzinfo = parse_tz(tzone)
-    if not tzinfo:
-        tzinfo = utc
+    tzinfo = timezone_or_utc(tzone)
     # we are interested in 00:00 local time, if we don't have
     # local time zone, fall back to 00:00 utc time
     # in case we have local timezone, replace utc with it
@@ -177,9 +179,7 @@ def construct_yearly_periods(first_date, last_date, tzone=None):
     the returned periods will land on Aug 31st.
     """
     at_time = first_date
-    tzinfo = parse_tz(tzone)
-    if not tzinfo:
-        tzinfo = utc
+    tzinfo = timezone_or_utc(tzone)
     period_ends_at = []
     while at_time <= last_date:
         # we are interested in 00:00 local time, if we don't have
@@ -203,7 +203,7 @@ def construct_periods(first_date, last_date, period_type=None, tzone=None):
 
 
 def convert_dates_to_utc(dates):
-    return [date.astimezone(utc) for date in dates]
+    return [date.astimezone(timezone_or_utc()) for date in dates]
 
 
 def extra_as_internal(obj):

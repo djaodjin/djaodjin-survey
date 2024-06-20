@@ -34,39 +34,47 @@ from six import StringIO
 
 
 try:
+    from datetime import timezone
     import zoneinfo
 
-    def parse_tz(tzone):
-        if issubclass(type(tzone), zoneinfo.ZoneInfo):
-            return tzone
+    def timezone_or_utc(tzone=None):
         if tzone:
-            return zoneinfo.ZoneInfo(tzone)
-        return None
+            if issubclass(type(tzone), zoneinfo.ZoneInfo):
+                return tzone
+            try:
+                return zoneinfo.ZoneInfo(tzone)
+            except zoneinfo.ZoneInfoNotFoundError:
+                pass
+        return timezone.utc
 
 except ImportError:
     try:
+        from datetime import timezone
         from backports import zoneinfo
 
-        def parse_tz(tzone):
-            if issubclass(type(tzone), zoneinfo.ZoneInfo):
-                return tzone
+        def timezone_or_utc(tzone=None):
             if tzone:
-                return zoneinfo.ZoneInfo(tzone)
-            return None
+                if issubclass(type(tzone), zoneinfo.ZoneInfo):
+                    return tzone
+                try:
+                    return zoneinfo.ZoneInfo(tzone)
+                except zoneinfo.ZoneInfoNotFoundError:
+                    pass
+            return timezone.utc
 
     except ImportError:
         import pytz
         from pytz.tzinfo import DstTzInfo
 
-        def parse_tz(tzone):
-            if issubclass(type(tzone), DstTzInfo):
-                return tzone
+        def timezone_or_utc(tzone=None):
             if tzone:
+                if issubclass(type(tzone), DstTzInfo):
+                    return tzone
                 try:
                     return pytz.timezone(tzone)
                 except pytz.UnknownTimeZoneError:
                     pass
-            return None
+            return pytz.utc
 
 
 try:
