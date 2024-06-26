@@ -737,3 +737,11 @@ class QueryParamForceSerializer(NoModelSerializer):
 
     force = serializers.BooleanField(required=False,
         help_text=_("Forces freeze of sample"))
+
+
+class ValidationErrorSerializer(NoModelSerializer):
+    """
+    Details on why collected data is invalid
+    """
+    detail = serializers.CharField(help_text=_("Describes the reason for"\
+        " the error in plain text"))

@@ -601,7 +601,7 @@
 { "fields": {
     "source": 113,
     "target": 2,
-    "content": "",
+    "content": "* 0.453592 * 1",
     "factor": 0.453592,
     "scale": 1
   },
@@ -610,7 +610,7 @@
 { "fields": {
     "source": 113,
     "target": 36,
-    "content": "",
+    "content": "* 0.453592 * 1e-3",
     "factor": 0.453592,
     "scale": 1e-3
   },
@@ -619,7 +619,7 @@
 { "fields": {
     "source": 113,
     "target": 37,
-    "content": "",
+    "content": "* 0.453592 * 1e3",
     "factor": 0.453592,
     "scale": 1e3
   },
@@ -628,7 +628,7 @@
 { "fields": {
     "source": 113,
     "target": 38,
-    "content": "",
+    "content": "* 0.453592 * 1e6",
     "factor": 0.453592,
     "scale": 1e6
   },
@@ -637,7 +637,7 @@
 { "fields": {
     "source": 113,
     "target": 114,
-    "content": "* 16",
+    "content": "* 16 * 1",
     "factor": 16,
     "scale": 1
   },
@@ -646,7 +646,7 @@
 { "fields": {
     "source": 113,
     "target": 115,
-    "content": "",
+    "content": "* 0.031081 * 1",
     "factor": 0.031081,
     "scale": 1
   },

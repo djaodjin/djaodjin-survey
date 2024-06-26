@@ -36,12 +36,14 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
+from .. import settings
 from ..compat import six, is_authenticated, gettext_lazy as _
 from ..docs import OpenApiResponse, extend_schema
 from ..filters import DateRangeFilter, OrderingFilter, SampleStateFilter
 from ..helpers import datetime_or_now, extra_as_internal
 from ..mixins import AccountMixin, SampleMixin
-from ..models import Answer, Choice, Portfolio, Sample, Unit, UnitEquivalences
+from ..models import (Answer, AnswerCollected, Choice, Portfolio, Sample, Unit,
+    UnitEquivalences)
 from ..queries import is_sqlite3
 from ..utils import get_question_model, get_user_serializer
 from .base import QuestionListAPIView
@@ -153,44 +155,149 @@ def attach_answers(units, questions_by_key, queryset,
 
 def update_or_create_answer(datapoint, question, sample, created_at,
                             collected_by=None):
+    """
+    Encodes and persists a `datapoint` for an account (i.e. `sample.account`)
+    to `question`, collected at date/time `created_at`, in the database.
+
+    `collected_by`, the ``User`` that updates or creates the record
+    in the database is optional.
+
+    A datapoint is a dictionnary. Example:
+    {
+      "measured": 12,
+      "unit": "kg"
+    }
+
+    `question` and `sample` are models, i.e. ``Question`` and ``Sample``
+    respectively.
+
+    When storing a datapoint in a numerical system unit (SI, customary, and
+    rank), there can be overflow, or the unit might not match
+    the `question.default_unit`.
+    """
     answer = None
     created = False
     measured = datapoint.get('measured', None)
     unit = datapoint.get('unit', question.default_unit)
-    overflow_unit = None
+    LOGGER.debug("%s %s [%s]", measured, unit, measured.__class__)
+    measured_collected = None
+    unit_collected = None
     try:
         with transaction.atomic():
             if unit.system in Unit.NUMERICAL_SYSTEMS:
+                # 1. We make sure the collected measure is a number
                 try:
                     try:
-                        measured = str(int(measured))
+                        # In Python 3, the plain `int` type is unbounded.
+                        measured = int(measured)
                     except ValueError:
-                        measured = '{:.0f}'.format(decimal.Decimal(measured))
-                    Answer.objects.filter(sample=sample, question=question,
-                        unit__in=UnitEquivalences.objects.filter(
-                            source=unit).values('target')).delete()
-                    answer, created = Answer.objects.update_or_create(
-                        sample=sample, question=question, unit=unit,
-                        defaults={
-                            'measured': int(measured),
-                            'created_at': created_at,
-                            'collected_by': collected_by})
-                    if sample and sample.updated_at != created_at:
-                        sample.updated_at = created_at
-                        sample.save()
-                except (ValueError, decimal.InvalidOperation, DataError) as err:
-                    # We cannot convert to integer (ex: "12.8kW/h")
-                    # or the value exceeds 32-bit representation.
-                    # XXX We store as a text value so it is not lost.
-                    LOGGER.warning("\"%s\": %s for '%s'",
-                        measured.replace('"', '\\"'), str(err).strip(),
-                        unit.title)
-                    if not overflow_unit:
-                        # Pick the first freetext `Unit` we find to store
-                        # the overflow as a textual representation.
-                        overflow_unit = Unit.objects.filter(
-                            system=Unit.SYSTEM_FREETEXT).order_by('pk').first()
-                    unit = overflow_unit
+                        measured = decimal.Decimal(measured)
+                except (ValueError, decimal.InvalidOperation, DataError):
+                    raise ValidationError(
+                        _("'%(measured)s' is not a number.") % {
+                        'measured': measured})
+
+                # 2. We start tracking collected measure and converted measure
+                # separately when the collected unit does not match the question
+                # unit.
+                if (settings.CONVERT_TO_QUESTION_SYSTEM and
+                    unit != question.default_unit):
+                    measured_collected = measured
+                    unit_collected = unit
+                    try:
+                        equiv = UnitEquivalences.objects.get(
+                            source=unit, target=question.default_unit)
+                        measured = equiv.as_target_unit(measured)
+                        unit = equiv.target
+                    except UnitEquivalences.DoesNotExist:
+                        if settings.FORCE_ONLY_QUESTION_UNIT:
+                            raise ValidationError(
+                            _("'%(measured)s' cannot be converted"\
+                              " from %(source_unit)s to %(target_unit)s") % {
+                            'measured': measured, 'source_unit': unit_collected,
+                            'target_unit': question.default_unit})
+
+                LOGGER.debug("%s %s [%s]", measured, unit, measured.__class__)
+
+                # 2a. If we can store the collected measure without
+                # lose of precision in the question unit, let's do that.
+                # (ex: 8,000g to kg)
+                # XXX 2a.i. If we would loose precision, store in collected
+                # unit?
+                if (not settings.FORCE_ONLY_QUESTION_UNIT and
+                    settings.DENORMALIZE_FOR_PRECISION and
+                    #unit_collected and unit_collected.system == unit.system and
+                    round(measured) != measured):
+                        source=question.default_unit, factor=1,
+                        scale__gt=1).order_by('scale')))
+                    for equiv in UnitEquivalences.objects.filter(
+                        source=question.default_unit, factor=1,
+                        scale__gt=1).order_by('scale'):
+                        measured_target = round(equiv.as_target_unit(measured))
+                        measured_source = equiv.as_source_unit(measured_target)
+                        LOGGER.debug("%s %s [%s] *", measured_target,
+                            equiv.target, measured_target.__class__)
+                        if float(measured) == measured_source:
+                            # No loss of precision
+                            measured_scaled = measured
+                            unit_scaled = unit
+                            measured = measured_target
+                            unit = equiv.target
+                            break
+
+                LOGGER.debug("%s %s [%s]", measured, unit, measured.__class__)
+
+                # 3. When the converted measure rounded to the closest
+                # integer fits the database number of bits for an integer,
+                # there is nothing to do.
+                # In Python 3, the plain `int` type is unbounded.
+                # In case of an overflow, we might be able to use
+                # a unit that only differs by the scale, and not loose
+                # any precision (ex: 1000kg to 1t) so we start tracking
+                # the scaled-up version.
+                if (not settings.FORCE_ONLY_QUESTION_UNIT and
+                    settings.DENORMALIZE_FOR_PRECISION and
+                    measured >= Answer.MEASURED_MAX_VALUE):
+                    for equiv in UnitEquivalences.objects.filter(
+                            source=unit, factor=1,
+                            scale__lt=1).order_by('-scale'):
+                        measured_target = equiv.as_target_unit(measured)
+                        LOGGER.debug("%s %s [%s] *", measured_target,
+                            equiv.target, measured_target.__class__)
+                        if measured_target < Answer.MEASURED_MAX_VALUE:
+                            measured_scaled = measured
+                            unit_scaled = unit
+                            measured = measured_target
+                            unit = equiv.target
+                            break
+
+                LOGGER.debug("%s %s [%s]", measured, unit, measured.__class__)
+
+                # We are only storing integers in the database
+                # Implementation Note: In Python 3, the plain `int` type is
+                # unbounded therefore there will be no overflow when rounded
+                # up. If we move this statement after the check for overflow,
+                # we might pass the check and round up afterwards, creating
+                # an overflow.
+                measured = round(measured)
+
+                LOGGER.debug("%s %s [%s]", measured, unit, measured.__class__)
+
+                if measured >= Answer.MEASURED_MAX_VALUE:
+                    if measured_collected and unit_collected:
+                        raise ValidationError(
+                        _("overflow encoding '%(measured)s%(unit)s'.") % {
+                        'measured': measured_collected,
+                        'unit': unit_collected})
+                    raise ValidationError(
+                        _("overflow encoding '%(measured)s' in %(unit)s.") % {
+                        'measured': measured, 'unit': unit})
+
+                # Stores only one Answer with equivalent unit per Sample.
+                Answer.objects.filter(Q(unit=unit) |
+                    Q(unit__in=UnitEquivalences.objects.filter(
+                        target=unit).values('source')),
+                    sample=sample, question=question).delete()
 
             if unit.system not in Unit.NUMERICAL_SYSTEMS:
                 if unit.system == Unit.SYSTEM_ENUMERATED:
@@ -214,15 +321,28 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                         unit=unit,
                         rank=choice_rank)
                     measured = choice.pk
-                answer, created = Answer.objects.update_or_create(
-                    sample=sample, question=question, unit=unit,
-                    defaults={
-                        'measured': measured,
-                        'created_at': created_at,
-                        'collected_by': collected_by})
-                if sample and sample.updated_at != created_at:
-                    sample.updated_at = created_at
-                    sample.save()
+
+            # Create or update the answer
+            answer, created = Answer.objects.update_or_create(
+                sample=sample, question=question, unit=unit,
+                defaults={
+                    'measured': measured,
+                    'created_at': created_at,
+                    'collected_by': collected_by})
+            if sample and sample.updated_at != created_at:
+                sample.updated_at = created_at
+                sample.save()
+
+            if measured_collected:
+                # We have converted the datapoint collected from the user
+                # into one with a unit whose system is identical to the
+                # question.default_unit.
+                # We store the collected datapoint for reference.
+                AnswerCollected.objects.update_or_create(
+                        collected=measured_collected,
+                        answer=answer,
+                        unit=unit_collected)
+
     except DataError as err:
         LOGGER.exception(err)
         raise ValidationError(
@@ -965,7 +1085,7 @@ answers/code-of-conduct HTTP/1.1
 
         if self.sample.is_frozen:
             raise ValidationError({
-                'detail': "cannot update answers in a frozen sample"})
+                'detail': _("cannot update answers in a frozen sample")})
 
         for datapoint in validated_data:
             measured = datapoint.get('measured', None)
@@ -980,7 +1100,7 @@ answers/code-of-conduct HTTP/1.1
                 if created:
                     at_least_one_created = True
             except ValidationError as err:
-                errors += [err]
+                errors += err.detail
         if errors:
             raise ValidationError(errors)
 

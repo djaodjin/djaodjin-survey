@@ -44,9 +44,12 @@ _SETTINGS = {
     'BELONGS_SERIALIZER': None,
     'BYPASS_SAMPLE_AVAILABLE': False,
     'CONTENT_MODEL': 'survey.Content',
+    'CONVERT_TO_QUESTION_SYSTEM': True,
     'CORRECT_MARKER': '(correct)',
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+    'DENORMALIZE_FOR_PRECISION': True,
     'EXTRA_FIELD': None,
+    'FORCE_ONLY_QUESTION_UNIT': False,
     'QUESTION_MODEL': 'survey.Question',
     'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionDetailSerializer',
     'SEARCH_FIELDS_PARAM': 'q_f',
@@ -77,10 +80,23 @@ BELONGS_SERIALIZER = (_SETTINGS.get('BELONGS_SERIALIZER')
 #: Outside very simple projects, this flag will most likely be used only
 #: for debugging purposes.
 BYPASS_SAMPLE_AVAILABLE = _SETTINGS.get('BYPASS_SAMPLE_AVAILABLE')
+#: When set to `True` storing measure in the database will attempt to convert
+#: numerical unit to the question default unit. When set to `False`,
+#: no convertion is attempted and the measure is stored with the unit passed
+#: as argument. defaults to `True`.
+CONVERT_TO_QUESTION_SYSTEM = _SETTINGS.get('CONVERT_TO_QUESTION_SYSTEM')
 CONTENT_MODEL = _SETTINGS.get('CONTENT_MODEL')
 CORRECT_MARKER = _SETTINGS.get('CORRECT_MARKER')
 DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
+#: When set to `True` and the measure collected falls out of the natural
+#: range to store an integer in the database (ex: 3.2kg), attempts to retain
+#: collected precision by using a scaled unit (ex: tons or grams) will be made.
+#: defaults to `True`.
+DENORMALIZE_FOR_PRECISION = _SETTINGS.get('DENORMALIZE_FOR_PRECISION')
 EXTRA_FIELD = _SETTINGS.get('EXTRA_FIELD')
+#: When set to `True`, the measure stored in the database are guarenteed
+#: to be in the question's default_unit. defaults to `False`.
+FORCE_ONLY_QUESTION_UNIT = _SETTINGS.get('FORCE_ONLY_QUESTION_UNIT')
 QUESTION_MODEL = _SETTINGS.get('QUESTION_MODEL')
 QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
 SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')

@@ -347,6 +347,31 @@
   },
   "model": "survey.EnumeratedQuestions", "pk": 5
 },
+{
+  "fields" : {
+      "title": "Non-hazardous Waste",
+      "text" : "Non-hazardous Waste..."
+  },
+  "model" : "survey.content", "pk" : 6
+},
+{
+  "fields" : {
+    "path": "/sustainability/environmental-reporting/waste-reporting/waste-measured/non-hazardous-waste",
+    "ui_hint" : "number",
+    "content": 6,
+    "default_unit": 2
+  },
+  "model" : "survey.question", "pk" : 6
+},
+{
+  "fields": {
+    "campaign": 1,
+    "question": 6,
+    "rank": 6
+  },
+  "model": "survey.EnumeratedQuestions", "pk":6
+},
+
 
 {
   "fields" : {

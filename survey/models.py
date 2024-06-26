@@ -184,7 +184,8 @@ class UnitEquivalences(models.Model):
 @python_2_unicode_compatible
 class Choice(models.Model):
     """
-    Choice for a multiple choice question.
+    Choice for a multiple choice question, or text blob for `Answer`
+    with a 'freetext' unit.
     """
     unit = models.ForeignKey(Unit, on_delete=models.PROTECT,
             related_name='enums')
@@ -208,6 +209,9 @@ class Choice(models.Model):
 
 @python_2_unicode_compatible
 class Content(models.Model):
+    """
+    Description (title and long form text) of a `Question`.
+    """
 
     title = models.CharField(max_length=50,
         help_text=_("Short description"))
@@ -350,13 +354,46 @@ class Campaign(SlugifyFieldMixin, models.Model):
     def __str__(self):
         return str(self.slug)
 
+    @property
     def has_questions(self):
         return self.questions.exists()
 
-    def get_questions(self, prefix=None):
-        if prefix:
-            return self.questions.filter(prefx=prefix)
-        return self.questions.all()
+    @property
+    def nb_questions(self):
+        if not hasattr(self, '_nb_questions'):
+            #pylint:disable=attribute-defined-outside-init
+            self._nb_questions = self.get_nb_questions()
+        return self._nb_questions
+
+    @property
+    def nb_required_questions(self):
+        if not hasattr(self, '_nb_required_questions'):
+            #pylint:disable=attribute-defined-outside-init
+            self._nb_required_questions = self.get_nb_required_questions()
+        return self._nb_required_questions
+
+    def get_questions(self, prefixes=None):
+        if not prefixes:
+            prefixes = []
+        filtered_in = None
+        #pylint:disable=superfluous-parens
+        for prefix in prefixes:
+            filtered_q = models.Q(path__startswith=prefix)
+            if filtered_in:
+                filtered_in |= filtered_q
+            else:
+                filtered_in = filtered_q
+        queryset = self.questions.all()
+        if filtered_in:
+            queryset = queryset.filter(filtered_q)
+        return queryset
+
+    def get_nb_questions(self, prefixes=None):
+        return self.get_questions(prefixes=prefixes).distinct().count()
+
+    def get_nb_required_questions(self, prefixes=None):
+        return self.get_questions(prefixes=prefixes).filter(
+            enumeratedquestions__required=True).distinct().count()
 
 
 @python_2_unicode_compatible
@@ -492,11 +529,9 @@ class Sample(models.Model):
                 question__enumeratedquestions__campaign=self.campaign).count()
         return self._nb_required_answers
 
-
     def has_identical_answers(self, right):
-        return not(self.objects.raw(sql_has_different_answers(self, right)) or
-            self.objects.raw(sql_has_different_answers(right, self)))
-
+        return not(Sample.objects.raw(sql_has_different_answers(self, right)) or
+            Sample.objects.raw(sql_has_different_answers(right, self)))
 
     def save(self, force_insert=False, force_update=False,
              using=None, update_fields=None):
@@ -574,6 +609,8 @@ class Answer(models.Model):
     """
     An Answer to a Question as part of Sample to a Campaign.
     """
+    MEASURED_MAX_VALUE = 2 ** 31 - 1
+
     objects = AnswerManager()
 
     created_at = models.DateTimeField()
@@ -584,7 +621,7 @@ class Answer(models.Model):
     denominator = models.IntegerField(null=True, default=1)
     collected_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         null=True, on_delete=models.PROTECT)
-    # XXX Optional fields when the answer is part of a campaign.
+    # Optional fields when the answer is part of a campaign.
     sample = models.ForeignKey(Sample, on_delete=models.CASCADE,
         related_name='answers')
 
@@ -643,16 +680,16 @@ class Answer(models.Model):
 @python_2_unicode_compatible
 class AnswerCollected(models.Model):
 
-    first_measured = models.IntegerField()
-    second_measured = models.IntegerField()
-    answer = models.ForeignKey(Answer, on_delete=models.CASCADE)
-    unit = models.ForeignKey(Unit, on_delete=models.PROTECT)
+    collected = models.TextField(
+        help_text=_("The measure as inputed by the user (ex: 5'2'')"))
+    answer = models.ForeignKey(Answer, on_delete=models.CASCADE,
+        help_text=_("The associated Answer for that collected datapoint"))
+    unit = models.ForeignKey(Unit, on_delete=models.PROTECT,
+        help_text=_("The unit the collected measure was specified in"))
 
     def __str__(self):
-        return "<AnswerCollected(answer_id=%d, unit_id=%d,"\
-            " first_measured=%d, second_measured=%d)>" % (
-            self.answer_id, self.unit_id, self.first_measured,
-            self.second_measured)
+        return "<AnswerCollected(answer_id=%d, unit_id=%d, collected=%s)>" % (
+            self.answer_id, self.unit_id, self.collected)
 
 
 @python_2_unicode_compatible
@@ -1072,19 +1109,21 @@ def convert_to_source_unit(value, factor, scale, formula):
     using `factor` and `scale`.
     """
     #pylint:disable=too-many-return-statements
+    val = float(value)         # XXX hack to handle `Decimal`
+
     # Temperatures use a little more complex formula than linear scaling.
     if formula == "1C + 273.15":                  # Celcius to Kelvin
-        return value - 273.15
+        return val - 273.15
     if formula == "1K - 273.15":                  # Kelvin to Celcius
-        return value + 273.15
+        return val + 273.15
     if formula == "(1F - 32) * 5/9 + 273.15":     # Farenheit to Kelvin
-        return (value - 273.15) * 9/5 + 32
+        return (val - 273.15) * 9/5 + 32
     if formula == "(1K - 273.15) * 9/5 + 32":     # Kelvin to Farenheit
-        return (value - 32) * 5/9 + 273.15
+        return (val - 32) * 5/9 + 273.15
     if formula == "(1°C * 9/5) + 32":             # Celcius to Farenheit
-        return (value - 32) * 5/9
+        return (val - 32) * 5/9
     if formula == "(1°F - 32) * 5/9":             # Farenheit to Celsius
-        return (value * 9/5) + 32
+        return (val * 9/5) + 32
 
     return value / (factor * scale)
 
@@ -1095,21 +1134,23 @@ def convert_to_target_unit(value, factor, scale, formula):
     using `factor` and `scale`.
     """
     #pylint:disable=too-many-return-statements
+    val = float(value)         # XXX hack to handle `Decimal`
+
     # Temperatures use a little more complex formula than linear scaling.
     if formula == "1C + 273.15":                  # Celcius to Kelvin
-        return value + 273.15
+        return val + 273.15
     if formula == "1K - 273.15":                  # Kelvin to Celcius
-        return value - 273.15
+        return val - 273.15
     if formula == "(1F - 32) * 5/9 + 273.15":     # Farenheit to Kelvin
-        return (value - 32) * 5/9 + 273.15
+        return (val - 32) * 5/9 + 273.15
     if formula == "(1K - 273.15) * 9/5 + 32":     # Kelvin to Farenheit
-        return (value - 273.15) * 9/5 + 32
+        return (val - 273.15) * 9/5 + 32
     if formula == "(1°C * 9/5) + 32":             # Celcius to Farenheit
-        return (value * 9/5) + 32
+        return (val * 9/5) + 32
     if formula == "(1°F - 32) * 5/9":             # Farenheit to Celsius
-        return (value - 32) * 5/9
+        return (val - 32) * 5/9
 
-    return value * factor * scale
+    return val * factor * scale
 
 
 def get_collected_by(campaign, start_at=None, ends_at=None,
