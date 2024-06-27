@@ -226,10 +226,7 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                 # unit?
                 if (not settings.FORCE_ONLY_QUESTION_UNIT and
                     settings.DENORMALIZE_FOR_PRECISION and
-                    #unit_collected and unit_collected.system == unit.system and
                     round(measured) != measured):
-                        source=question.default_unit, factor=1,
-                        scale__gt=1).order_by('scale')))
                     for equiv in UnitEquivalences.objects.filter(
                         source=question.default_unit, factor=1,
                         scale__gt=1).order_by('scale'):
@@ -1938,7 +1935,7 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
         have no answer.
         """
         if not prefixes:
-            prefixes = []
+            prefixes = self.get_prefixes()
         filtered_in = None
         #pylint:disable=superfluous-parens
         for prefix in prefixes:
@@ -1967,6 +1964,10 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
         return queryset.exclude(pk__in=answered_questions)
 
 
+    def get_prefixes(self):
+        return [self.db_path] if self.db_path else []
+
+
     def create(self, request, *args, **kwargs):
         # Basic sanity checks:
         # 1. The sample is not yet frozen.
@@ -1975,9 +1976,13 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
         if self.sample.is_frozen:
             raise ValidationError({'detail': _("sample is already frozen")})
 
+        prefixes = self.get_prefixes()
+        if not prefixes:
+            raise ValidationError({'detail':
+                _("You cannot freeze a sample with no answers")})
+
         required_unanswered_questions = \
-            self.get_required_unanswered_questions(
-                prefixes=[self.db_path] if self.db_path else None)
+            self.get_required_unanswered_questions(prefixes=prefixes)
         if required_unanswered_questions.exists():
             raise ValidationError({'detail': _("%d questions with a required"\
 " answer have yet to be answered.") % required_unanswered_questions.count(),
