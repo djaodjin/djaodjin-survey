@@ -58,6 +58,48 @@ from .serializers import (AccountsDateRangeQueryParamSerializer,
 LOGGER = logging.getLogger(__name__)
 
 
+class AccountsDateRangeMixin(object):
+
+    accounts_start_at_url_kwarg = 'accounts_start_at'
+    accounts_ends_at_url_kwarg = 'accounts_ends_at'
+
+    @property
+    def accounts_start_at(self):
+        if not hasattr(self, '_accounts_start_at'):
+            self._accounts_start_at = self.get_query_param(
+                self.accounts_start_at_url_kwarg)
+            if self._accounts_start_at:
+                self._accounts_start_at = datetime_or_now(
+                    self._accounts_start_at.strip('"'))
+        return self._accounts_start_at
+
+    @property
+    def accounts_ends_at(self):
+        if not hasattr(self, '_accounts_ends_at'):
+            self._accounts_ends_at = self.get_query_param(
+                self.accounts_ends_at_url_kwarg)
+            if self._accounts_ends_at:
+                self._accounts_ends_at = datetime_or_now(
+                    self._accounts_ends_at.strip('"'))
+        return self._accounts_ends_at
+
+    def get_query_param(self, key, default_value=None):
+        if not hasattr(self, '_accounts_date_range_serializer'):
+            self._accounts_date_range_serializer = \
+                AccountsDateRangeQueryParamSerializer(
+                    data=self.request.query_params)
+            self._accounts_date_range_serializer.is_valid(raise_exception=True)
+        param = self._accounts_date_range_serializer.validated_data.get(
+            key, None)
+        if param:
+            return param
+        try:
+            return self.request.query_params.get(key, default_value)
+        except AttributeError:
+            pass
+        return self.request.GET.get(key, default_value)
+
+
 class EditableFilterMixin(AccountMixin, EditableFilterBaseMixin):
 
     @property
@@ -389,7 +431,8 @@ class BenchmarkIndexAPIView(BenchmarkAllIndexAPIView):
         return super(BenchmarkIndexAPIView, self).get(request, *args, **kwargs)
 
 
-class AccessiblesAccountsMixin(CampaignMixin, AccountMixin):
+class AccessiblesAccountsMixin(AccountsDateRangeMixin,
+                               CampaignMixin, AccountMixin):
     """
     Query accounts by 'accessibles' affinity
     """
@@ -398,16 +441,8 @@ class AccessiblesAccountsMixin(CampaignMixin, AccountMixin):
         """
         Returns account accessibles by a profile in a specific date range.
         """
-        query_serializer = AccountsDateRangeQueryParamSerializer(
-            data=self.request.query_params)
-        query_serializer.is_valid(raise_exception=True)
-        accounts_start_at = query_serializer.validated_data.get(
-            'accounts_start_at', None)
-        accounts_ends_at = query_serializer.validated_data.get(
-            'accounts_ends_at', None)
-        return get_accessible_accounts([self.account],
-            campaign=self.campaign,
-            start_at=accounts_start_at, ends_at=accounts_ends_at,
+        return get_accessible_accounts([self.account], campaign=self.campaign,
+            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
             aggregate_set=True)
 
 
@@ -545,7 +580,8 @@ class AccessiblesBenchmarkIndexAPIView(AccessiblesBenchmarkAPIView):
             request, *args, **kwargs)
 
 
-class EngagedAccountsMixin(CampaignMixin, AccountMixin):
+class EngagedAccountsMixin(AccountsDateRangeMixin,
+                           CampaignMixin, AccountMixin):
     """
     Query accounts by 'accessibles' affinity
     """
@@ -554,16 +590,8 @@ class EngagedAccountsMixin(CampaignMixin, AccountMixin):
         """
         Returns account accessibles by a profile in a specific date range.
         """
-        query_serializer = AccountsDateRangeQueryParamSerializer(
-            data=self.request.query_params)
-        query_serializer.is_valid(raise_exception=True)
-        accounts_start_at = query_serializer.validated_data.get(
-            'accounts_start_at', None)
-        accounts_ends_at = query_serializer.validated_data.get(
-            'accounts_ends_at', None)
-        return get_engaged_accounts([self.account],
-            campaign=self.campaign,
-            start_at=accounts_start_at, ends_at=accounts_ends_at,
+        return get_engaged_accounts([self.account], campaign=self.campaign,
+            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
             aggregate_set=True)
 
 
@@ -701,7 +729,8 @@ class EngagedBenchmarkIndexAPIView(EngagedBenchmarkAPIView):
             request, *args, **kwargs)
 
 
-class EditableFilterAccountsMixin(CampaignMixin, EditableFilterMixin):
+class EditableFilterAccountsMixin(AccountsDateRangeMixin,
+                                  CampaignMixin, EditableFilterMixin):
     """
     Query accounts for a custom filter
     """
@@ -710,13 +739,8 @@ class EditableFilterAccountsMixin(CampaignMixin, EditableFilterMixin):
         """
         Returns account accessibles by a profile in a specific date range.
         """
-        query_serializer = AccountsDateRangeQueryParamSerializer(
-            data=self.request.query_params)
-        query_serializer.is_valid(raise_exception=True)
-        accounts_start_at = query_serializer.validated_data.get(
-            'accounts_start_at', None)
-        accounts_ends_at = query_serializer.validated_data.get(
-            'accounts_ends_at', None)
+        accounts_start_at = self.accounts_start_at
+        accounts_ends_at = self.accounts_ends_at
 
         select_by_answers = EditableFilterEnumeratedAccounts.objects.filter(
             editable_filter=self.editable_filter).exclude(
