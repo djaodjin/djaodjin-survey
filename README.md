@@ -40,8 +40,9 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.12.0
+0.12.1
 
+  * enables override of accounts date range
   * adds benchmarks API
   * converts numerical unit upon collection
   * returns list of required unanswered questions in freeze API
