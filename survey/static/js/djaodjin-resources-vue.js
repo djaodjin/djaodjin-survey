@@ -953,7 +953,7 @@ var paginationMixin = {
         },
         handleScroll: function(evt) {
             var vm = this;
-            let element = this.$el;
+            let element = vm.$el;
             if( element.getBoundingClientRect().bottom < window.innerHeight ) {
                 let menubar = vm.$el.querySelector('[role="pagination"]');
                 if( menubar) {
@@ -1381,42 +1381,50 @@ var accountDetailMixin = {
         }
     },
     methods: {
-        getAccountField: function(user, fieldName) {
+        getAccountField: function(account, fieldName) {
             var vm = this;
-            if( user && user.hasOwnProperty(fieldName) ) {
-                return user[fieldName];
-            }
-            if( user ) {
-                const account = vm.accountsBySlug[user];
-                if( account && account.hasOwnProperty(fieldName) ) {
-                    return account[fieldName];
+            if( account ) {
+                let fieldValue = account.hasOwnProperty(fieldName) ?
+                    account[fieldName] : null;
+                if( fieldValue ) {
+                    return fieldValue;
                 }
-                vm.accountsBySlug[user] = {
-                    picture: null,
-                    printable_name: user
-                };
-                if( vm.api_accounts_url ) {
-                    vm.reqGet(vm._safeUrl(vm.api_accounts_url, user),
+                const accountSlug = account.slug ? account.slug : account;
+                const cached = vm.accountsBySlug[accountSlug];
+                if( cached && cached.hasOwnProperty(fieldName) ) {
+                    return cached[fieldName];
+                }
+                // XXX disable loading individually. we need to give
+                // `populateAccounts` a chance to run and complete.
+                if( false && vm.api_accounts_url ) {
+                    vm.accountsBySlug[accountSlug] = {
+                        picture: null,
+                        printable_name: accountSlug
+                    };
+                    vm.reqGet(vm._safeUrl(vm.api_accounts_url, accountSlug),
                     function(resp) {
                         vm.accountsBySlug[resp.slug] = resp;
                     }, function() {
                         // discard errors (ex: "not found").
                     });
                 }
-                return vm.accountsBySlug[user][fieldName];
             }
             return "";
         },
-        getAccountPicture: function(user) {
-            return this.getAccountField(user, 'picture');
+        getAccountPicture: function(account) {
+            return this.getAccountField(account, 'picture');
         },
-        getAccountPrintableName: function(user) {
-            return this.getAccountField(user, 'printable_name');
+        getAccountPrintableName: function(account) {
+            return this.getAccountField(account, 'printable_name');
         },
         populateAccounts: function(elements, fieldName) {
             var vm = this;
 
             if( !vm.api_accounts_url ) return;
+
+            if( !fieldName ) {
+                fieldName = 'slug';
+            }
 
             const accounts = new Set();
             for( let idx = 0; idx < elements.length; ++idx ) {
@@ -1424,21 +1432,24 @@ var accountDetailMixin = {
                 accounts.add((fieldName && item[fieldName]) ?
                     item[fieldName] : item.slug);
             }
-            let queryParams = "?q_f=slug&q=";
-            let sep = "";
-            for( const account of accounts ) {
-                queryParams += sep + account;
-                sep = ",";
-            }
-            vm.reqGet(vm.api_accounts_url + queryParams,
-            function(resp) {
-                for( let idx = 0; idx < resp.results.length; ++idx ) {
-                    vm.accountsBySlug[resp.results[idx].slug] =
-                        resp.results[idx];
+            if( accounts.size ) {
+                let queryParams = "?q_f==slug&q=";
+                let sep = "";
+                for( const account of accounts ) {
+                    queryParams += sep + account;
+                    sep = ",";
                 }
-            }, function() {
-                // discard errors (ex: "not found").
-            });
+                vm.reqGet(vm.api_accounts_url + queryParams,
+                function(resp) {
+                    for( let idx = 0; idx < resp.results.length; ++idx ) {
+                        vm.accountsBySlug[resp.results[idx].slug] =
+                            resp.results[idx];
+                    }
+                    vm.$forceUpdate();
+                }, function() {
+                    // discard errors (ex: "not found").
+                });
+            }
         },
     }
 };
