@@ -553,7 +553,7 @@ class CompareQuestionSerializer(QuestionSerializer):
 class InviteeSerializer(NoModelSerializer):
 
     slug = serializers.SlugField()
-    full_name = serializers.CharField()
+    full_name = serializers.CharField(required=False)
     email = serializers.EmailField(required=False)
     printable_name = serializers.SerializerMethodField()
 

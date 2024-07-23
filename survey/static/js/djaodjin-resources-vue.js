@@ -1442,8 +1442,8 @@ var accountDetailMixin = {
                 vm.reqGet(vm.api_accounts_url + queryParams,
                 function(resp) {
                     for( let idx = 0; idx < resp.results.length; ++idx ) {
-                        vm.accountsBySlug[resp.results[idx].slug] =
-                            resp.results[idx];
+                        vm.$set(vm.accountsBySlug, resp.results[idx].slug,
+                            resp.results[idx]);
                     }
                     vm.$forceUpdate();
                 }, function() {

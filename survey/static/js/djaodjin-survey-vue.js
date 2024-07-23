@@ -132,13 +132,20 @@ Vue.component('portfolios-received-list', {
 
 Vue.component('portfolios-grant-list', {
     mixins: [
-        itemListMixin
+        itemListMixin,
+        accountDetailMixin
     ],
     props: {
         defaultSelectedAccounts: {
             type: Array,
             default: function() {
                 return [];
+            }
+        },
+        defaultSelectedCampaign: {
+            type: Object,
+            default: function() {
+                return null;
             }
         }
     },
@@ -153,9 +160,12 @@ Vue.component('portfolios-grant-list', {
                 grantee: {
                     email: ""
                 },
+                campaign: null,
                 message: "",
                 accounts: [],
-            }
+            },
+            getCompleteCb: 'getCompleted',
+            profileRequestDone: false
         }
     },
     methods: {
@@ -174,14 +184,17 @@ Vue.component('portfolios-grant-list', {
         },
         addGrantee: function(grantees, newGrantee) {
             var vm = this;
-            if( (typeof newGrantee.slug === 'undefined') &&
-                !newGrantee.email ) {
-// We don't want to scroll back to the top when an invite should be created.
-//                showErrorMessages(
-//                    "Sorry, we cannot find contact information for " + (
-//                    newGrantee.full_name || newGrantee.email);
+            if( newGrantee.slug ) {
+                vm.grant.grantee = newGrantee;
+                vm.profileRequestDone = false;
             } else {
                 vm.grant.grantee = newGrantee;
+                vm.profileRequestDone = true;
+                if( vm.$refs.fullName ) {
+                    vm.$nextTick(function() {
+                        vm.$refs.fullName.focus();
+                    });
+                }
             }
             return false;
         },
@@ -192,11 +205,16 @@ Vue.component('portfolios-grant-list', {
                 full_name: (grant.grantee.full_name ||
                     grant.grantee.printable_name)
             };
+            if( grant.campaign ) {
+                portfolios.campaign = grant.campaign.slug || grant.campaign;
+            }
             if( grant.grantee.slug ) {
                 portfolios.grantee.slug = grant.grantee.slug;
             }
             if( grant.grantee.message ) {
                 portfolios.message = grant.grantee.message;
+            } else if( grant.message ) {
+                portfolios.message = grant.message;
             }
             if( grant.accounts.length > 0 ) {
                 portfolios.accounts = [];
@@ -210,24 +228,36 @@ Vue.component('portfolios-grant-list', {
             var vm = this;
             vm.reqPost(vm.url, portfolios,
             function(resp) { // success
-                vm.showMessages(
-                    ["Your porfolio grant was successfully sent."],
-                    "success");
+                vm.reload();
+                vm.grant.grantee = {email: ""};
             });
         },
         submitGrants: function() {
             var vm = this;
-            var portfolios = vm._preparePortfolios(vm.grant);
-            if( portfolios.grantee.slug ) {
-                vm._submitPortfolios(portfolios);
-            } else {
-                vm.reqPost(vm.url_account_base, portfolios.grantee,
-                function(resp) {
-                    var email = portfolios.grantee.email;
-                    portfolios.grantee = resp;
-                    portfolios.grantee.email = email;
+            if( vm.grant.grantee.slug || vm.grant.grantee.email) {
+                vm.profileRequestDone = false;
+                var portfolios = vm._preparePortfolios(vm.grant);
+                if( portfolios.grantee.slug ) {
                     vm._submitPortfolios(portfolios);
-                });
+                } else {
+                    vm.reqPost(vm.url_account_base, portfolios.grantee,
+                    function(resp) {
+                        var email = portfolios.grantee.email;
+                        portfolios.grantee = resp;
+                        portfolios.grantee.email = email;
+                        vm._submitPortfolios(portfolios);
+                    });
+                }
+            } else {
+                vm.profileRequestDone = true;
+                if( vm.$refs.typeahead && vm.$refs.typeahead.query ) {
+                    vm.grant.grantee.email = vm.$refs.typeahead.query;
+                    if( vm.$refs.fullName ) {
+                        vm.$nextTick(function() {
+                            vm.$refs.fullName.focus();
+                        });
+                    }
+                }
             }
         },
         ignore: function(portfolio, idx) {
@@ -236,6 +266,11 @@ Vue.component('portfolios-grant-list', {
             function(resp) { // success
                 vm.items.results.splice(idx, 1);
             });
+        },
+        getCompleted: function(){
+            var vm = this;
+            vm.populateAccounts(vm.items.results, 'grantee');
+            vm.populateAccounts(vm.items.results, 'account');
         },
     },
     computed: {
@@ -248,6 +283,12 @@ Vue.component('portfolios-grant-list', {
         vm.get();
         if( vm.defaultSelectedAccounts ) {
             vm.grant.accounts = vm.defaultSelectedAccounts;
+        }
+        if( vm.defaultSelectedCampaign ) {
+            vm.grant.campaign = vm.defaultSelectedCampaign;
+        }
+        if( vm.$refs.message ) {
+            vm.grant.message = vm.$refs.message.textContent;
         }
     }
 });
@@ -803,23 +844,23 @@ var AccountTypeAhead = Vue.component('account-typeahead', {
             var params = {};
             params[vm.queryParamName] = vm.query;
             vm.reqGet(vm.url, params,
-                      function (resp) {
-                          if (resp && vm.query) {
-                              var data = resp.results;
-                              data = vm.prepareResponseData ? vm.prepareResponseData(data) : data;
-                              vm.items = vm.limit ? data.slice(0, vm.limit) : data;
-                              vm.current = -1;
-                              vm.loading = false;
-                              if( data.length > 0 ) {
-                                  vm.onHit(data[0]);
-                              } else {
-                                  vm.onHit({email: vm.query});
-                              }
-                          }
-                      }, function() {
-                          // on failure we just do nothing. - i.e. we don't want a bunch
-                          // of error messages to pop up.
-                      });
+            function (resp) {
+              if (resp && vm.query) {
+                  var data = resp.results;
+                  data = vm.prepareResponseData ? vm.prepareResponseData(data) : data;
+                  vm.items = vm.limit ? data.slice(0, vm.limit) : data;
+                  vm.current = -1;
+                  vm.loading = false;
+                  if( vm.items.length === 1 ) {
+                      vm.onHit(data[0]);
+                  } else {
+                      vm.onHit({email: vm.query});
+                  }
+              }
+            }, function() {
+                // on failure we just do nothing. - i.e. we don't want a bunch
+                // of error messages to pop up.
+            });
         },
         setActiveAndHit: function(item) {
             var vm = this;
@@ -849,7 +890,6 @@ var AccountTypeAhead = Vue.component('account-typeahead', {
 
 
 Vue.component('grantee-typeahead', AccountTypeAhead.extend({
-  props: ['dataset', 'defaultMessage', 'showAccounts'],
   data: function data() {
     return {
       url: this.$urls.api_account_candidates,
@@ -860,34 +900,8 @@ Vue.component('grantee-typeahead', AccountTypeAhead.extend({
       selectFirst: false,
       minChars: 3,
       queryParamName: 'q',
-      selectedItem: {
-          email: "",
-          message: ""
-      },
-      unregistered: false
     };
   },
-  methods: {
-
-    onHit: function onHit(newItem) {
-      var vm = this;
-      if( newItem.slug ) {
-        vm.$emit('selectitem', vm.dataset, newItem);
-        vm.reset();
-      } else {
-        vm.selectedItem.email = vm.query;
-        vm.selectedItem.message = vm.defaultMessage;
-        vm.unregistered = true;
-        vm.$nextTick(function() {
-            vm.$refs.fullName.focus();
-        });
-      }
-    },
-    submitInvite: function() {
-      var vm = this;
-      vm.$emit('selectitem', vm.dataset, vm.selectedItem);
-    },
-  }
 }));
 
 
