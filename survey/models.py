@@ -421,10 +421,10 @@ class SampleManager(models.Manager):
         return self.create(account=get_account_model().objects.get(
                 **account_lookup_kwargs), **kwargs)
 
-    def get_completed_assessments_at_by(self, campaign,
+    def get_completed_assessments_at_by(self, campaign, accounts=None,
                                         start_at=None, ends_at=None,
                                         prefix=None, title="",
-                                        accounts=None, exclude_accounts=None,
+                                        exclude_accounts=None,
                                         extra=None):
         """
         Returns the most recent frozen assessment before an optionally specified
@@ -436,10 +436,12 @@ class SampleManager(models.Manager):
         typically used to filter out 'testing' accounts
         """
         #pylint:disable=too-many-arguments
+        # XXX Rename method to `get_latest_frozen_by_accounts`
         return self.raw(sql_completed_at_by(
-            campaign, start_at=start_at, ends_at=ends_at,
+            campaign, accounts=accounts,
+            start_at=start_at, ends_at=ends_at,
             prefix=prefix, title=title,
-            accounts=accounts, exclude_accounts=exclude_accounts, extra=extra))
+            exclude_accounts=exclude_accounts, extra=extra))
 
 
     def get_latest_frozen_by_accounts(self, campaign=None,

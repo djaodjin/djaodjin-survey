@@ -85,9 +85,14 @@ class AccountsDateRangeMixin(object):
 
     def get_query_param(self, key, default_value=None):
         if not hasattr(self, '_accounts_date_range_serializer'):
-            self._accounts_date_range_serializer = \
-                AccountsDateRangeQueryParamSerializer(
-                    data=self.request.query_params)
+            try:
+                self._accounts_date_range_serializer = \
+                    AccountsDateRangeQueryParamSerializer(
+                        data=self.request.query_params)
+            except AttributeError:
+                self._accounts_date_range_serializer = \
+                    AccountsDateRangeQueryParamSerializer(
+                        data=self.request.GET)
             self._accounts_date_range_serializer.is_valid(raise_exception=True)
         param = self._accounts_date_range_serializer.validated_data.get(
             key, None)
