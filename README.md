@@ -40,12 +40,10 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.12.1
+0.12.2
 
-  * enables override of accounts date range
-  * adds benchmarks API
-  * converts numerical unit upon collection
-  * returns list of required unanswered questions in freeze API
+  * supports for Django and DRF views in AccountsDateRangeMixin
+  * enables caching of profile name / picture under more scenarios
 
 [previous release notes](changelog)
 

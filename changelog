@@ -1,3 +1,10 @@
+0.12.2
+
+  * supports for Django and DRF views in AccountsDateRangeMixin
+  * enables caching of profile name / picture under more scenarios
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 26 Jul 2024 11:35:00 -0700
+
 0.12.1
 
   * enables override of accounts date range
