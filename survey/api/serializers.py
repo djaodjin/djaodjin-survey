@@ -77,14 +77,20 @@ class ExtraField(serializers.CharField):
 
     def to_internal_value(self, data):
         if isinstance(data, dict):
-            return json.dumps(data)
+            try:
+                return json.dumps(data)
+            except (TypeError, ValueError):
+                pass
         return super(ExtraField, self).to_internal_value(data)
 
     def to_representation(self, value):
-        try:
-            return json.loads(value)
-        except (TypeError, ValueError):
-            pass
+        if isinstance(value, dict):
+            return value
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except (TypeError, ValueError):
+                pass
         return super(ExtraField, self).to_representation(value)
 
 

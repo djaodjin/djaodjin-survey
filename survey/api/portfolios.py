@@ -713,7 +713,79 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         return HttpResponse(status=status.HTTP_204_NO_CONTENT)
 
 
-class PortfoliosUpdateAPIView(AccountMixin, generics.UpdateAPIView):
+class PortfolioUpdateAPIView(AccountMixin, generics.UpdateAPIView):
+    """
+    Updates extra field in a portfolio
+
+    The requestor/grantor uses this API call to add metadata about
+    the request/grant.
+
+    **Tags**: portfolios
+
+    **Examples**
+
+    .. code-block:: http
+
+        PUT /api/energy-utility/portfolios/requests/metadata/supplier-1 HTTP/1.1
+
+    .. code-block:: json
+
+        {
+          "extra": {"tags": "tier1"}
+        }
+
+    responds
+
+    .. code-block:: json
+
+        {
+          "grantee": "energy-utility",
+          "account": "supplier-1",
+          "campaign": {
+              "slug": "sustainability",
+              "title": "ESG/Environmental practices",
+              "account": "djaopsp"
+          },
+          "ends_at": "2022-01-01T00:00:00Z",
+          "state": "request-denied",
+          "api_accept": null,
+          "extra": {"tags": "tier1"}
+        }
+    """
+    target_url_kwarg = 'target'
+    serializer_class = PortfolioOptInSerializer
+
+    def get_serializer_class(self):
+        if self.request.method.lower() in ('put', 'patch'):
+            return PortfolioOptInUpdateSerializer
+        return super(PortfolioUpdateAPIView, self).get_serializer_class()
+
+    @extend_schema(responses={
+      200: OpenApiResponse(PortfolioOptInSerializer)})
+    def put(self, request, *args, **kwargs):
+        return super(PortfolioUpdateAPIView, self).put(
+            request, *args, **kwargs)
+
+    @extend_schema(responses={
+      200: OpenApiResponse(PortfolioOptInSerializer)})
+    def patch(self, request, *args, **kwargs):
+        return super(PortfolioUpdateAPIView, self).patch(
+            request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        serializer = self.get_serializer(data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        # If we have a portfolio, let's update the extra metadata.
+        Portfolio.objects.filter(grantee=self.account,
+            account__slug=self.kwargs.get(self.target_url_kwarg)).update(
+                extra=serializer.validated_data.get('extra'))
+
+        return HttpResponse(serializer.data)
+
+
+class PortfolioDoubleOptinUpdateAPIView(PortfolioUpdateAPIView):
     """
     Updates extra field in a request/grant
 
@@ -758,18 +830,19 @@ class PortfoliosUpdateAPIView(AccountMixin, generics.UpdateAPIView):
     def get_serializer_class(self):
         if self.request.method.lower() in ('put', 'patch'):
             return PortfolioOptInUpdateSerializer
-        return super(PortfoliosUpdateAPIView, self).get_serializer_class()
+        return super(
+            PortfolioDoubleOptinUpdateAPIView, self).get_serializer_class()
 
     @extend_schema(responses={
       200: OpenApiResponse(PortfolioOptInSerializer)})
     def put(self, request, *args, **kwargs):
-        return super(PortfoliosUpdateAPIView, self).put(
+        return super(PortfolioDoubleOptinUpdateAPIView, self).put(
             request, *args, **kwargs)
 
     @extend_schema(responses={
       200: OpenApiResponse(PortfolioOptInSerializer)})
     def patch(self, request, *args, **kwargs):
-        return super(PortfoliosUpdateAPIView, self).patch(
+        return super(PortfolioDoubleOptinUpdateAPIView, self).patch(
             request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):

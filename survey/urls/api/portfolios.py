@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,17 +22,25 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from rest_framework.views import APIView
+
 from ...api.portfolios import (PortfoliosAPIView,
     PortfoliosGrantsAPIView, PortfoliosGrantAcceptAPIView,
     PortfoliosRequestsAPIView, PortfoliosRequestAcceptAPIView,
-    PortfoliosUpdateAPIView)
+    PortfolioUpdateAPIView, PortfolioDoubleOptinUpdateAPIView)
 from ...compat import path
 
 
 urlpatterns = [
+    path('portfolios/metadata/<slug:target>',
+        PortfolioUpdateAPIView.as_view(),
+        name='survey_api_portfolio_update'),
+    path('portfolios/metadata',
+        APIView.as_view(),
+        name='survey_api_portfolio_metadata_index'),
     path('portfolios/requests/metadata/<slug:target>',
-        PortfoliosUpdateAPIView.as_view(),
-        name='survey_api_portfolios_update'),
+        PortfolioDoubleOptinUpdateAPIView.as_view(),
+        name='survey_api_portfoliodoubleoptin_update'),
     path(r'portfolios/requests/<slug:verification_key>',
         PortfoliosRequestAcceptAPIView.as_view(),
         name='api_portfolios_request_accept'),

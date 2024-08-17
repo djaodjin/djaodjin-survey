@@ -856,7 +856,10 @@ class PortfolioDoubleOptInQuerySet(models.QuerySet):
         #pylint:disable=too-many-arguments
         kwargs = {}
         if campaign:
-            kwargs.update({'campaign': campaign})
+            if isinstance(campaign, Campaign):
+                kwargs.update({'campaign': campaign})
+            else:
+                kwargs.update({'campaign__slug': str(campaign)})
         if start_at:
             kwargs.update({'created_at__gte': start_at})
         if ends_at:
@@ -875,7 +878,10 @@ class PortfolioDoubleOptInQuerySet(models.QuerySet):
             at_time = datetime_or_now()
         kwargs = {}
         if campaign:
-            kwargs.update({'campaign': campaign})
+            if isinstance(campaign, Campaign):
+                kwargs.update({'campaign': campaign})
+            else:
+                kwargs.update({'campaign__slug': str(campaign)})
         return self.filter(
             (models.Q(ends_at__isnull=True) | models.Q(ends_at__gte=at_time)) &
             (models.Q(account=account) &

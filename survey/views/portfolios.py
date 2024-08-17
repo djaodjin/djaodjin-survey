@@ -69,9 +69,6 @@ class PortfoliosView(AccountMixin, TemplateView):
 
 class PortfoliosAcceptView(RedirectView):
 
-    slug_field = 'verification_key'
-    slug_url_kwarg = 'verification_key'
-
     def get_redirect_url(self, *args, **kwargs):
         redirect_path = validate_redirect(self.request)
         if not redirect_path:
@@ -81,6 +78,10 @@ class PortfoliosAcceptView(RedirectView):
 
 class PortfoliosGrantAcceptView(AccountMixin, SingleObjectMixin,
                                 PortfoliosAcceptView):
+
+    # SingleObjectMixin would override `slug_field` and `slug_url_kwarg`.
+    slug_field = 'verification_key'
+    slug_url_kwarg = 'verification_key'
 
     def get_queryset(self):
         # Look up grant to be accepted through the 'verification_key'
@@ -98,6 +99,10 @@ class PortfoliosGrantAcceptView(AccountMixin, SingleObjectMixin,
 
 class PortfoliosRequestAcceptView(AccountMixin, SingleObjectMixin,
                                   PortfoliosAcceptView):
+
+    # SingleObjectMixin would override `slug_field` and `slug_url_kwarg`.
+    slug_field = 'verification_key'
+    slug_url_kwarg = 'verification_key'
 
     def get_queryset(self):
         # Look up request to be accepted through the 'verification_key'

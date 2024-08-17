@@ -67,37 +67,27 @@ def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
             start_at=start_at, ends_at=ends_at)
 
     if queryset is None:
+        filter_params = {}
+        if start_at:
+            # XXX not sure anymore why we use double-optin here...
+            filter_params.update({
+                'portfolio_double_optin_accounts__created_at__gte': start_at})
         account_model = get_account_model()
         if campaign:
             queryset = account_model.objects.filter(
                 models.Q(portfolios__campaign=campaign) |
-                models.Q(portfolios__campaign__isnull=True))
+                models.Q(portfolios__campaign__isnull=True),
+                portfolios__grantee__in=grantees,
+                **filter_params)
         else:
-            queryset = account_model.objects.all()
-        filter_params = {}
-        if start_at:
-            filter_params.update({
-                'portfolio_double_optin_accounts__created_at__gte': start_at})
-        # Implementation note: requires Django>=2 because of `FilteredRelation`
-        # Adding the correct condition on the LEFT OUTER JOIN is quite
-        # a challenge with Django. The SQL we need is as follow:
-        #   SELECT DISTINCT saas_organization.*,
-        #                 survey_portfoliodoubleoptin.extra AS _extra
-        #   FROM saas_organization
-        #   INNER JOIN survey_portfolio
-        #   ON saas_organization.id = survey_portfolio.account_id
-        #   LEFT OUTER JOIN survey_portfoliodoubleoptin
-        #   ON saas_organization.id = survey_portfoliodoubleoptin.account_id
-        #     AND survey_portfoliodoubleoptin.grantee_id IN (${grantees})
-        #   WHERE survey_portfolio.grantee_id IN (${grantees});
-        queryset = queryset.filter(
-            portfolios__grantee__in=grantees,
-            **filter_params).annotate(
-            granted=models.FilteredRelation(
-                'portfolio_double_optin_accounts',
-                condition=models.Q(
-                    portfolio_double_optin_accounts__grantee__in=grantees
-            ))).annotate(_extra=models.F('granted__extra'))
+            queryset = account_model.objects.filter(
+                portfolios__grantee__in=grantees,
+                **filter_params)
+
+        if not aggregate_set:
+            queryset = queryset.annotate(_extra=models.F('portfolios__extra'))
+
+        queryset = queryset.distinct()
 
     return queryset
 
