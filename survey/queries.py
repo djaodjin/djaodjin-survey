@@ -97,14 +97,14 @@ def sql_has_different_answers(left, right):
     Returns SQL statement to check if there are answers in the `left` sample
     that are not in the `right` sample.
     """
-    sql_query = """SELECT right.id FROM survey_answer AS left
-LEFT OUTER JOIN survey_answer AS right
-ON (left.question_id = right.question_id AND
-    left.unit_id = right.unit_id AND
-    left.measured = right.measured)
-WHERE left.sample_id = %(left_sample_id)d AND
-    right.sample_id = %(right_sample_id)d AND
-    left.id IS NULL LIMIT 1
+    sql_query = """SELECT second.id FROM survey_answer AS first
+LEFT OUTER JOIN survey_answer AS second
+ON (first.question_id = second.question_id AND
+    first.unit_id = second.unit_id AND
+    first.measured = second.measured)
+WHERE first.sample_id = %(left_sample_id)d AND
+    second.sample_id = %(right_sample_id)d AND
+    first.id IS NULL LIMIT 1
 """ % {
     'left_sample_id': left.pk,
     'right_sample_id': right.pk
