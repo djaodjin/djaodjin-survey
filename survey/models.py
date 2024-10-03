@@ -29,7 +29,7 @@ around ``Answer`` to store measurements.
 ``Matrix`` and ``EditablePredicate`` implement views and dashboards typically
 used for reporting analytics.
 
-``Portfolio`` and ``PortfolioDoubleOptin`` implement access control to the
+``Portfolio`` and ``PortfolioDoubleOptIn`` implement access control to the
 underlying ``Sample`` accessible to an account/user.
 """
 import datetime, hashlib, random, uuid

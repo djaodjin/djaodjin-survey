@@ -35,7 +35,7 @@ from .. import settings, signals
 from ..compat import six, gettext_lazy as _
 from ..docs import OpenApiResponse, extend_schema
 from ..helpers import datetime_or_now
-from ..mixins import AccountMixin
+from ..mixins import AccountMixin, DateRangeContextMixin
 from ..models import Portfolio, PortfolioDoubleOptIn, Sample
 from .serializers import (PortfolioReceivedSerializer,
     PortfolioOptInSerializer, PortfolioOptInUpdateSerializer,
@@ -785,7 +785,8 @@ class PortfolioUpdateAPIView(AccountMixin, generics.UpdateAPIView):
         return HttpResponse(serializer.data)
 
 
-class PortfolioDoubleOptinUpdateAPIView(PortfolioUpdateAPIView):
+class PortfolioDoubleOptinUpdateAPIView(DateRangeContextMixin,
+                                        PortfolioUpdateAPIView):
     """
     Updates extra field in a request/grant
 
@@ -850,9 +851,14 @@ class PortfolioDoubleOptinUpdateAPIView(PortfolioUpdateAPIView):
         serializer = self.get_serializer(data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
 
+        filter_kwargs = {}
+        if self.start_at:
+            filter_kwargs.update({'created_at__gte': self.start_at})
+        if self.ends_at:
+            filter_kwargs.update({'created_at__lt': self.ends_at})
         optins = PortfolioDoubleOptIn.objects.requested(self.account).filter(
-            account__slug=self.kwargs.get(self.target_url_kwarg)
-        )
+            account__slug=self.kwargs.get(self.target_url_kwarg),
+            **filter_kwargs)
 
         optins.update(extra=serializer.validated_data.get('extra'))
 
