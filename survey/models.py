@@ -902,7 +902,8 @@ class PortfolioDoubleOptInQuerySet(models.QuerySet):
             start_at=start_at, ends_at=ends_at, until=until).filter(state__in=(
             PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
             PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED,
-            PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED))
+            PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED,
+            PortfolioDoubleOptIn.OPTIN_REQUEST_EXPIRED))
 
 
     def unsolicited(self, account, campaign=None,
