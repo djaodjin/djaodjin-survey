@@ -40,9 +40,10 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.12.3
+0.12.4
 
-  * adds API to set extra field in portfolio
+  * adds index URL for portfoliodoubleoptin metadata
+  * fixes cannot use right as an alias on postgresql
 
 [previous release notes](changelog)
 

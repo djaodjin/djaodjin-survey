@@ -1,3 +1,10 @@
+0.12.4
+
+  * adds index URL for portfoliodoubleoptin metadata
+  * fixes cannot use right as an alias on postgresql
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu,  3 Oct 2024 13:38:00 -0700
+
 0.12.3
 
   * adds API to set extra field in portfolio
