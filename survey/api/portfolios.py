@@ -22,7 +22,7 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import logging
+import datetime, logging
 
 from dateutil.relativedelta import relativedelta
 from django.db import transaction
@@ -32,7 +32,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response as HttpResponse
 
 from .. import settings, signals
-from ..compat import six, gettext_lazy as _
+from ..compat import six, timezone_or_utc, gettext_lazy as _
 from ..docs import OpenApiResponse, extend_schema
 from ..helpers import datetime_or_now
 from ..mixins import AccountMixin, DateRangeContextMixin
@@ -726,7 +726,7 @@ class PortfolioUpdateAPIView(AccountMixin, generics.UpdateAPIView):
 
     .. code-block:: http
 
-        PUT /api/energy-utility/portfolios/requests/metadata/supplier-1 HTTP/1.1
+        PUT /api/energy-utility/portfolios/metadata/supplier-1 HTTP/1.1
 
     .. code-block:: json
 
@@ -778,10 +778,23 @@ class PortfolioUpdateAPIView(AccountMixin, generics.UpdateAPIView):
         serializer.is_valid(raise_exception=True)
 
         # If we have a portfolio, let's update the extra metadata.
-        Portfolio.objects.filter(grantee=self.account,
-            account__slug=self.kwargs.get(self.target_url_kwarg)).update(
-                extra=serializer.validated_data.get('extra'))
-
+        extra = serializer.validated_data.get('extra')
+        portfolios = Portfolio.objects.filter(grantee=self.account,
+            account__slug=self.kwargs.get(self.target_url_kwarg))
+        if portfolios.exists():
+            portfolios.update(extra=extra)
+        else:
+            account_model = get_account_model()
+            account = generics.get_object_or_404(get_account_model(),
+                slug=self.kwargs.get(self.target_url_kwarg))
+            Portfolio.objects.create(
+                grantee=self.account,
+                account=account,
+                # This project didn't exist before 1970, so we are not
+                # sharing any data inadvertently.
+                ends_at=datetime.datetime.fromtimestamp(0,
+                    tz=timezone_or_utc()),
+                extra=extra)
         return HttpResponse(serializer.data)
 
 
