@@ -484,6 +484,9 @@ Vue.component('query-individual-account', {
                 start_at: null,
                 ends_at: null,
                 period_type: null
+            },
+            humanizeDate: function(at_time) {
+                return at_time.toString();
             }
         }
     },
@@ -505,13 +508,13 @@ Vue.component('query-individual-account', {
             function (resp) {
                 for( let idx = 0; idx < resp.results.length; ++idx ) {
                     if( resp.results[idx].is_frozen ) {
-                        const title = resp.results[idx].created_at.toString() + (resp.results[idx].verified_status !== 'no-review' ? " - Verified" : "" );
+                        const title = vm.humanizeDate(resp.results[idx].created_at) + (resp.results[idx].verified_status !== 'no-review' ? " - Verified" : "" );
                         const url = vm._safeUrl(vm._safeUrl(
                             vm.$urls.api_version + '/' + vm.account.slug + '/sample/' + resp.results[idx].slug, 'content'), vm.prefix);
-                        vm.samples.push({
-                            title: title,
-                            url: url
-                        });
+                        var data = resp.results[idx];
+                        data.title = title;
+                        data.url = url;
+                        vm.samples.push(data);
                     }
                 }
             });
@@ -523,6 +526,11 @@ Vue.component('query-individual-account', {
         },
         hasSamples: function() {
             return this.samples != null && this.samples.length > 0;
+        }
+    },
+    mounted: function(){
+        if( this.$el.dataset && this.$el.dataset.humanizeDate ) {
+            this.humanizeDate = eval(this.$el.dataset.humanizeDate);
         }
     }
 });
@@ -920,14 +928,14 @@ Vue.component('grant-allowed-typeahead', AccountTypeAhead.extend({
 }));
 
 
-QuestionTypeahead = Vue.component('question-typeahead', {
+Vue.component('campaign-typeahead', {
   mixins: [
       typeAheadMixin
   ],
   props: ['dataset'],
   data: function data() {
     return {
-      url: this.$urls.api_question_typeahead,
+      url: this.$urls.api_campaign_typeahead,
       items: [],
       query: '',
       current: -1,
@@ -942,13 +950,53 @@ QuestionTypeahead = Vue.component('question-typeahead', {
       vm.setActive(item);
       vm.hit();
     },
-    onHit: function onHit(newItem) {
+    onHit: function(newItem) {
       var vm = this;
       if( newItem.title ) {
         vm.$emit('selectitem', vm.dataset, newItem);
         vm.query = newItem.title;
       }
       vm.clear();
+    },
+  }
+});
+
+
+QuestionTypeahead = Vue.component('question-typeahead', {
+  mixins: [
+      typeAheadMixin
+  ],
+  props: ['dataset'],
+  data: function data() {
+    return {
+      url: this.$urls.api_question_typeahead,
+      items: [],
+      query: '',
+      current: -1,
+      loading: false,
+      selectFirst: false,
+      queryParamName: 'q',
+      filterCampaign: null
+    };
+  },
+  methods: {
+    setActiveAndHit: function(item) {
+      var vm = this;
+      vm.setActive(item);
+      vm.hit();
+    },
+    onHit: function(newItem) {
+      var vm = this;
+      if( newItem.title ) {
+        vm.$emit('selectitem', vm.dataset, newItem);
+        vm.query = newItem.title;
+      }
+      vm.clear();
+    },
+    selectCampaign: function(dataset, campaign) {
+        var vm = this;
+        vm.filterCampaign = campaign;
+        vm.url = vm._safeUrl(this.$urls.api_question_typeahead, campaign.slug);
     },
   }
 });
