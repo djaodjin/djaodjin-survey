@@ -167,6 +167,7 @@ ON survey_sample.account_id = last_updates.account_id AND
    survey_sample.created_at = last_updates.last_updated_at
 WHERE survey_sample.is_frozen
       %(campaign_clause)s
+      %(extra_clause)s
 ORDER BY survey_sample.created_at DESC
 """ % {'values': values,
        'campaign_clause': campaign_clause,
