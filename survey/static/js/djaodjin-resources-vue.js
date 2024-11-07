@@ -1371,7 +1371,7 @@ var typeAheadMixin = {
 };
 
 
-/** Mixin to load user details from the profile APIs
+/** Mixin to load profile or user details from the profile APIs
  */
 var accountDetailMixin = {
     data: function() {
@@ -1419,7 +1419,6 @@ var accountDetailMixin = {
         },
         populateAccounts: function(elements, fieldName) {
             var vm = this;
-
             if( !vm.api_accounts_url ) return;
 
             if( !fieldName ) {
@@ -1454,6 +1453,88 @@ var accountDetailMixin = {
     }
 };
 
+/** Mixin to load user details from the profile APIs
+ */
+var userDetailMixin = {
+    data: function() {
+        return {
+            api_users_url: this.$urls.api_users,
+            usersBySlug: {}
+        }
+    },
+    methods: {
+        getUserField: function(user, fieldName) {
+            var vm = this;
+            if( user ) {
+                let fieldValue = user.hasOwnProperty(fieldName) ?
+                    user[fieldName] : null;
+                if( fieldValue ) {
+                    return fieldValue;
+                }
+                const userSlug = user.slug ? user.slug : user;
+                const cached = vm.usersBySlug[userSlug];
+                if( cached && cached.hasOwnProperty(fieldName) ) {
+                    return cached[fieldName];
+                }
+                // XXX disable loading individually. we need to give
+                // `populateUsers` a chance to run and complete.
+                if( false && vm.api_users_url ) {
+                    vm.usersBySlug[userSlug] = {
+                        picture: null,
+                        printable_name: userSlug
+                    };
+                    vm.reqGet(vm._safeUrl(vm.api_users_url, userSlug),
+                    function(resp) {
+                        vm.usersBySlug[resp.slug] = resp;
+                    }, function() {
+                        // discard errors (ex: "not found").
+                    });
+                }
+            }
+            return "";
+        },
+        getUserPicture: function(user) {
+            return this.getUserField(user, 'picture');
+        },
+        getUserPrintableName: function(user) {
+            return this.getUserField(user, 'printable_name');
+        },
+        populateUsers: function(elements, fieldName) {
+            var vm = this;
+            if( !vm.api_users_url ) return;
+
+            if( !fieldName ) {
+                fieldName = 'slug';
+            }
+
+            const users = new Set();
+            for( let idx = 0; idx < elements.length; ++idx ) {
+                const item = elements[idx];
+                users.add((fieldName && item[fieldName]) ?
+                    item[fieldName] : item.slug);
+            }
+            if( users.size ) {
+                let queryParams = "?q_f==slug&q=";
+                let sep = "";
+                for( const user of users ) {
+                    queryParams += sep + user;
+                    sep = ",";
+                }
+                vm.reqGet(vm.api_users_url + queryParams,
+                function(resp) {
+                    for( let idx = 0; idx < resp.results.length; ++idx ) {
+                        vm.$set(vm.usersBySlug, resp.results[idx].slug,
+                            resp.results[idx]);
+                    }
+                    vm.$forceUpdate();
+                }, function() {
+                    // discard errors (ex: "not found").
+                });
+            }
+        },
+    }
+};
+
     // attach properties to the exports object to define
     // the exported module properties.
     exports.httpRequestMixin = httpRequestMixin;
@@ -1463,4 +1544,5 @@ var accountDetailMixin = {
     exports.paramsMixin = paramsMixin;
     exports.typeAheadMixin = typeAheadMixin;
     exports.accountDetailMixin = accountDetailMixin;
+    exports.userDetailMixin = userDetailMixin;
 }));
