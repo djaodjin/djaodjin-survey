@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2024, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -25,24 +25,25 @@
 -include $(buildTop)/share/dws/prefix.mk
 
 srcDir        ?= .
-installTop    ?= $(VIRTUAL_ENV)
+installTop    ?= $(if $(VIRTUAL_ENV),$(VIRTUAL_ENV),$(abspath $(srcDir))/.venv)
 binDir        ?= $(installTop)/bin
-CONFIG_DIR    ?= $(srcDir)
-LOCALSTATEDIR ?= $(installTop)/var
+libDir        ?= $(installTop)/lib
+CONFIG_DIR    ?= $(installTop)/etc/testsite
+RUN_DIR       ?= $(installTop)/var/run
 
 installDirs   ?= install -d
 installFiles  ?= install -p -m 644
 NPM           ?= npm
-PYTHON        := $(binDir)/python
-PIP           := $(binDir)/pip
-TWINE         := $(binDir)/twine
+PYTHON        := python
+PIP           := pip
+TWINE         := twine
 
-RUN_DIR       ?= $(srcDir)
 DB_NAME       ?= $(RUN_DIR)/db.sqlite
 
 MANAGE        := TESTSITE_SETTINGS_LOCATION=$(CONFIG_DIR) RUN_DIR=$(RUN_DIR) $(PYTHON) manage.py
 
 RUNSYNCDB     = $(if $(findstring --run-syncdb,$(shell cd $(srcDir) && $(MANAGE) migrate --help 2>/dev/null)),--run-syncdb,)
+
 
 install::
 	cd $(srcDir) && $(PIP) install .
@@ -61,7 +62,7 @@ dist::
 build-assets: vendor-assets-prerequisites
 
 
-clean: clean-dbs
+clean:: clean-dbs
 	[ ! -f $(srcDir)/package-lock.json ] || rm $(srcDir)/package-lock.json
 	find $(srcDir) -name '__pycache__' -exec rm -rf {} +
 	find $(srcDir) -name '*~' -exec rm -rf {} +
@@ -100,8 +101,7 @@ $(DESTDIR)$(CONFIG_DIR)/credentials: $(srcDir)/testsite/etc/credentials
 
 $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
 	$(installDirs) $(dir $@)
-	[ -f $@ ] || sed \
-		-e 's,%(LOCALSTATEDIR)s,$(LOCALSTATEDIR),' $< > $@
+	[ -f $@ ] || sed -e 's,%(RUN_DIR)s,$(RUN_DIR),' $< > $@
 
 
 $(installTop)/.npm/djaodjin-survey-packages: $(srcDir)/testsite/package.json
@@ -119,4 +119,6 @@ $(installTop)/.npm/djaodjin-survey-packages: $(srcDir)/testsite/package.json
 	touch $@
 
 
-.PHONY: all check dist doc install
+-include $(buildTop)/share/dws/suffix.mk
+
+.PHONY: all check dist doc install build-assets vendor-assets-prerequisites
