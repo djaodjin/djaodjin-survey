@@ -209,7 +209,7 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                             source=unit, target=question.default_unit)
                         measured = equiv.as_target_unit(measured)
                         unit = equiv.target
-                    except UnitEquivalences.DoesNotExist:
+                    except (UnitEquivalences.DoesNotExist, NotImplementedError):
                         if settings.FORCE_ONLY_QUESTION_UNIT:
                             raise ValidationError(
                             _("'%(measured)s' cannot be converted"\

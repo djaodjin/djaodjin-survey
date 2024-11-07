@@ -167,7 +167,7 @@ class UnitEquivalences(models.Model):
 
     def as_source_unit(self, value):
         if not self.content:
-            raise RuntimeError("cannot convert %s to %s" % (
+            raise NotImplementedError("cannot convert %s to %s" % (
                 self.target, self.source))
         return convert_to_source_unit(
             value, self.factor, self.scale, self.content)
@@ -175,7 +175,7 @@ class UnitEquivalences(models.Model):
 
     def as_target_unit(self, value):
         if not self.content:
-            raise RuntimeError("cannot convert %s to %s" % (
+            raise NotImplementedError("cannot convert %s to %s" % (
                 self.source, self.target))
         return convert_to_target_unit(
             value, self.factor, self.scale, self.content)
