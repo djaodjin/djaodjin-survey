@@ -1,3 +1,13 @@
+0.12.5
+
+  * creates portfolio if we are setting metadata/extra field
+  * prevents unnecessary `RuntimeError` when `FORCE_ONLY_QUESTION_UNIT is False`
+  * fixes missing requested state
+  * fixes adding campaign filter for questions
+  * fixes multiple samples frozen as a set will have the same `created_at`
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu,  7 Nov 2024 14:55:00 -0700
+
 0.12.4
 
   * adds index URL for portfoliodoubleoptin metadata

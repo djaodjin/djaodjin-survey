@@ -40,10 +40,13 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.12.4
+0.12.5
 
-  * adds index URL for portfoliodoubleoptin metadata
-  * fixes cannot use right as an alias on postgresql
+  * creates portfolio if we are setting metadata/extra field
+  * prevents unnecessary `RuntimeError` when `FORCE_ONLY_QUESTION_UNIT is False`
+  * fixes missing requested state
+  * fixes adding campaign filter for questions
+  * fixes multiple samples frozen as a set will have the same `created_at`
 
 [previous release notes](changelog)
 
