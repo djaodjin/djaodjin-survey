@@ -352,7 +352,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
 
         message = serializer.validated_data.get('message')
         signals.portfolios_grant_initiated.send(sender=__name__,
-            portfolios=portfolios, invitee=grantee_data, message=message,
+            portfolios=portfolios, recipients=[grantee_data], message=message,
             request=self.request)
 
         results = []
@@ -576,22 +576,38 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
         return super(PortfoliosRequestsAPIView, self).get_serializer_class()
 
     def perform_create(self, serializer):
+        #pylint:disable=too-many-locals
         account_model = get_account_model()
         ends_at = datetime_or_now()
         defaults = {
             'state': PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
             'initiated_by': self.request.user
         }
+        campaign = serializer.validated_data.get('campaign')
         accounts = serializer.validated_data['accounts']
         requests_initiated = []
         with transaction.atomic():
-            for account in accounts:
-                lookups = {self.lookup_field: account.get('slug')}
+            for serialized_account in accounts:
+                account_data = {}
+                account_data.update(serialized_account)
+
+                # Django1.11: we need to remove invalid fields when creating
+                # a new grantee account otherwise Django1.11 will raise
+                # an error.
+                # This is not the case with Django>=3.2
+                lookups = {self.lookup_field: account_data.pop('slug')}
+                invalid_fields = []
+                # set comprehension py2.7+ syntax
+                model_fields = {
+                    field.name for field in account_model._meta.get_fields()}
+                for field_name in six.iterkeys(account_data):
+                    if field_name not in model_fields:
+                        invalid_fields += [field_name]
+                for field_name in invalid_fields:
+                    account_data.pop(field_name)
                 account, unused_created = account_model.objects.get_or_create(
-                    defaults={
-                        'email': account.get('email')
-                    }, **lookups)
-                campaign = serializer.validated_data.get('campaign')
+                    defaults=account_data, **lookups)
+
                 double_optin_queryset = PortfolioDoubleOptIn.objects.filter(
                     Q(ends_at__isnull=True) | Q(ends_at__gt=ends_at),
                     grantee=self.account,
@@ -610,14 +626,14 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                         campaign=campaign,
                     verification_key=PortfolioDoubleOptIn.generate_key(account),
                         **defaults)
-                requests_initiated += [(portfolio, account)]
+                requests_initiated += [(portfolio, [account_data])]
 
         message = serializer.validated_data.get('message')
         for request in requests_initiated:
             portfolio = request[0]
-            account = request[1]
+            recipients = request[1]
             signals.portfolios_request_initiated.send(sender=__name__,
-                portfolios=[portfolio], invitee=account, message=message,
+                portfolios=[portfolio], recipients=recipients, message=message,
                 request=self.request)
 
 
@@ -785,7 +801,7 @@ class PortfolioUpdateAPIView(AccountMixin, generics.UpdateAPIView):
             portfolios.update(extra=extra)
         else:
             account_model = get_account_model()
-            account = generics.get_object_or_404(get_account_model(),
+            account = generics.get_object_or_404(account_model,
                 slug=self.kwargs.get(self.target_url_kwarg))
             Portfolio.objects.create(
                 grantee=self.account,
