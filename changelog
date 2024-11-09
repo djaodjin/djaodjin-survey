@@ -1,3 +1,9 @@
+0.12.6
+
+  * filters model field for recipients of a portfolio request
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sat,  9 Nov 2024 08:46:00 -0700
+
 0.12.5
 
   * creates portfolio if we are setting metadata/extra field

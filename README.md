@@ -40,8 +40,9 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.12.5
+0.12.6
 
+  * filters model field for recipients of a portfolio request
   * creates portfolio if we are setting metadata/extra field
   * prevents unnecessary `RuntimeError` when `FORCE_ONLY_QUESTION_UNIT is False`
   * fixes missing requested state
