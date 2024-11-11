@@ -351,8 +351,9 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
                 portfolio=portfolio, request=self.request)
 
         message = serializer.validated_data.get('message')
+        recipients = [grantee_data] if grantee_data else []
         signals.portfolios_grant_initiated.send(sender=__name__,
-            portfolios=portfolios, recipients=[grantee_data], message=message,
+            portfolios=portfolios, recipients=recipients, message=message,
             request=self.request)
 
         results = []

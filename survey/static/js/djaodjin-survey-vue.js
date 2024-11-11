@@ -1026,7 +1026,7 @@ Vue.component('default-unit-typeahead', {
     mounted: function() {
         var vm = this;
         if( vm.question && vm.question.default_unit ) {
-            vm.query = vm.question.default_unit;
+            vm.query = vm.question.default_unit.slug;
         }
     }
 });

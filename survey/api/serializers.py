@@ -261,9 +261,12 @@ class QuestionUpdateSerializer(QuestionDetailSerializer):
     default_unit = serializers.SlugRelatedField(required=False,
         slug_field='slug', queryset=Unit.objects.all(),
         help_text=_("Default unit for measured field when none is specified"))
+    required = serializers.BooleanField(required=False,
+        help_text=_("Whether an answer is required or not when the question"\
+        " is part of a campaign"))
 
     class Meta(QuestionDetailSerializer.Meta):
-        fields = QuestionDetailSerializer.Meta.fields
+        fields = QuestionDetailSerializer.Meta.fields + ('required',)
 
 
 class QuestionCreateSerializer(QuestionUpdateSerializer):
