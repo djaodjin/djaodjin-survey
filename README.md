@@ -40,14 +40,10 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.12.6
+0.12.7
 
-  * filters model field for recipients of a portfolio request
-  * creates portfolio if we are setting metadata/extra field
-  * prevents unnecessary `RuntimeError` when `FORCE_ONLY_QUESTION_UNIT is False`
-  * fixes missing requested state
-  * fixes adding campaign filter for questions
-  * fixes multiple samples frozen as a set will have the same `created_at`
+  * clears verification_key when optin is not active
+  * removes recipients in a grant that do not have an e-mail address
 
 [previous release notes](changelog)
 

@@ -1,3 +1,10 @@
+0.12.7
+
+  * clears verification_key when optin is not active
+  * removes recipients in a grant that do not have an e-mail address
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sat, 11 Nov 2024 15:05:00 -0700
+
 0.12.6
 
   * filters model field for recipients of a portfolio request
