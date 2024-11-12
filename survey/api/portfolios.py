@@ -351,7 +351,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
                 portfolio=portfolio, request=self.request)
 
         message = serializer.validated_data.get('message')
-        recipients = [grantee_data] if grantee_data else []
+        recipients = [grantee_data] if grantee_data.get('email') else []
         signals.portfolios_grant_initiated.send(sender=__name__,
             portfolios=portfolios, recipients=recipients, message=message,
             request=self.request)
@@ -435,8 +435,7 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         filter_args = {self.lookup_field: self.kwargs.get(self.lookup_field)}
         try:
             instance = self.get_queryset().get(**filter_args)
-            instance.state = PortfolioDoubleOptIn.OPTIN_GRANT_DENIED
-            instance.save()
+            instance.grant_denied()
             signals.portfolio_grant_denied.send(sender=__name__,
                 portfolio=instance, request=self.request)
             return HttpResponse(status=status.HTTP_204_NO_CONTENT)
@@ -713,8 +712,7 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         filter_args = {self.lookup_field: self.kwargs.get(self.lookup_field)}
         try:
             instance = self.get_queryset().get(**filter_args)
-            instance.state = PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED
-            instance.save()
+            instance.request_denied()
             signals.portfolio_request_denied.send(sender=__name__,
                 portfolio=instance, request=self.request)
             return HttpResponse(status=status.HTTP_204_NO_CONTENT)

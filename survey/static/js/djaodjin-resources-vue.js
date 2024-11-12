@@ -1409,7 +1409,9 @@ var accountDetailMixin = {
                     });
                 }
             }
-            return "";
+            // If we don't return `undefined` here, we might inadvertently
+            // post initialized fields (null, or "") in HTTP requests.
+            return undefined;
         },
         getAccountPicture: function(account) {
             return this.getAccountField(account, 'picture');

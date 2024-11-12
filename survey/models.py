@@ -1104,12 +1104,32 @@ class PortfolioDoubleOptIn(models.Model):
             self.verification_key = None
             self.save()
 
+    def grant_denied(self):
+        self.state = PortfolioDoubleOptIn.OPTIN_GRANT_DENIED
+        self.verification_key = None
+        self.save()
+
+    def grant_expired(self):
+        self.state = PortfolioDoubleOptIn.OPTIN_GRANT_EXPIRED
+        self.verification_key = None
+        self.save()
+
     def request_accepted(self):
         with transaction.atomic():
             self.create_portfolios()
             self.state = PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED
             self.verification_key = None
             self.save()
+
+    def request_denied(self):
+        self.state = PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED
+        self.verification_key = None
+        self.save()
+
+    def request_expired(self):
+        self.state = PortfolioDoubleOptIn.OPTIN_REQUEST_EXPIRED
+        self.verification_key = None
+        self.save()
 
 
 def convert_to_source_unit(value, factor, scale, formula):

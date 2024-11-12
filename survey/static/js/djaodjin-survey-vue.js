@@ -147,6 +147,12 @@ Vue.component('portfolios-grant-list', {
             default: function() {
                 return null;
             }
+        },
+        defaultGrantCandidates: {
+            type: Array,
+            default: function() {
+                return [];
+            }
         }
     },
     data: function() {
@@ -184,11 +190,11 @@ Vue.component('portfolios-grant-list', {
         },
         addGrantee: function(grantees, newGrantee) {
             var vm = this;
+            vm.grant.grantee = newGrantee;
+            vm.populateAccounts([vm.grant.grantee]);
             if( newGrantee.slug ) {
-                vm.grant.grantee = newGrantee;
                 vm.profileRequestDone = false;
             } else {
-                vm.grant.grantee = newGrantee;
                 vm.profileRequestDone = true;
                 if( vm.$refs.fullName ) {
                     vm.$nextTick(function() {
@@ -199,11 +205,12 @@ Vue.component('portfolios-grant-list', {
             return false;
         },
         _preparePortfolios: function(grant) {
+            var vm = this;
             var portfolios = {};
             portfolios.grantee = {
-                email: grant.grantee.email,
-                full_name: (grant.grantee.full_name ||
-                    grant.grantee.printable_name)
+                email: vm.getAccountField(grant.grantee, 'email'),
+                full_name: vm.getAccountField(grant.grantee, 'full_name') ||
+                    vm.getAccountField(grant.grantee, 'printable_name')
             };
             if( grant.campaign ) {
                 portfolios.campaign = grant.campaign.slug || grant.campaign;
@@ -224,7 +231,7 @@ Vue.component('portfolios-grant-list', {
             }
             return portfolios;
         },
-        _submitPortfolios: function(portfolios) {
+        submitPortfolios: function(portfolios) {
             var vm = this;
             vm.reqPost(vm.url, portfolios,
             function(resp) { // success
@@ -238,14 +245,14 @@ Vue.component('portfolios-grant-list', {
                 vm.profileRequestDone = false;
                 var portfolios = vm._preparePortfolios(vm.grant);
                 if( portfolios.grantee.slug ) {
-                    vm._submitPortfolios(portfolios);
+                    vm.submitPortfolios(portfolios);
                 } else {
                     vm.reqPost(vm.url_account_base, portfolios.grantee,
                     function(resp) {
                         var email = portfolios.grantee.email;
                         portfolios.grantee = resp;
                         portfolios.grantee.email = email;
-                        vm._submitPortfolios(portfolios);
+                        vm.submitPortfolios(portfolios);
                     });
                 }
             } else {
@@ -274,6 +281,27 @@ Vue.component('portfolios-grant-list', {
         },
     },
     computed: {
+        grantCandidates: function() {
+            var vm = this;
+            var results = [];
+            if( vm.itemsLoaded && vm.items.results ) {
+                for( var idx = 0;
+                     idx < vm.defaultGrantCandidates.length; ++idx ) {
+                    var found = false;
+                    for( var jdx = 0; jdx < vm.items.results.length; ++jdx ) {
+                        if( vm.items.results[jdx].grantee
+                            == vm.defaultGrantCandidates[idx].grantee ) {
+                            found = true;
+                            break
+                        }
+                    }
+                    if( !found ) {
+                        results.push(vm.defaultGrantCandidates[idx]);
+                    }
+                }
+            }
+            return results;
+        },
         showAccounts: function() {
             return this.grant.grantee.slug || this.grant.grantee.email;
         }
@@ -283,6 +311,7 @@ Vue.component('portfolios-grant-list', {
         vm.get();
         if( vm.defaultSelectedAccounts ) {
             vm.grant.accounts = vm.defaultSelectedAccounts;
+            vm.populateAccounts(vm.grant.accounts);
         }
         if( vm.defaultSelectedCampaign ) {
             vm.grant.campaign = vm.defaultSelectedCampaign;
