@@ -175,6 +175,7 @@ def update_or_create_answer(datapoint, question, sample, created_at,
     rank), there can be overflow, or the unit might not match
     the `question.default_unit`.
     """
+    #pylint:disable=too-many-locals
     answer = None
     created = False
     measured = datapoint.get('measured', None)
@@ -308,7 +309,7 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                             " Expected one of %s.") % (measured,
                             [choice.get('text', "")
                              for choice in six.itervalues(choices)]))
-                else:
+                elif measured:
                     choice_rank = Choice.objects.filter(
                         unit=unit).aggregate(Max('rank')).get(
                             'rank__max', 0)
@@ -318,17 +319,21 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                         unit=unit,
                         rank=choice_rank)
                     measured = choice.pk
+                else: # In the special cases where we want to delete a comment
+                      # i.e. measured == "" and unit == 'freetext'
+                    Answer.objects.filter(
+                        sample=sample, question=question, unit=unit).delete()
+                    measured_collected = None
+                    measured = None
 
             # Create or update the answer
-            answer, created = Answer.objects.update_or_create(
-                sample=sample, question=question, unit=unit,
-                defaults={
-                    'measured': measured,
-                    'created_at': created_at,
-                    'collected_by': collected_by})
-            if sample and sample.updated_at != created_at:
-                sample.updated_at = created_at
-                sample.save()
+            if measured is not None:
+                answer, created = Answer.objects.update_or_create(
+                    sample=sample, question=question, unit=unit,
+                    defaults={
+                        'measured': measured,
+                        'created_at': created_at,
+                        'collected_by': collected_by})
 
             if measured_collected:
                 # We have converted the datapoint collected from the user
@@ -339,6 +344,10 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                         collected=measured_collected,
                         answer=answer,
                         unit=unit_collected)
+
+            if sample and sample.updated_at != created_at:
+                sample.updated_at = created_at
+                sample.save()
 
     except DataError as err:
         LOGGER.exception(err)
@@ -1085,15 +1094,16 @@ answers/code-of-conduct HTTP/1.1
                 'detail': _("cannot update answers in a frozen sample")})
 
         for datapoint in validated_data:
-            measured = datapoint.get('measured', None)
-            if not measured:
+            measured = datapoint.get('measured')
+            if measured is None:
                 continue
             try:
                 answer, created = update_or_create_answer(
                     datapoint, question=self.question,
                     sample=self.sample, created_at=created_at,
                     collected_by=user)
-                results += [answer]
+                if answer:
+                    results += [answer]
                 if created:
                     at_least_one_created = True
             except ValidationError as err:
