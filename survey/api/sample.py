@@ -39,7 +39,8 @@ from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 from .. import settings
 from ..compat import six, is_authenticated, gettext_lazy as _
 from ..docs import OpenApiResponse, extend_schema
-from ..filters import DateRangeFilter, OrderingFilter, SampleStateFilter
+from ..filters import (CampaignFilter, DateRangeFilter, OrderingFilter,
+    SampleStateFilter)
 from ..helpers import datetime_or_now, extra_as_internal
 from ..mixins import AccountMixin, SampleMixin
 from ..models import (Answer, AnswerCollected, Choice, Portfolio, Sample, Unit,
@@ -2195,7 +2196,8 @@ class SampleRecentCreateAPIView(AccountMixin, generics.ListCreateAPIView):
 
     ordering = ('-created_at',)
 
-    filter_backends = (DateRangeFilter, SampleStateFilter, OrderingFilter)
+    filter_backends = (CampaignFilter, SampleStateFilter, DateRangeFilter,
+        OrderingFilter)
 
     serializer_class = SampleSerializer
 

@@ -500,11 +500,11 @@ class AggregateByPeriodFilter(DateRangeFilter):
         return fields
 
 
-class StateFilter(BaseFilterBackend):
+class ModelFieldFilter(BaseFilterBackend):
 
-    state_param = 'state'
-    state_field = 'state'
-    state_candidates = []
+    field_param = 'state'
+    field_field = 'state'
+    field_candidates = []
 
     def get_query_param(self, request, key, default_value=None):
         try:
@@ -514,16 +514,22 @@ class StateFilter(BaseFilterBackend):
         return request.GET.get(key, default_value)
 
     def filter_queryset(self, request, queryset, view):
-        state = self.get_query_param(request, self.state_param, '')
+        state = self.get_query_param(request, self.field_param, '')
         flt = None
         for val in state.split(','):
-            for candidate in self.state_candidates:
-                if val == candidate[1]:
-                    if flt:
-                        flt |= models.Q(**{self.state_field: candidate[0]})
-                    else:
-                        flt = models.Q(**{self.state_field: candidate[0]})
-                    break
+            found = None
+            if self.field_candidates:
+                for candidate in self.field_candidates:
+                    if val == candidate[1]:
+                        found = candidate[0]
+                        break
+            else:
+                found = val # no translation
+            if found:
+                if flt:
+                    flt |= models.Q(**{self.field_field: found})
+                else:
+                    flt = models.Q(**{self.field_field: found})
         if flt is not None:
             queryset = queryset.filter(flt)
         return queryset
@@ -532,12 +538,13 @@ class StateFilter(BaseFilterBackend):
         fields = super(StateFilter, self).get_schema_operation_parameters(view)
         fields += [
             {
-                'name': self.state_param,
+                'name': self.field_param,
                 'required': False,
                 'in': 'query',
-                'description': force_str("filter by state (%(choices)s)" % {
+                'description': force_str("filter by %(name)s (%(choices)s)" % {
+                    'name': self.field_param,
                     'choices': ", ".join([
-                        candidate[1] for candidate in self.state_candidates])
+                        candidate[1] for candidate in self.field_candidates])
                 }),
                 'schema': {
                     'type': 'string',
@@ -547,18 +554,30 @@ class StateFilter(BaseFilterBackend):
         return fields
 
 
+class CampaignFilter(ModelFieldFilter):
+
+    field_param = 'campaign'
+    field_field = 'campaign__slug'
+
+
+class StateFilter(ModelFieldFilter):
+
+    field_param = 'state'
+    field_field = 'state'
+
+
 class DoubleOptInStateFilter(StateFilter):
 
-    state_param = 'state'
-    state_field = 'state'
-    state_candidates = PortfolioDoubleOptIn.STATES
+    field_param = 'state'
+    field_field = 'state'
+    field_candidates = PortfolioDoubleOptIn.STATES
 
 
 class SampleStateFilter(StateFilter):
 
-    state_param = 'state'
-    state_field = 'is_frozen'
-    state_candidates = [
+    field_param = 'state'
+    field_field = 'is_frozen'
+    field_candidates = [
         (False, 'active'),
         (True, 'completed')
     ]

@@ -40,8 +40,8 @@ from ..models import Portfolio, PortfolioDoubleOptIn, Sample
 from .serializers import (PortfolioReceivedSerializer,
     PortfolioOptInSerializer, PortfolioOptInUpdateSerializer,
     PortfolioGrantCreateSerializer, PortfolioRequestCreateSerializer)
-from ..filters import (DateRangeFilter, DoubleOptInStateFilter, OrderingFilter,
-     SearchFilter)
+from ..filters import (CampaignFilter, DateRangeFilter, DoubleOptInStateFilter,
+    OrderingFilter, SearchFilter)
 from ..utils import get_account_model
 
 
@@ -64,8 +64,8 @@ class SmartPortfolioListMixin(AccountMixin):
 
     ordering = ('ends_at',)
 
-    filter_backends = (DoubleOptInStateFilter, DateRangeFilter, SearchFilter,
-        OrderingFilter)
+    filter_backends = (CampaignFilter, DoubleOptInStateFilter,
+        DateRangeFilter, SearchFilter, OrderingFilter)
 
 
 class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
