@@ -10,23 +10,23 @@
 	<tr href="#{{survey}}">
 		<td>{{survey.title}}</td>
 		<td>{{survey.description}}</td>
-		<td><a {% if survey.active %}disabled="true"{% endif %} href="{% url 'survey_edit' survey %}">Edit</a></td>
+		<td><a {% if survey.is_active %}disabled="true"{% endif %} href="{% url 'survey_edit' survey %}">Edit</a></td>
 		<td><a href="{% url 'survey_question_list' survey %}" >Questions</a></td>
 		<td>
 			<form method="post" action="{% url 'survey_publish' survey %}">
-				<input type="submit" {% if not survey.has_questions %}disabled="true"{% endif %} value="{% if survey.active %}Unpublish{% else %}Publish{% endif %}" />
+				<input type="submit" {% if not survey.has_questions %}disabled="true"{% endif %} value="{% if survey.is_active %}Unpublish{% else %}Publish{% endif %}" />
 				{% csrf_token %}
 			</form>
 		</td>
 		<td>
-			<a href="{% url 'survey_send' survey %}" {% if not survey.active %}disabled="true"{% endif %}>Send</a>
+			<a href="{% url 'survey_send' survey %}" {% if not survey.is_active %}disabled="true"{% endif %}>Send</a>
 		</td>
 		<td>
 			<a href="{% url 'survey_result' survey %}">Results</a>
 		</td>
 		<td>
 			<form method="post" action="delete">
-				<button type="submit" {% if survey.active %}disabled="true"{% endif %} value="Delete" />
+				<button type="submit" {% if survey.is_active %}disabled="true"{% endif %} value="Delete" />
 				{% csrf_token %}
 			</form>
 		</td>

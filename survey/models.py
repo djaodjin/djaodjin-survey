@@ -334,8 +334,10 @@ class Campaign(SlugifyFieldMixin, models.Model):
     account = models.ForeignKey(settings.BELONGS_MODEL,
         on_delete=models.PROTECT, null=True,
         help_text=_("Acccount that can make edits to the campaign"))
-    active = models.BooleanField(default=False,
+    is_active = models.BooleanField(default=False,
         help_text=_("Whether the campaign is available or not"))
+    is_commons = models.BooleanField(default=False,
+      help_text=_("True when the campaign is for the benefit of the community"))
     # quizz_mode, defaults_single_page, one_response_only are managing workflow
     # and layout.
     quizz_mode = models.BooleanField(default=False,

@@ -8,7 +8,7 @@
     {{campaign.description|safe}}
   </div>
   <div>
-  {% if campaign.active %}
+  {% if campaign.is_active %}
   {% if rank %}<span>#{{rank}}</span>{% endif %}
     <form method="post" action=".">
       {% csrf_token %}

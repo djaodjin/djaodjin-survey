@@ -325,7 +325,7 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta(object):
         model = Campaign
         fields = ('slug', 'account', 'title', 'description', 'created_at',
-            'active')
+            'is_active', 'is_commons')
         read_only_fields = ('slug', 'account', 'created_at')
 
 
@@ -349,8 +349,8 @@ class CampaignDetailSerializer(serializers.ModelSerializer):
 
     class Meta(object):
         model = Campaign
-        fields = ('slug', 'account', 'title', 'description', 'active',
-            'quizz_mode', 'questions')
+        fields = ('slug', 'account', 'title', 'description', 'is_active',
+            'is_commons', 'quizz_mode', 'questions')
         read_only_fields = ('slug',)
 
 

@@ -57,7 +57,8 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
             "slug": "construction",
             "account": "alliance",
             "title": "Assessment on sustainable construction practices",
-            "active": true,
+            "is_active": true,
+            "is_commons": true,
             "quizz_mode": false,
             "questions": [
                 {
@@ -192,7 +193,8 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
             "slug": "construction",
             "account": "alliance",
             "title": "Assessment on sustainable construction practices",
-            "active": true
+            "is_active": true,
+            "is_commons": true
           }]
         }
     """

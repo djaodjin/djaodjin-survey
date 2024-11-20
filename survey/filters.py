@@ -535,7 +535,8 @@ class ModelFieldFilter(BaseFilterBackend):
         return queryset
 
     def get_schema_operation_parameters(self, view):
-        fields = super(StateFilter, self).get_schema_operation_parameters(view)
+        fields = super(ModelFieldFilter, self).get_schema_operation_parameters(
+            view)
         fields += [
             {
                 'name': self.field_param,

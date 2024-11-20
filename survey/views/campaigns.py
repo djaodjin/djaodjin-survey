@@ -74,10 +74,10 @@ class CampaignPublishView(CampaignMixin, RedirectView):
 
     def post(self, request, *args, **kwargs):
         campaign = self.campaign
-        if campaign.active:
-            campaign.active = False
+        if campaign.is_active:
+            campaign.is_active = False
         else:
-            campaign.active = True
+            campaign.is_active = True
             if not campaign.created_at:
                 campaign.created_at = datetime.datetime.now()
         campaign.save()
