@@ -40,10 +40,12 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.12.7
+0.13.0
 
-  * clears verification_key when optin is not active
-  * removes recipients in a grant that do not have an e-mail address
+  * rationalizes `campaign.active` to `campaign.is_active`
+  * adds field `campaign.is_commons`
+  * enables filter portfolio and sample history by campaign
+  * enables removing notes by setting text to ""
 
 [previous release notes](changelog)
 
