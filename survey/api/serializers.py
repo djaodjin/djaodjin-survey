@@ -569,6 +569,14 @@ class InviteeSerializer(NoModelSerializer):
     @staticmethod
     def get_printable_name(obj):
         try:
+            return str(obj.printable_name)
+        except AttributeError:
+            pass
+        try:
+            return obj['printable_name']
+        except KeyError:
+            pass
+        try:
             return str(obj.full_name)
         except AttributeError:
             pass
