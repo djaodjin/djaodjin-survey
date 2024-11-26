@@ -1,3 +1,9 @@
+0.13.1
+
+  * fixes empty profile name when using deployutils broker
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 19 Nov 2024 19:20:00 -0700
+
 0.13.0
 
   * rationalizes `campaign.active` to `campaign.is_active`
