@@ -47,8 +47,8 @@ from .helpers import datetime_or_now, SlugifyFieldMixin
 from .queries import (UNIT_SYSTEM_STANDARD, UNIT_SYSTEM_IMPERIAL,
     UNIT_SYSTEM_RANK, UNIT_SYSTEM_ENUMERATED, UNIT_SYSTEM_FREETEXT,
     UNIT_SYSTEM_DATETIME, get_account_model, get_question_model,
-    sql_completed_at_by, sql_has_different_answers,
-    sql_latest_frozen_by_accounts, sql_frozen_answers)
+    sql_has_different_answers, sql_latest_frozen_by_accounts,
+    sql_frozen_answers)
 
 
 def get_extra_field_class():
@@ -423,43 +423,43 @@ class SampleManager(models.Manager):
         return self.create(account=get_account_model().objects.get(
                 **account_lookup_kwargs), **kwargs)
 
-    def get_completed_assessments_at_by(self, campaign, accounts=None,
-                                        start_at=None, ends_at=None,
-                                        prefix=None, title="",
-                                        exclude_accounts=None,
-                                        extra=None):
-        """
-        Returns the most recent frozen assessment before an optionally specified
-        date, indexed by account. Furthermore the query can be restricted
-        to answers on a specific segment using `prefix` and matching text
-        in the `extra` field.
-
-        All accounts in ``excludes`` are not added to the index. This is
-        typically used to filter out 'testing' accounts
-        """
-        #pylint:disable=too-many-arguments
-        # XXX Rename method to `get_latest_frozen_by_accounts`
-        return self.raw(sql_completed_at_by(
-            campaign, accounts=accounts,
-            start_at=start_at, ends_at=ends_at,
-            prefix=prefix, title=title,
-            exclude_accounts=exclude_accounts, extra=extra))
-
 
     def get_latest_frozen_by_accounts(self, campaign=None,
                                       start_at=None, ends_at=None,
-                                      tags=None, pks_only=False):
+                                      segment_prefix=None, segment_title="",
+                                      accounts=None, grantees=None,
+                                      tags=None):
         """
-        Returns the most recent frozen sample in an optionally specified
-        date range, indexed by account.
+        Returns the most recent frozen sample per account
 
-        The returned queryset can be further filtered by a campaign and
-        a set of tags.
+        When `campaign` is specified, it will return the most recent frozen
+        sample responding to `campaign` per account. When both `campaign` and
+        `segment_prefix` are specified, it will return the most recent frozen
+        sample responding to `campaign` which as an answer to question prefixed
+        by `segment_prefix` per account.
+
+        When `start_at` and `ends_at` are defined, it will return the most
+        recent frozen sample that is also within the [`start_at`, `ends_at`[
+        date range.
+
+        By default, when `accounts` is not specified, it will return one sample
+        per account for all accounts in the database if such sample exists,
+        otherwise it will return only samples for specified `accounts`.
+
+        When grantees is specified, it will return the most recent frozen sample
+        visible to all `grantees`.
+
+        When `tags` is `None`, the returned queryset will be filtered by sample
+        where `extra IS NULL`, otherwise the returned queryset will be samples
+        where the extra field contains at least on tag in tags.
         """
         #pylint:disable=too-many-arguments
-        return self.raw(sql_latest_frozen_by_accounts(campaign,
+        return self.raw(sql_latest_frozen_by_accounts(
+            campaign=campaign,
             start_at=start_at, ends_at=ends_at,
-            tags=tags, pks_only=pks_only))
+            segment_prefix=segment_prefix, segment_title=segment_title,
+            accounts=accounts, grantees=grantees,
+            tags=tags))
 
 
     def get_score(self, sample):

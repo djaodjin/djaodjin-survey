@@ -114,88 +114,88 @@ WHERE first.sample_id = %(left_sample_id)d AND
 
 def sql_latest_frozen_by_accounts(campaign=None,
                                   start_at=None, ends_at=None,
-                                  tags=None, pks_only=False):
+                                  segment_prefix=None, segment_title="",
+                                  accounts=None, grantees=None, tags=None):
     """
-    Returns the most recent frozen sample in an optionally specified
-    date range [``start_at``, ``ends_at``[, indexed by account.
+    Returns the most recent frozen sample per account
 
-    The returned queryset can be further filtered by a ``campaign`` and
-    a set of ``tags``.
-    """
-    #pylint:disable=too-many-arguments
-    campaign_clause = ""
-    if campaign:
-        campaign_clause = (
-            "AND survey_sample.campaign_id = %(campaign_id)d" % {
-                'campaign_id': campaign.pk})
-    date_range_clause = ""
-    if start_at:
-        date_range_clause = (" AND survey_sample.created_at >= '%s'" %
-            start_at.isoformat())
-    if ends_at:
-        date_range_clause += (" AND survey_sample.created_at < '%s'" %
-            ends_at.isoformat())
-    extra_clause = ""
-    if tags is not None:
-        if tags:
-            extra_clause = "".join([
-                "AND LOWER(survey_sample.extra) LIKE '%%%s%%'" %
-                tag.lower() for tag in tags])
-        else:
-            extra_clause = "AND survey_sample.extra IS NULL"
-    if pks_only:
-        values = 'survey_sample.id'
-    else:
-        values = 'survey_sample.*'
+    When `campaign` is specified, it will return the most recent frozen sample
+    responding to `campaign` per account. When both `campaign` and
+    `segment_prefix` are specified, it will return the most recent frozen
+    sample responding to `campaign` which as an answer to question prefixed
+    by `segment_prefix` per account.
 
-    sql_query = """SELECT
-    %(values)s
-FROM survey_sample
-INNER JOIN (
-    SELECT
-        account_id,
-        campaign_id,
-        MAX(created_at) AS last_updated_at
-    FROM survey_sample
-    WHERE survey_sample.is_frozen
-          %(campaign_clause)s
-          %(date_range_clause)s
-          %(extra_clause)s
-    GROUP BY account_id, campaign_id) AS last_updates
-ON survey_sample.account_id = last_updates.account_id AND
-   survey_sample.campaign_id = last_updates.campaign_id AND
-   survey_sample.created_at = last_updates.last_updated_at
-WHERE survey_sample.is_frozen
-      %(campaign_clause)s
-      %(extra_clause)s
-ORDER BY survey_sample.created_at DESC
-""" % {'values': values,
-       'campaign_clause': campaign_clause,
-       'date_range_clause': date_range_clause,
-       'extra_clause': extra_clause}
-    return sql_query
+    When `start_at` and `ends_at` are defined, it will return the most recent
+    frozen sample that is also within the [`start_at`, `ends_at`[ date range.
 
+    By default, when `accounts` is not specified, it will return one sample
+    per account for all accounts in the database if such sample exists,
+    otherwise it will return only samples for specified `accounts`.
 
-def sql_completed_at_by(campaign, start_at=None, ends_at=None,
-                        prefix=None, title="",
-                        accounts=None, exclude_accounts=None,
-                        extra=None):
-    """
-    Returns the most recent frozen assessment before an optionally specified
-    date, indexed by account. Furthermore the query can be restricted to answers
-    on a specific segment using `prefix` and matching text in the `extra` field.
+    When grantees is specified, it will return the most recent frozen sample
+    visible to all `grantees`.
 
-    All accounts in ``excludes`` are not added to the index. This is
-    typically used to filter out 'testing' accounts
+    When `tags` is `None`, the returned queryset will be filtered by sample
+    where `extra IS NULL`, otherwise the returned queryset will be samples
+    where the extra field contains at least on tag in tags.
     """
     #pylint:disable=too-many-arguments,too-many-locals
-    sep = " AND "
-    additional_filters = ""
-    campaign_clause = ""
+    primary_filters_clause = ""
+    secondary_filters_clause = ""
+    prefix_fields = ""
+    prefix_join = ""
     if campaign:
-        campaign_clause = (
-            "AND survey_sample.campaign_id = %(campaign_id)d" % {
+        primary_filters_clause = (
+            " AND survey_sample.campaign_id = %(campaign_id)d" % {
                 'campaign_id': campaign.pk})
+    if segment_prefix:
+        prefix_fields = """,
+    '%(segment_prefix)s'%(convert_to_text)s AS segment_path,
+    '%(segment_title)s'%(convert_to_text)s AS segment_title""" % {
+        'segment_prefix': segment_prefix,
+        'segment_title': segment_title,
+        'convert_to_text': ("" if is_sqlite3() else "::text")
+    }
+        prefix_join = (
+"""INNER JOIN survey_answer ON survey_answer.sample_id = survey_sample.id
+INNER JOIN survey_question ON survey_answer.question_id = survey_question.id""")
+        secondary_filters_clause += (
+            " AND survey_question.path LIKE '%s%%%%'" % str(segment_prefix))
+
+    if start_at:
+        secondary_filters_clause += (" AND survey_sample.created_at >= '%s'" %
+            start_at.isoformat())
+    if ends_at:
+        secondary_filters_clause += (" AND survey_sample.created_at < '%s'" %
+            ends_at.isoformat())
+
+    grantees_join = ""
+    if grantees:
+        grantees_join = """
+   INNER JOIN survey_portfolio
+     ON survey_portfolio.account_id = survey_sample.account_id"""
+        if isinstance(grantees, list):
+            if isinstance(grantees[0], int):
+                grantee_ids = "(%s)" % ','.join([
+                    str(account_id) for account_id in grantees])
+            else:
+                grantee_ids = "(%s)" % ','.join([
+                    str(account.pk) for account in grantees])
+        elif isinstance(grantees, QuerySet):
+            grantee_ids = "(%s)" % ','.join([
+                str(account.pk) for account in grantees])
+        elif isinstance(grantees, RawQuerySet):
+            grantee_ids = "(%s)" % grantees.query.sql
+        secondary_filters_clause += ("""
+   AND survey_sample.created_at < survey_portfolio.ends_at
+   AND survey_portfolio.grantee_id IN %(grantee_ids)s""" % {
+            'grantee_ids': grantee_ids})
+        if campaign:
+            secondary_filters_clause += ("""
+   AND (survey_portfolio.campaign_id = %(campaign_id)s OR
+        survey_portfolio.campaign_id IS NULL)""" % {
+            'campaign_id': campaign.pk})
+
     if accounts:
         if isinstance(accounts, list):
             account_ids = "(%s)" % ','.join([
@@ -205,79 +205,45 @@ def sql_completed_at_by(campaign, start_at=None, ends_at=None,
                 str(account.pk) for account in accounts])
         elif isinstance(accounts, RawQuerySet):
             account_ids = "(%s)" % accounts.query.sql
-        additional_filters += (
-            "%(sep)ssurvey_sample.account_id IN %(account_ids)s" % {
-                'sep': sep, 'account_ids': account_ids})
-        sep = " AND "
-    if exclude_accounts:
-        if isinstance(exclude_accounts, list):
-            account_ids = "(%s)" % ','.join([
-                str(account_id) for account_id in exclude_accounts])
-        additional_filters += (
-            "%(sep)ssurvey_sample.account_id NOT IN %(account_ids)s" % {
-                'sep': sep, 'account_ids': account_ids})
-        sep = " AND "
+        secondary_filters_clause += (
+            " AND survey_sample.account_id IN %(account_ids)s" % {
+            'account_ids': account_ids})
 
-    if start_at:
-        additional_filters += "%ssurvey_sample.created_at >= '%s'" % (
-            sep, start_at.isoformat())
-        sep = " AND "
-    if ends_at:
-        additional_filters += "%ssurvey_sample.created_at < '%s'" % (
-            sep, ends_at.isoformat())
-        sep = " AND "
-
-    if prefix:
-        prefix_fields = """,
-    '%(segment_prefix)s'%(convert_to_text)s AS segment_path,
-    '%(segment_title)s'%(convert_to_text)s AS segment_title""" % {
-        'segment_prefix': prefix,
-        'segment_title': title,
-        'convert_to_text': ("" if is_sqlite3() else "::text")
-    }
-        prefix_join = (
-"""INNER JOIN survey_answer ON survey_answer.sample_id = survey_sample.id
-INNER JOIN survey_question ON survey_answer.question_id = survey_question.id""")
-        additional_filters += "%ssurvey_question.path LIKE '%s%%%%'" % (
-            sep, prefix)
-        sep = " AND "
-    else:
-        prefix_fields = ""
-        prefix_join = ""
-
-    extra_clause = sep + ("survey_sample.extra IS NULL" if not extra
-        else "survey_sample.extra like '%%%%%s%%%%'" % extra)
+    if tags is not None:
+        if tags:
+            primary_filters_clause += "".join([
+                " AND LOWER(survey_sample.extra) LIKE '%%%s%%'" %
+                tag.lower() for tag in tags])
+        else:
+            primary_filters_clause += " AND survey_sample.extra IS NULL"
 
     sql_query = """SELECT
-    survey_sample.id AS id,
-    survey_sample.slug AS slug,
-    survey_sample.created_at AS created_at,
-    survey_sample.campaign_id AS campaign_id,
-    survey_sample.account_id AS account_id,
-    survey_sample.updated_at AS updated_at,
-    survey_sample.is_frozen AS is_frozen,
-    survey_sample.extra AS extra%(prefix_fields)s
+    survey_sample.*%(prefix_fields)s
 FROM survey_sample
 INNER JOIN (
     SELECT
-        account_id,
+        survey_sample.account_id,
+        survey_sample.campaign_id,
         MAX(survey_sample.created_at) AS last_updated_at
     FROM survey_sample
     %(prefix_join)s
+    %(grantees_join)s
     WHERE survey_sample.is_frozen
-          %(campaign_clause)s
-          %(extra_clause)s
-          %(additional_filters)s
-    GROUP BY account_id) AS last_updates
+          %(primary_filters_clause)s
+          %(secondary_filters_clause)s
+    GROUP BY survey_sample.account_id, survey_sample.campaign_id
+) AS last_updates
 ON survey_sample.account_id = last_updates.account_id AND
+   survey_sample.campaign_id = last_updates.campaign_id AND
    survey_sample.created_at = last_updates.last_updated_at
 WHERE survey_sample.is_frozen
-      %(extra_clause)s
-""" % {'campaign_clause': campaign_clause,
-       'extra_clause': extra_clause,
-       'prefix_fields': prefix_fields,
+    %(primary_filters_clause)s
+ORDER BY survey_sample.created_at DESC
+""" % {'prefix_fields': prefix_fields,
        'prefix_join': prefix_join,
-       'additional_filters': additional_filters}
+       'grantees_join': grantees_join,
+       'primary_filters_clause': primary_filters_clause,
+       'secondary_filters_clause': secondary_filters_clause}
     return sql_query
 
 

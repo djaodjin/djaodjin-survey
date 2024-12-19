@@ -237,12 +237,12 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
         for ends_at in date_periods[1:]:
             samples = []
             if accounts:
-                # Calling `get_completed_assessments_at_by` with an `accounts`
+                # Calling `get_latest_frozen_by_accounts` with an `accounts`
                 # arguments evaluating to `False` will return all the latest
                 # frozen samples.
-                samples = Sample.objects.get_completed_assessments_at_by(
+                samples = Sample.objects.get_latest_frozen_by_accounts(
                     self.campaign, start_at=start_at, ends_at=ends_at,
-                    accounts=accounts)
+                    accounts=accounts, tags=[])
 
             # samples that will be counted in the benchmark
             if samples:
@@ -1083,13 +1083,13 @@ class CompareAPIView(DateRangeContextMixin, CampaignMixin, AccountMixin,
             accessible_accounts = get_accessible_accounts(
                 [self.account], campaign=self.campaign)
             if accessible_accounts:
-                # Calling `get_completed_assessments_at_by` with an `accounts`
+                # Calling `get_latest_frozen_by_accounts` with an `accounts`
                 # arguments evaluating to `False` will return all the latest
                 # frozen samples.
-                self._samples = Sample.objects.get_completed_assessments_at_by(
-                    self.campaign,
+                self._samples = Sample.objects.get_latest_frozen_by_accounts(
+                    campaign=self.campaign,
                     start_at=self.start_at, ends_at=self.ends_at,
-                    accounts=accessible_accounts)
+                    accounts=accessible_accounts, tags=[])
             else:
                 self._samples = Sample.objects.none()
         return self._samples

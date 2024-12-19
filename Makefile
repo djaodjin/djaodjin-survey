@@ -29,7 +29,8 @@ installTop    ?= $(if $(VIRTUAL_ENV),$(VIRTUAL_ENV),$(abspath $(srcDir))/.venv)
 binDir        ?= $(installTop)/bin
 libDir        ?= $(installTop)/lib
 CONFIG_DIR    ?= $(installTop)/etc/testsite
-RUN_DIR       ?= $(installTop)/var/run
+# because there is no site.conf
+RUN_DIR       ?= $(abspath $(srcDir))
 
 installDirs   ?= install -d
 installFiles  ?= install -p -m 644
@@ -38,6 +39,7 @@ PYTHON        := python
 PIP           := pip
 TWINE         := twine
 
+ASSETS_DIR    := $(srcDir)/testsite/static
 DB_NAME       ?= $(RUN_DIR)/db.sqlite
 
 MANAGE        := TESTSITE_SETTINGS_LOCATION=$(CONFIG_DIR) RUN_DIR=$(RUN_DIR) $(PYTHON) manage.py
@@ -107,15 +109,15 @@ $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
 $(installTop)/.npm/djaodjin-survey-packages: $(srcDir)/testsite/package.json
 	$(installFiles) $^ $(installTop)
 	$(NPM) install --loglevel verbose --cache $(installTop)/.npm --tmp $(installTop)/tmp --prefix $(installTop)
-	$(installDirs) -d $(srcDir)/testsite/static/vendor
-	$(installFiles) $(installTop)/node_modules/d3/d3.js $(srcDir)/testsite/static/vendor
-	$(installFiles) $(installTop)/node_modules/jquery/dist/jquery.js $(srcDir)/testsite/static/vendor
-	$(installFiles) $(installTop)/node_modules/moment/moment.js $(srcDir)/testsite/static/vendor
-	$(installFiles) $(installTop)/node_modules/moment-timezone/builds/moment-timezone-with-data.js $(srcDir)/testsite/static/vendor
-	$(installFiles) $(installTop)/node_modules/nvd3/build/nv.d3.css $(srcDir)/testsite/static/vendor
-	$(installFiles) $(installTop)/node_modules/nvd3/build/nv.d3.js $(srcDir)/testsite/static/vendor
-	$(installFiles) $(installTop)/node_modules/vue/dist/vue.js $(srcDir)/testsite/static/vendor
-	$(installFiles) $(installTop)/node_modules/vue-resource/dist/vue-resource.js $(srcDir)/testsite/static/vendor
+	$(installDirs) -d $(ASSETS_DIR)/vendor
+	$(installFiles) $(installTop)/node_modules/d3/d3.js $(ASSETS_DIR)/vendor
+	$(installFiles) $(installTop)/node_modules/jquery/dist/jquery.js $(ASSETS_DIR)/vendor
+	$(installFiles) $(installTop)/node_modules/moment/moment.js $(ASSETS_DIR)/vendor
+	$(installFiles) $(installTop)/node_modules/moment-timezone/builds/moment-timezone-with-data.js $(ASSETS_DIR)/vendor
+	$(installFiles) $(installTop)/node_modules/nvd3/build/nv.d3.css $(ASSETS_DIR)/vendor
+	$(installFiles) $(installTop)/node_modules/nvd3/build/nv.d3.js $(ASSETS_DIR)/vendor
+	$(installFiles) $(installTop)/node_modules/vue/dist/vue.js $(ASSETS_DIR)/vendor
+	$(installFiles) $(installTop)/node_modules/vue-resource/dist/vue-resource.js $(ASSETS_DIR)/vendor
 	touch $@
 
 
