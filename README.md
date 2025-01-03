@@ -40,9 +40,10 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.13.1
+0.14.0
 
-  * fixes empty profile name when using deployutils broker
+  * deprecates `get_completed_assessments_at_by`, replaced by
+    `get_latest_frozen_by_accounts
 
 [previous release notes](changelog)
 
