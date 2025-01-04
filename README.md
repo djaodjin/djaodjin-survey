@@ -40,7 +40,7 @@ Tested with
 - **Python:** 3.7, **Django:** 3.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.10, **Django:** 4.2 (latest)
 
-0.14.0
+0.14.1
 
   * deprecates `get_completed_assessments_at_by`, replaced by
     `get_latest_frozen_by_accounts

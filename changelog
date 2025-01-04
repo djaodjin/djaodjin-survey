@@ -1,3 +1,9 @@
+0.14.1
+
+  * fixes regression when combining with UNION statements in sqlite3
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sat,  4 Jan 2025 10:45:00 -0700
+
 0.14.0
 
   * deprecates `get_completed_assessments_at_by`, replaced by
