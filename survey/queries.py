@@ -238,8 +238,10 @@ ON survey_sample.account_id = last_updates.account_id AND
    survey_sample.created_at = last_updates.last_updated_at
 WHERE survey_sample.is_frozen
     %(primary_filters_clause)s
-ORDER BY survey_sample.created_at DESC
-""" % {'prefix_fields': prefix_fields,
+""" % {
+# We cannot add an `ORDER BY` clause in the above statement otherwise
+# the query cannot be combined in an `UNION` statement by SQLite3 later on.
+       'prefix_fields': prefix_fields,
        'prefix_join': prefix_join,
        'grantees_join': grantees_join,
        'primary_filters_clause': primary_filters_clause,
