@@ -108,7 +108,7 @@ $(DESTDIR)$(CONFIG_DIR)/gunicorn.conf: $(srcDir)/testsite/etc/gunicorn.conf
 
 $(installTop)/.npm/djaodjin-survey-packages: $(srcDir)/testsite/package.json
 	$(installFiles) $^ $(installTop)
-	$(NPM) install --loglevel verbose --cache $(installTop)/.npm --tmp $(installTop)/tmp --prefix $(installTop)
+	$(NPM) install --loglevel verbose --cache $(installTop)/.npm --prefix $(installTop)
 	$(installDirs) -d $(ASSETS_DIR)/vendor
 	$(installFiles) $(installTop)/node_modules/d3/d3.js $(ASSETS_DIR)/vendor
 	$(installFiles) $(installTop)/node_modules/jquery/dist/jquery.js $(ASSETS_DIR)/vendor
