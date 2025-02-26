@@ -38,7 +38,7 @@ Releases
 Tested with
 
 - **Python:** 3.7, **Django:** 3.2 (legacy)
-- **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/)
+- **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.12, **Django:** 5.1 (latest)
 
 0.14.1
