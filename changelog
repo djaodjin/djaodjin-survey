@@ -11,7 +11,7 @@
 0.14.0
 
   * deprecates `get_completed_assessments_at_by`, replaced by
-    `get_latest_frozen_by_accounts
+    `get_latest_frozen_by_accounts`
 
  -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri,  3 Jan 2025 11:45:00 -0700
 
