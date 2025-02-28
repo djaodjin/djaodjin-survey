@@ -171,6 +171,7 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
             question_path = row.question_path
             question_title = row.question_title
             default_unit = Unit(
+                id=row.question_default_unit_id,
                 slug=row.question_default_unit_slug,
                 title=row.question_default_unit_title,
                 system=row.question_default_unit_system)

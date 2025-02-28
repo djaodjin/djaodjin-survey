@@ -1,3 +1,13 @@
+0.15.0 (future release)
+
+  * removes call to deleted `rest_framework.compat.distinct` wrapper
+    function
+  * adds primary keys to `matrix.BenchmarkMixin._flush_choices` and
+    `queries.get_benchmarks_counts`
+  * adds support for Django 5.1
+
+ -- Morgan Shorter <morgan@morganshorter.com>  Tue,  25 Feb 2025 18:05:00 -0800
+
 0.14.1
 
   * fixes regression when combining with UNION statements in sqlite3
@@ -7,7 +17,7 @@
 0.14.0
 
   * deprecates `get_completed_assessments_at_by`, replaced by
-    `get_latest_frozen_by_accounts
+    `get_latest_frozen_by_accounts`
 
  -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri,  3 Jan 2025 11:45:00 -0700
 
