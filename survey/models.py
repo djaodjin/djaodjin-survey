@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2025, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -47,8 +47,9 @@ from .helpers import datetime_or_now, SlugifyFieldMixin
 from .queries import (UNIT_SYSTEM_STANDARD, UNIT_SYSTEM_IMPERIAL,
     UNIT_SYSTEM_RANK, UNIT_SYSTEM_ENUMERATED, UNIT_SYSTEM_FREETEXT,
     UNIT_SYSTEM_DATETIME, get_account_model, get_question_model,
-    sql_has_different_answers, sql_latest_frozen_by_accounts,
-    sql_frozen_answers)
+    sql_has_different_answers, sql_frozen_answers,
+    sql_latest_frozen_by_accounts, sql_latest_frozen_by_accounts_by_period,
+    sql_latest_frozen_by_portfolios, sql_latest_frozen_by_portfolios_by_period)
 
 
 def get_extra_field_class():
@@ -320,8 +321,28 @@ class Question(AbstractQuestion):
         return str(self.path)
 
 
+class CampaignManager(models.Manager):
+
+    def by_portfolios(self, at_time=None, accounts=None, grantees=None):
+        """
+        Returns a queryset of campaigns referenced by portfolios
+        with account in `accounts`, grantee in `grantees`,
+        and that includes `at_time`.
+        """
+        kwargs = {}
+        if at_time:
+            kwargs.update({'portfolios__ends_at__gt': at_time})
+        if accounts:
+            kwargs.update({'portfolios__account__in': accounts})
+        if grantees:
+            kwargs.update({'portfolios__grantee__in': grantees})
+        return self.filter(*kwargs).distinct()
+
+
 @python_2_unicode_compatible
 class Campaign(SlugifyFieldMixin, models.Model):
+
+    objects = CampaignManager()
 
     slug = models.SlugField(unique=True,
         help_text=_("Unique identifier that can be used in a URL"))
@@ -462,6 +483,83 @@ class SampleManager(models.Manager):
             tags=tags))
 
 
+    def get_latest_frozen_by_accounts_by_period(self, period='yearly',
+                                campaign=None, start_at=None, ends_at=None,
+                                segment_prefix=None, segment_title="",
+                                accounts=None, grantees=None,
+                                tags=None):
+        """
+        Returns the most recent frozen sample per account per `period`
+
+        When `campaign` is specified, it will return the most recent frozen
+        sample responding to `campaign` per account. When both `campaign` and
+        `segment_prefix` are specified, it will return the most recent frozen
+        sample responding to `campaign` which as an answer to question prefixed
+        by `segment_prefix` per account.
+
+        When `start_at` and `ends_at` are defined, it will return the most
+        recent frozen sample that is also within the [`start_at`, `ends_at`[
+        date range.
+
+        By default, when `accounts` is not specified, it will return one sample
+        per account for all accounts in the database if such sample exists,
+        otherwise it will return only samples for specified `accounts`.
+
+        When grantees is specified, it will return the most recent frozen sample
+        visible to all `grantees`.
+
+        When `tags` is `None`, the returned queryset will be filtered by sample
+        where `extra IS NULL`, otherwise the returned queryset will be samples
+        where the extra field contains at least on tag in tags.
+        """
+        #pylint:disable=too-many-arguments
+        return self.raw(sql_latest_frozen_by_accounts_by_period(
+            period=period, campaign=campaign,
+            start_at=start_at, ends_at=ends_at,
+            segment_prefix=segment_prefix, segment_title=segment_title,
+            accounts=accounts, grantees=grantees,
+            tags=tags))
+
+
+    def get_latest_frozen_by_portfolios(self, campaign=None,
+                                        start_at=None, ends_at=None,
+                                        segment_prefix=None, segment_title="",
+                                        accounts=None, grantees=None,
+                                        tags=None):
+        """
+        Returns the most recent frozen sample per account,
+        decorated with accessibility status
+        """
+        #pylint:disable=too-many-arguments
+        return self.raw(sql_latest_frozen_by_portfolios(
+            campaign=campaign, start_at=start_at, ends_at=ends_at,
+            segment_prefix=segment_prefix, segment_title=segment_title,
+            accounts=accounts, grantees=grantees,
+            tags=tags,
+            reporting_completed_not_shared=Sample.REPORTING_COMPLETED_NOTSHARED,
+            reporting_completed=Sample.REPORTING_COMPLETED))
+
+
+    def get_latest_frozen_by_portfolios_by_period(self, period='yearly',
+                                campaign=None, start_at=None, ends_at=None,
+                                segment_prefix=None, segment_title="",
+                                accounts=None, grantees=None,
+                                tags=None):
+        """
+        Returns the most recent frozen sample per account per period,
+        decorated with accessibility status
+        """
+        #pylint:disable=too-many-arguments
+        return self.raw(sql_latest_frozen_by_portfolios_by_period(
+            period=period, campaign=campaign,
+            start_at=start_at, ends_at=ends_at,
+            segment_prefix=segment_prefix, segment_title=segment_title,
+            accounts=accounts, grantees=grantees,
+            tags=tags,
+            reporting_completed_not_shared=Sample.REPORTING_COMPLETED_NOTSHARED,
+            reporting_completed=Sample.REPORTING_COMPLETED))
+
+
     def get_score(self, sample):
         answers = Answer.objects.populate(sample)
         nb_correct_answers = 0
@@ -493,6 +591,9 @@ class Sample(models.Model):
     to Questions.
     """
     objects = SampleManager()
+
+    REPORTING_COMPLETED_NOTSHARED = 11
+    REPORTING_COMPLETED = 12
 
     slug = models.SlugField(unique=True,
         help_text="Unique identifier for the sample. It can be used in a URL.")
