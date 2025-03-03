@@ -666,6 +666,40 @@ class Sample(models.Model):
         return queryset
 
 
+    def get_required_unanswered_questions(self, prefixes=None):
+        """
+        Returns a queryset of questions with a required answer which
+        have no answer.
+        """
+        filtered_in = None
+        if prefixes:
+            for prefix in prefixes:
+                filtered_q = models.Q(path__startswith=prefix)
+                if filtered_in:
+                    filtered_in |= filtered_q
+                else:
+                    filtered_in = filtered_q
+
+        answered_questions = get_question_model().objects.filter(
+          models.Q(default_unit_id=models.F('answer__unit_id')) |
+          models.Q(default_unit__source_equivalences__target_id=models.F(
+              'answer__unit_id')),
+            enumeratedquestions__campaign=self.campaign,
+            answer__sample=self).distinct()
+
+        if filtered_in:
+            queryset = get_question_model().objects.filter(
+                filtered_in,
+                enumeratedquestions__campaign=self.campaign,
+                enumeratedquestions__required=True)
+        else:
+            queryset = get_question_model().objects.filter(
+                enumeratedquestions__campaign=self.campaign,
+                enumeratedquestions__required=True)
+
+        return queryset.exclude(pk__in=answered_questions)
+
+
 class AnswerManager(models.Manager):
 
     @staticmethod

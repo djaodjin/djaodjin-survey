@@ -1940,6 +1940,7 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
             self._force = query_serializer.validated_data.get('force', False)
         return self._force
 
+
     def get_required_unanswered_questions(self, prefixes=None):
         """
         Returns a queryset of questions with a required answer which
@@ -1947,32 +1948,7 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
         """
         if not prefixes:
             prefixes = self.get_prefixes()
-        filtered_in = None
-        #pylint:disable=superfluous-parens
-        for prefix in prefixes:
-            filtered_q = Q(path__startswith=prefix)
-            if filtered_in:
-                filtered_in |= filtered_q
-            else:
-                filtered_in = filtered_q
-
-        answered_questions = get_question_model().objects.filter(
-          Q(default_unit_id=F('answer__unit_id')) |
-          Q(default_unit__source_equivalences__target_id=F('answer__unit_id')),
-            enumeratedquestions__campaign=self.sample.campaign,
-            answer__sample=self.sample).distinct()
-
-        if filtered_in:
-            queryset = get_question_model().objects.filter(
-                filtered_in,
-                enumeratedquestions__campaign=self.sample.campaign,
-                enumeratedquestions__required=True)
-        else:
-            queryset = get_question_model().objects.filter(
-                enumeratedquestions__campaign=self.sample.campaign,
-                enumeratedquestions__required=True)
-
-        return queryset.exclude(pk__in=answered_questions)
+        return self.sample.get_required_unanswered_questions(prefixes=prefixes)
 
 
     def get_prefixes(self):
