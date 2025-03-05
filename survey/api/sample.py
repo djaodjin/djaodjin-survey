@@ -1978,6 +1978,7 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
         if not self.force:
             latest_completed = Sample.objects.filter(
                 is_frozen=True,
+                account=self.sample.account,
                 campaign=self.sample.campaign,
                 extra=self.sample.extra).order_by('created_at').first()
             if latest_completed:
