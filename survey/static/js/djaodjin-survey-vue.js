@@ -529,6 +529,13 @@ Vue.component('query-individual-account', {
             vm.selectedSample = -1;
             vm.$refs.account.reset();
         },
+        // Respond to a typeaheadreset event
+        resetAccount: function() {
+            var vm = this;
+            vm.account = null;
+            vm.samples = [];
+            vm.selectedSample = -1;
+        },
         selectAccount: function(dataset, newAccount) {
             var vm = this;
             vm.account = newAccount;

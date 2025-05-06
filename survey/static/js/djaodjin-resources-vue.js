@@ -1292,7 +1292,7 @@ var typeAheadMixin = {
             }
         },
 
-        onHit: function onHit() {
+        onHit: function(item) {
             console.warn('You need to implement the `onHit` method', this);
         },
 
@@ -1300,6 +1300,7 @@ var typeAheadMixin = {
             var vm = this;
             vm.clear();
             vm.query = '';
+            vm.$emit('typeaheadreset');
         },
 
         setActive: function(index) {
@@ -1431,7 +1432,7 @@ var accountDetailMixin = {
             for( let idx = 0; idx < elements.length; ++idx ) {
                 const item = elements[idx];
                 accounts.add((fieldName && item[fieldName]) ?
-                    item[fieldName] : item.slug);
+                    item[fieldName] : item);
             }
             if( accounts.size ) {
                 let queryParams = "?q_f==slug&q=";

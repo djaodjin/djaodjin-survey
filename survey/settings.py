@@ -47,6 +47,7 @@ _SETTINGS = {
     'CONVERT_TO_QUESTION_SYSTEM': True,
     'CORRECT_MARKER': '(correct)',
     'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+    'DEFAULT_FORCE_FREEZE': False,
     'DENORMALIZE_FOR_PRECISION': True,
     'EXTRA_FIELD': None,
     'FORCE_ONLY_QUESTION_UNIT': False,
@@ -87,6 +88,7 @@ BYPASS_SAMPLE_AVAILABLE = _SETTINGS.get('BYPASS_SAMPLE_AVAILABLE')
 CONVERT_TO_QUESTION_SYSTEM = _SETTINGS.get('CONVERT_TO_QUESTION_SYSTEM')
 CONTENT_MODEL = _SETTINGS.get('CONTENT_MODEL')
 CORRECT_MARKER = _SETTINGS.get('CORRECT_MARKER')
+DEFAULT_FORCE_FREEZE = _SETTINGS.get('DEFAULT_FORCE_FREEZE')
 DEFAULT_FROM_EMAIL = _SETTINGS.get('DEFAULT_FROM_EMAIL')
 #: When set to `True` and the measure collected falls out of the natural
 #: range to store an integer in the database (ex: 3.2kg), attempts to retain

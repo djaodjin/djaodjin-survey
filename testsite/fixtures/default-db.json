@@ -9,7 +9,7 @@
       "is_superuser": true,
       "last_login": "2024-01-01T00:00:00+00:00",
       "last_name": "Doe",
-      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "password": "pbkdf2_sha256$600000$RbRWfhoqwcQxMMlPXtC999$sqc/L+VuCXbya5v9VCNbalsGMJEVjv39X+0aVcBZ3sI=",
       "username": "donny"
     },
     "model": "auth.User", "pk": 2

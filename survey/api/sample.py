@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2025, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -1937,7 +1937,8 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
                 data=self.request.query_params)
             query_serializer.is_valid(raise_exception=True)
             #pylint:disable=attribute-defined-outside-init
-            self._force = query_serializer.validated_data.get('force', False)
+            self._force = query_serializer.validated_data.get(
+                'force', settings.DEFAULT_FORCE_FREEZE)
         return self._force
 
 
