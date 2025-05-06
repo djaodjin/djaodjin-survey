@@ -1019,12 +1019,23 @@ class PortfolioDoubleOptInQuerySet(models.QuerySet):
                 kwargs.update({'campaign': campaign})
             else:
                 kwargs.update({'campaign__slug': str(campaign)})
+        if isinstance(account, get_account_model()):
+            account_filter = (
+                models.Q(account=account) &
+                models.Q(state=PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED)
+            ) | (
+                models.Q(grantee=account) &
+                models.Q(state=PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED))
+        else:
+            account_filter = (
+                models.Q(account__slug=account) &
+                models.Q(state=PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED)
+            ) | (
+                models.Q(grantee__slug=account) &
+                models.Q(state=PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED))
         return self.filter(
             (models.Q(ends_at__isnull=True) | models.Q(ends_at__gte=at_time)) &
-            (models.Q(account=account) &
-            models.Q(state=PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED)) |
-            (models.Q(grantee=account) &
-            models.Q(state=PortfolioDoubleOptIn.OPTIN_GRANT_INITIATED)),
+            account_filter,
             **kwargs)
 
     def requested(self, account, campaign=None,
