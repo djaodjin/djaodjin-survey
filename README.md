@@ -41,15 +41,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.12, **Django:** 5.1 (latest)
 
-0.15.0
+0.15.1
 
-  * fixes compare with previous completed sample
-  * moves get_required_unanswered_questions from mixins to models
-  * removes call to deleted `rest_framework.compat.distinct` wrapper
-    function
-  * adds primary keys to `matrix.BenchmarkMixin._flush_choices` and
-    `queries.get_benchmarks_counts`
-  * adds support for Django 5.1
+  * accepts account model or account slug in `PortfolioDoubleOptin.pending_for`
+  * enables a default to force freeze in freeze API
 
 [previous release notes](changelog)
 

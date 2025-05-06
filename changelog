@@ -1,3 +1,10 @@
+0.15.1
+
+  * accepts account model or account slug in `PortfolioDoubleOptin.pending_for`
+  * enables a default to force freeze in freeze API
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue,  6 May 2025 14:15:00 -0700
+
 0.15.0
 
   * fixes compare with previous completed sample
