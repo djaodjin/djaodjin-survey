@@ -2,7 +2,7 @@
     "name": "djaodjin-survey-ui",
     "version": "0.10.3-dev",
     "dependencies": {
-        "bootstrap": "4.3.1",
+        "bootstrap": "5.0.0",
         "d3": "3.5.5",
         "jquery": "~3.6.0",
         "moment": "~2.29.4",
