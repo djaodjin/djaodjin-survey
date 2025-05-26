@@ -194,7 +194,7 @@ INNER JOIN survey_question ON survey_answer.question_id = survey_question.id""")
     if tags is not None:
         if tags:
             primary_filters_clause += "".join([
-                " AND LOWER(survey_sample.extra) LIKE '%%%s%%'" %
+                " AND LOWER(survey_sample.extra) LIKE '%%%%%s%%%%'" %
                 tag.lower() for tag in tags])
         else:
             primary_filters_clause += " AND survey_sample.extra IS NULL"
