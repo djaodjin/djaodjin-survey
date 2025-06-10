@@ -429,6 +429,8 @@ class EnumeratedQuestions(models.Model):
         help_text=_("used to order questions when presenting a campaign."))
     required = models.BooleanField(default=True,
         help_text=_("If checked, an answer is required"))
+    ref_num = models.CharField(max_length=8,
+        help_text=_("Reference number for the question (ex: 1.2, 2a)"))
 
     class Meta:
         unique_together = ('campaign', 'rank')
@@ -662,7 +664,9 @@ class Sample(models.Model):
             sample=self,
             question__campaigns__in=[self.campaign.pk]).order_by(
             'question__enumeratedquestions__rank').annotate(
-                _rank=models.F('question__enumeratedquestions__rank'))
+                _rank=models.F('question__enumeratedquestions__rank'),
+                required=models.F('question__enumeratedquestions__required'),
+                ref_num=models.F('question__enumeratedquestions__ref_num'))
         return queryset
 
 

@@ -617,7 +617,8 @@ campaign_questions AS (
     SELECT
       survey_question.id AS id,
       survey_enumeratedquestions.rank AS rank,
-      survey_enumeratedquestions.required AS required
+      survey_enumeratedquestions.required AS required,
+      survey_enumeratedquestions.ref_num AS ref_num
     FROM survey_question
       INNER JOIN survey_enumeratedquestions
       ON survey_question.id = survey_enumeratedquestions.question_id
@@ -627,7 +628,8 @@ campaign_questions AS (
 questions AS (
     SELECT DISTINCT(answers.question_id) AS id,
       COALESCE(campaign_questions.rank, 0) AS rank,
-      COALESCE(campaign_questions.required, 'f') AS required
+      COALESCE(campaign_questions.required, 'f') AS required,
+      COALESCE(campaign_questions.ref_num, '') AS ref_num
     FROM answers
     LEFT OUTER JOIN campaign_questions
       ON answers.question_id = campaign_questions.id
@@ -643,6 +645,7 @@ SELECT
     answers.sample_id AS sample_id,
     questions.rank AS _rank,
     questions.required AS required,
+    questions.ref_num AS ref_num,
     answers._measured_text AS _measured_text
 FROM questions
 LEFT OUTER JOIN answers

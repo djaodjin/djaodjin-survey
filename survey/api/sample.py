@@ -95,10 +95,11 @@ def attach_answers(units, questions_by_key, queryset,
                 default_unit = copy.deepcopy(default_unit_dict)
             value = {
                 'path': path,
-                'rank': resp.rank,
                 'frozen': bool(getattr(resp, 'frozen', False)),
+                'rank': resp.rank,
                 'required': (
                     resp.required if hasattr(resp, 'required') else True),
+                'ref_num': resp.ref_num if hasattr(resp, 'ref_num') else "",
                 'default_unit': default_unit,
                 'ui_hint': question.ui_hint,
             }
@@ -607,7 +608,8 @@ campaign_questions AS (
     SELECT
       survey_question.id AS id,
       survey_enumeratedquestions.rank AS rank,
-      survey_enumeratedquestions.required AS required
+      survey_enumeratedquestions.required AS required,
+      survey_enumeratedquestions.ref_num AS ref_num
     FROM survey_question
       INNER JOIN survey_enumeratedquestions
       ON survey_question.id = survey_enumeratedquestions.question_id
@@ -637,7 +639,8 @@ campaign_questions AS (
 questions AS (
     SELECT DISTINCT(answers.question_id) AS id,
       COALESCE(campaign_questions.rank, 0) AS rank,
-      COALESCE(campaign_questions.required, 'f') AS required
+      COALESCE(campaign_questions.required, 'f') AS required,
+      COALESCE(campaign_questions.ref_num, '') AS ref_num
     FROM answers
     LEFT OUTER JOIN campaign_questions
       ON answers.question_id = campaign_questions.id
@@ -653,6 +656,7 @@ SELECT
     answers.sample_id AS sample_id,
     questions.rank AS _rank,
     questions.required AS required,
+    questions.ref_num AS ref_num,
     answers._measured_text AS _measured_text,
     1 AS frozen
 FROM questions
@@ -689,7 +693,8 @@ campaign_questions AS (
     SELECT
       survey_question.id AS id,
       survey_enumeratedquestions.rank AS rank,
-      survey_enumeratedquestions.required AS required
+      survey_enumeratedquestions.required AS required,
+      survey_enumeratedquestions.ref_num AS ref_num
     FROM survey_question
       INNER JOIN survey_enumeratedquestions
       ON survey_question.id = survey_enumeratedquestions.question_id
@@ -708,6 +713,7 @@ SELECT
     answers.sample_id AS sample_id,
     campaign_questions.rank AS _rank,
     campaign_questions.required AS required,
+    campaign_questions.ref_num AS ref_num,
     answers._measured_text AS _measured_text,
     0 AS frozen
 FROM campaign_questions
@@ -830,6 +836,7 @@ class SampleCandidatesMixin(SampleMixin):
           candidate_answers.sample_id AS sample_id,
           survey_enumeratedquestions.rank AS _rank,
           survey_enumeratedquestions.required AS required,
+          survey_enumeratedquestions.ref_num AS ref_num,
           candidate_answers._measured_text AS _measured_text
         FROM survey_question
         INNER JOIN survey_enumeratedquestions
@@ -1429,6 +1436,7 @@ class SampleCandidatesAPIView(SampleCandidatesMixin, SampleAnswersMixin,
                 by_question[answer.question_id] = {
                     'path': question.path,
                     'rank': answer.rank,
+                    'ref_num': answer.ref_num,
                     'title': question.content.title,
                     'picture': question.content.picture,
                     'extra': extra_as_internal(question.content),

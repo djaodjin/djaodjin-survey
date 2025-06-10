@@ -1119,6 +1119,7 @@ class CompareAPIView(DateRangeContextMixin, CampaignMixin, AccountMixin,
                 'title': question.title,
                 'rank': answer.rank,
                 'required': answer.required,
+                'ref_num': answer.ref_num,
                 'default_unit': default_unit,
                 'ui_hint': question.ui_hint,
             }
