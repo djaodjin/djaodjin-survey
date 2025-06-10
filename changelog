@@ -1,3 +1,11 @@
+0.16.0
+
+  * adds ref_num field to EnumeratedQuestions
+  * fixes filter samples based on tags in extra
+  * supports Django5.2
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 10 Jun 2025 12:15:00 -0700
+
 0.15.1
 
   * accepts account model or account slug in `PortfolioDoubleOptin.pending_for`

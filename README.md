@@ -39,12 +39,13 @@ Tested with
 
 - **Python:** 3.7, **Django:** 3.2 (legacy)
 - **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/))
-- **Python:** 3.12, **Django:** 5.1 (latest)
+- **Python:** 3.12, **Django:** 5.2 (latest)
 
-0.15.1
+0.16.0
 
-  * accepts account model or account slug in `PortfolioDoubleOptin.pending_for`
-  * enables a default to force freeze in freeze API
+  * adds ref_num field to EnumeratedQuestions
+  * fixes filter samples based on tags in extra
+  * supports Django5.2
 
 [previous release notes](changelog)
 
