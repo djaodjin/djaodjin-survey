@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2025, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -206,12 +206,27 @@ class UnitSerializer(serializers.ModelSerializer):
     system = EnumField(choices=Unit.SYSTEMS,
         help_text=_("One of standard (metric system), imperial,"\
             " rank, enum, or freetext"))
-    choices = ChoiceSerializer(many=True, required=False)
+    choices = serializers.SerializerMethodField(required=False)
 
     class Meta:
         model = Unit
         fields = ('slug', 'title', 'system', 'choices')
         read_only_fields = ('slug', 'choices',)
+
+    def get_choices(self, dictionary):
+        # enables filtered choices
+        queryset = self.context.get('choices')
+        if queryset is None:
+            try:
+                queryset = dictionary.get('choices')
+            except (AttributeError, KeyError):
+                try:
+                    unit_slug = dictionary.slug
+                except AttributeError:
+                    unit_slug = dictionary.get('slug')
+                queryset = Choice.objects.filter(unit__slug=unit_slug)
+        return ChoiceSerializer(
+            context=self.context, many=True).to_representation(queryset)
 
 
 class ConvertUnitSerializer(UnitSerializer):

@@ -1067,6 +1067,44 @@ Vue.component('default-unit-typeahead', {
     }
 });
 
+
+Vue.component('enum-choices-typeahead', {
+    mixins: [
+        typeAheadMixin
+    ],
+    props: [
+        'question',
+        'value'
+    ],
+    data: function () {
+        return {
+            url: this.$urls.api_units + '/' + this.question.default_unit.slug
+                + '/choices',
+            query: this.value ? this.value : '',
+            prev: this.value ? this.value : '',
+        };
+    },
+    methods: {
+        onHit: function onHit(newItem) {
+            var vm = this;
+            if( newItem.text ) {
+                // We update `prev` such that the `@blur` event does not
+                // forget the new selection.
+                vm.prev = newItem.text;
+                vm.query = newItem.text;
+            }
+            vm.clear();
+            vm.$emit('selectitem', newItem.text, vm.question);
+        },
+        clearAndForget: function() {
+            var vm = this;
+            vm.clear();
+            // We need to keep the `onHit` selection, if there was an `onHit`.
+            vm.query = vm.prev;
+        },
+    },
+});
+
     exports.QueryAccountsByAffinity = QueryAccountsByAffinity;
     exports.QueryAccountsByAnswers = QueryAccountsByAnswers;
 }));

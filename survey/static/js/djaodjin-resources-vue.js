@@ -1268,6 +1268,16 @@ var typeAheadMixin = {
             return this.current === index ? " active" : "";
         },
 
+        highlightQuery: function(text) {
+            var vm = this;
+            if( !vm.query ) {
+                return text;
+            }
+            let regex = new RegExp(vm.query, "gi"); // search for all instances
+            let newText = text.replace(regex, `<mark>$&</mark>`);
+            return newText;
+        },
+
         cancel: function() {},
 
         clear: function() {
@@ -1300,7 +1310,18 @@ var typeAheadMixin = {
             var vm = this;
             vm.clear();
             vm.query = '';
+            vm.$nextTick(function() {
+                var inputs = vm.$refs.input;
+                if( inputs.length > 0 ) {
+                    inputs[0].focus();
+                }
+            });
             vm.$emit('typeaheadreset');
+        },
+        resetAndReload: function() {
+            var vm = this;
+            vm.reset();
+            vm.reload();
         },
 
         setActive: function(index) {
@@ -1330,9 +1351,15 @@ var typeAheadMixin = {
                 vm.items = vm.limit ? data.slice(0, vm.limit) : data;
                 vm.current = -1;
                 vm.loading = false;
-                if (vm.selectFirst) {
-                    vm.down();
-                }
+                vm.$nextTick(function() {
+                    var inputs = vm.$refs.input;
+                    if( inputs.length > 0 ) {
+                        inputs[0].focus();
+                    }
+                    if (vm.selectFirst) {
+                        vm.down();
+                    }
+                });
             }, function() {
                 // on failure we just do nothing. - i.e. we don't want a bunch
                 // of error messages to pop up.

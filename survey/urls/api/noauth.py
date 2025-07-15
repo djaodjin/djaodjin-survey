@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2025, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,11 +22,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...api.units import UnitDetailAPIView, UnitListAPIView
+from ...api.units import ChoiceListAPIView, UnitDetailAPIView, UnitListAPIView
 from ...compat import path
 
 
 urlpatterns = [
+    path('units/<slug:unit>/choices',
+        ChoiceListAPIView.as_view(), name='survey_api_choices'),
     path('units/<slug:unit>',
         UnitDetailAPIView.as_view(), name='survey_api_unit'),
     path('units',

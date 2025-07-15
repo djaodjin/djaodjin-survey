@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2025, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,13 +27,55 @@ import logging
 from django.db.models import F
 from rest_framework import generics
 from rest_framework.filters import BaseFilterBackend
+from rest_framework.pagination import BasePagination
+from rest_framework.response import Response
 
 from ..docs import extend_schema
 from ..filters import SearchFilter
-from ..models import Unit
-from .serializers import ConvertUnitSerializer, UnitSerializer
+from ..models import Choice, Unit
+from .serializers import (ChoiceSerializer, ConvertUnitSerializer, EnumField,
+    UnitSerializer)
 
 LOGGER = logging.getLogger(__name__)
+
+
+class ChoicesPagination(BasePagination):
+
+    def paginate_queryset(self, queryset, request, view=None):
+        #pylint:disable=attribute-defined-outside-init
+        self.unit = getattr(view, 'unit', None)
+        return queryset
+
+    def get_paginated_response(self, data):
+        system = EnumField(choices=Unit.SYSTEMS).to_representation(
+            self.unit.system)
+        return Response({
+            'slug': self.unit.slug,
+            'title': self.unit.title,
+            'system': system,
+            'results': data,
+        })
+
+    def get_paginated_response_schema(self, schema):
+        return {
+            'type': 'object',
+            'required': ['slug', 'title', 'system', 'results'],
+            'properties': {
+                'slug': {
+                    'type': 'string',
+                    'example': "yes-no",
+                },
+                'title': {
+                    'type': 'string',
+                    'example': "Yes/No",
+                },
+                'system': {
+                    'type': 'string',
+                    'example': "enum",
+                },
+                'results': schema,
+            },
+        }
 
 
 class EquivalenceFilter(BaseFilterBackend):
@@ -128,6 +170,90 @@ class UnitDetailAPIView(generics.RetrieveAPIView):
     serializer_class = UnitSerializer
     lookup_field = 'slug'
     lookup_url_kwarg = 'unit'
+    search_fields = ( # applies to `Choice`, not `self.object` (of type `Unit`)
+        'text',
+        'descr'
+    )
+
+    @property
+    def unit(self):
+        if not hasattr(self, '_unit'):
+            #pylint:disable=attribute-defined-outside-init
+            self._unit = self.get_object()
+        return self._unit
+
+    def get_serializer_context(self):
+        context = super(UnitDetailAPIView, self).get_serializer_context()
+        search_filter = SearchFilter()
+        if search_filter.get_search_terms(self.request):
+            queryset = Choice.objects.filter(unit=self.unit)
+            queryset = search_filter.filter_queryset(
+                self.request, queryset, self)
+            context.update({
+                'choices': queryset
+            })
+        return context
+
+
+class ChoiceListAPIView(generics.ListAPIView):
+    """
+    Retrieves enumerated choices for a unit
+
+    Retrieves choices of a ``Unit`` with an enum system. The results can
+    be filtered by a search criteria.
+
+    **Tags**: content
+
+    **Examples**
+
+    .. code-block:: http
+
+        GET /api/units/assessment/search?q=yes HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "slug": "assessment",
+            "title": "assessments",
+            "system": "enum",
+            "results": [
+                {
+                    "rank": 1,
+                    "text": "mostly-yes",
+                    "descr": "Mostly yes"
+                },
+                {
+                    "rank": 2,
+                    "text": "yes",
+                    "descr": "Yes"
+                }
+            ]
+        }
+    """
+    queryset = Choice.objects.all()
+    serializer_class = ChoiceSerializer
+    lookup_field = 'slug'
+    lookup_url_kwarg = 'unit'
+    search_fields = (
+        'text',
+        'descr'
+    )
+    filter_backends = (SearchFilter,)
+    pagination_class = ChoicesPagination
+
+    @property
+    def unit(self):
+        if not hasattr(self, '_unit'):
+            #pylint:disable=attribute-defined-outside-init
+            self._unit = generics.get_object_or_404(Unit.objects.all(),
+                slug=self.kwargs.get(self.lookup_url_kwarg))
+        return self._unit
+
+    def get_queryset(self):
+        return self.queryset.filter(
+            unit__slug=self.kwargs.get(self.lookup_url_kwarg)).order_by('text')
 
 
 class UnitListAPIView(generics.ListAPIView):
