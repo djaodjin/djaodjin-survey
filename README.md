@@ -41,11 +41,9 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.12, **Django:** 5.2 (latest)
 
-0.16.0
+0.17.0
 
-  * adds ref_num field to EnumeratedQuestions
-  * fixes filter samples based on tags in extra
-  * supports Django5.2
+  * adds input field for enums with more than 10 choices
 
 [previous release notes](changelog)
 

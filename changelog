@@ -1,3 +1,9 @@
+0.17.0
+
+  * adds input field for enums with more than 10 choices
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 15 Jul 2025 12:51:00 -0700
+
 0.16.0
 
   * adds ref_num field to EnumeratedQuestions
