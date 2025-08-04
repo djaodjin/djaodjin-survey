@@ -154,7 +154,7 @@ def _construct_weekly_period(at_time, years=0, tzone=None):
 
     week_of_year = sunday.isocalendar()
     # Implementation note: `%G` was introduced in Python3.6
-    years_shifted_sunday = datetime.datetime.strptime('%d %d %d' % (
+    years_shifted_sunday = datetime.datetime.strptime('%04d %02d %d' % (
         week_of_year[0] + years, week_of_year[1], week_of_year[2]),
         '%G %V %u').replace(tzinfo=sunday.tzinfo)
 
