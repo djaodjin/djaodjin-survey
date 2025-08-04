@@ -184,14 +184,14 @@ class UnitDetailAPIView(generics.RetrieveAPIView):
 
     def get_serializer_context(self):
         context = super(UnitDetailAPIView, self).get_serializer_context()
-        search_filter = SearchFilter()
-        if search_filter.get_search_terms(self.request):
-            queryset = Choice.objects.filter(unit=self.unit)
-            queryset = search_filter.filter_queryset(
-                self.request, queryset, self)
-            context.update({
-                'choices': queryset
-            })
+        if self.unit.system == Unit.SYSTEM_ENUMERATED:
+            search_filter = SearchFilter()
+            if search_filter.get_search_terms(self.request):
+                queryset = search_filter.filter_queryset(
+                    self.request, self.unit.choices, self)
+                context.update({
+                    'choices': queryset
+                })
         return context
 
 
@@ -252,8 +252,7 @@ class ChoiceListAPIView(generics.ListAPIView):
         return self._unit
 
     def get_queryset(self):
-        return self.queryset.filter(
-            unit__slug=self.kwargs.get(self.lookup_url_kwarg)).order_by('text')
+        return self.unit.choices
 
 
 class UnitListAPIView(generics.ListAPIView):

@@ -124,7 +124,7 @@ class Unit(models.Model):
         if self.system == self.SYSTEM_ENUMERATED:
             return Choice.objects.filter(
                 question__isnull=True, unit=self).order_by('rank')
-        return None
+        return Choice.objects.none()
 
     def __str__(self):
         return str(self.slug)
