@@ -37,13 +37,14 @@ Releases
 
 Tested with
 
-- **Python:** 3.7, **Django:** 3.2 (legacy)
+- **Python:** 3.9, **Django:** 3.2 (legacy)
 - **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.12, **Django:** 5.2 (latest)
 
-0.17.0
+0.17.1
 
-  * adds input field for enums with more than 10 choices
+  * supports very old dates (year<1000) resulting from typos (fix)
+  * adds choices in API results only if enum unit (optimization)
 
 [previous release notes](changelog)
 
