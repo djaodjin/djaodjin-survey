@@ -103,8 +103,10 @@ def attach_answers(units, questions_by_key, queryset,
                 'default_unit': default_unit,
                 'ui_hint': question.ui_hint,
             }
-            for field_name in extra_fields:
-                value.update({field_name: getattr(question, field_name)})
+            if extra_fields:
+                extra_as_internal(question)
+                for field_name in extra_fields:
+                    value.update({field_name: getattr(question, field_name)})
             questions_by_key.update({question_pk: value})
         if resp.pk:
             # We have an actual answer to the question,

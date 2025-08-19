@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2025, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,8 @@ from .. import settings
 from ..compat import reverse, six
 from ..docs import extend_schema
 from ..filters import AggregateByPeriodFilter, OrderingFilter, SearchFilter
-from ..helpers import construct_periods, convert_dates_to_utc, datetime_or_now
+from ..helpers import (construct_periods, convert_dates_to_utc,
+    datetime_or_now, extra_as_internal)
 from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
     EditableFilterMixin as EditableFilterBaseMixin, MatrixMixin, SampleMixin)
 from ..models import (Answer, Choice, Matrix, EditableFilter,
@@ -161,7 +162,7 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
         return get_account_model().objects.all()
 
 
-    def _flush_choices(self, questions_by_key, row, choices):
+    def _flush_choices(self, questions_by_key, row, choices, extra_fields=None):
         """
         Populates `questions_by_key` with benchmark data aggregated in choices.
         """
@@ -169,7 +170,6 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
         start_at = getattr(row, 'period', None)
         if question_id not in questions_by_key:
             question_path = row.question_path
-            question_title = row.question_title
             default_unit = Unit(
                 id=row.question_default_unit_id,
                 slug=row.question_default_unit_slug,
@@ -177,10 +177,14 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
                 system=row.question_default_unit_system)
             questions_by_key[question_id] = {
                 'path': question_path,
-                'title': question_title,
                 'ui_hint': None, # XXX unnecessary in benchmarks
                 'default_unit': default_unit
             }
+            if extra_fields:
+                extra_as_internal(row)
+                for field_name in extra_fields:
+                    questions_by_key[question_id].update({
+                        field_name: getattr(row, 'question_%s' % field_name)})
         question = questions_by_key[question_id]
         if not 'benchmarks' in question:
             question['benchmarks'] = [{
@@ -210,6 +214,7 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
         if self.nb_accounts < 1:
             return questions_by_key
 
+        extra_fields = getattr(self.serializer_class.Meta, 'extra_fields', [])
         period_type = self.period_type
         first_date = self.start_at
         if not first_date:
@@ -248,7 +253,7 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
             # samples that will be counted in the benchmark
             if samples:
                 sql_query = get_benchmarks_counts(samples, prefix=prefix,
-                    period_type=period_type)
+                    period_type=period_type, extra_fields=extra_fields)
                 queryset = get_question_model().objects.raw(sql_query)
 
                 choices = []
@@ -263,14 +268,16 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
                         (period_start_at and (prev_period_start_at and
                         prev_period_start_at != period_start_at))):
                         self._flush_choices(
-                            questions_by_key, prev_row, choices)
+                            questions_by_key, prev_row, choices,
+                            extra_fields=extra_fields)
                         choices = []
                     prev_period_start_at = period_start_at
                     prev_row = question
                     choices += [(choice, count)]
                 if prev_row:
                     self._flush_choices(
-                        questions_by_key, prev_row, choices)
+                        questions_by_key, prev_row, choices,
+                        extra_fields=extra_fields)
 
             start_at = ends_at
 

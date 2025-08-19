@@ -663,7 +663,8 @@ ORDER BY questions.id, answers.unit_id, %(accounts_table)s.full_name""" % {
     return sql_query
 
 
-def get_benchmarks_counts(samples, prefix="/", period_type=None):
+def get_benchmarks_counts(samples, prefix="/", period_type=None,
+                          extra_fields=None):
     """
     Returns a SQL statement that aggregates enumerated choices, optionally
     per period ('yearly' or 'monthly'), over a set of `samples`
@@ -682,13 +683,24 @@ def get_benchmarks_counts(samples, prefix="/", period_type=None):
         group_by_period = as_sql_date_trunc('survey_sample.created_at',
             period_type=period_type)
 
+    extra_fields_select = ""
+    extra_fields_propagate = ""
+    content_table = get_content_model()._meta.db_table
+    if extra_fields:
+        for field in extra_fields:
+            extra_fields_select += (
+                "%(content_table)s.%(field)s AS question_%(field)s," % {
+                    'content_table': content_table, 'field': field})
+            extra_fields_propagate += (
+                "question_%(field)s," % {'field': field})
+
     sql_query = """
 WITH answers_by_question_choice AS (
 SELECT
   survey_answer.sample_id AS sample_id,
   survey_answer.question_id AS question_id,
   survey_question.path AS question_path,
-  %(content_table)s.title AS question_title,
+  %(extra_fields_select)s
   survey_unit.id AS question_default_unit_id,
   survey_unit.slug AS question_default_unit_slug,
   survey_unit.title AS question_default_unit_title,
@@ -713,7 +725,7 @@ WHERE
 SELECT
   question_id AS id,
   question_path,
-  question_title,
+  %(extra_fields_propagate)s
   question_default_unit_id,
   question_default_unit_slug,
   question_default_unit_title,
@@ -728,7 +740,7 @@ GROUP BY
  %(group_by_period)s
   question_id,
   question_path,
-  question_title,
+  %(extra_fields_propagate)s
   question_default_unit_id,
   question_default_unit_slug,
   question_default_unit_title,
@@ -744,6 +756,8 @@ ORDER BY question_id ASC,%(group_by_period)s choice ASC;""" % {
         "%s AS period," % group_by_period if group_by_period else ""),
     'group_by_period': (
         " %s," % group_by_period if group_by_period else ""),
-    'content_table': get_content_model()._meta.db_table,
+    'content_table': content_table,
+    'extra_fields_select': extra_fields_select,
+    'extra_fields_propagate': extra_fields_propagate
     }
     return sql_query
