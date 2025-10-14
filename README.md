@@ -41,8 +41,9 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.12, **Django:** 5.2 (latest)
 
-0.17.2
+0.17.3
 
+  * prevents 500 error if an extra field doesnot exist
   * adds dynamic set of content fields in benchmark query
 
 [previous release notes](changelog)

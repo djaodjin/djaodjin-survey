@@ -1,3 +1,9 @@
+0.17.3
+
+  * prevents 500 error if an extra field doesnot exist
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Mon, 14 Oct 2025 12:15:00 -0700
+
 0.17.2
 
   * adds dynamic set of content fields in benchmark query
