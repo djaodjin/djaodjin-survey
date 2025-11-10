@@ -169,6 +169,8 @@ def construct_weekly_periods(first_date, last_date, years=0, tzone=None):
         _, ends_at = _construct_weekly_period(at_time, years=years, tzone=tzone)
         week_ends_at += [ends_at]
         at_time += relativedelta(weeks=1)
+    if at_time != last_date:
+        week_ends_at += [last_date]
     return week_ends_at
 
 

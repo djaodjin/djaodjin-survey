@@ -530,6 +530,11 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
         # so it OK to just filter by grantee.
         return PortfolioDoubleOptIn.objects.filter(grantee=self.account)
 
+    def get_serializer_class(self):
+        if self.request.method.lower() == 'post':
+            return PortfolioRequestCreateSerializer
+        return super(PortfoliosRequestsAPIView, self).get_serializer_class()
+
     def post(self, request, *args, **kwargs):
         """
         Initiates request
@@ -568,15 +573,10 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                ]
              }
         """
-        return self.create(request, *args, **kwargs)
-
-    def get_serializer_class(self):
-        if self.request.method.lower() == 'post':
-            return PortfolioRequestCreateSerializer
-        return super(PortfoliosRequestsAPIView, self).get_serializer_class()
-
-    def perform_create(self, serializer):
         #pylint:disable=too-many-locals
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        status_code = status.HTTP_200_OK
         account_model = get_account_model()
         ends_at = datetime_or_now()
         defaults = {
@@ -626,6 +626,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                         campaign=campaign,
                     verification_key=PortfolioDoubleOptIn.generate_key(account),
                         **defaults)
+                    status_code = status.HTTP_201_CREATED
                 requests_initiated += [(portfolio, [account_data])]
 
         message = serializer.validated_data.get('message')
@@ -635,6 +636,8 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
             signals.portfolios_request_initiated.send(sender=__name__,
                 portfolios=[portfolio], recipients=recipients, message=message,
                 request=self.request)
+
+        return HttpResponse(serializer.data, status=status_code)
 
 
 class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
