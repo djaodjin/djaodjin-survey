@@ -74,7 +74,9 @@ var messagesMixin = {
                                 } else if( data[key].hasOwnProperty('detail') ) {
                                     message = data[key].detail;
                                 }
-                                messages.push(key + ": " + message);
+                                if( message ) {
+                                    messages.push(key + ": " + message);
+                                }
                                 var inputField = jQuery("[name=\"" + key + "\"]");
                                 var parent = inputField.parents('.form-group');
                                 inputField.addClass("is-invalid");
@@ -126,6 +128,7 @@ var messagesMixin = {
                     messageBlock = jQuery(div.firstChild);
                 } else {
                     messageBlock = jQuery(messageBlock[0].cloneNode(true));
+                    messageBlock.find('div').remove();
                 }
 
                 // insert the actual messages
@@ -190,12 +193,15 @@ var paramsMixin = {
     },
     methods: {
         asDateInputField: function(dateISOString) {
-            const dateValue = moment(dateISOString);
-            return dateValue.isValid() ? dateValue.format("YYYY-MM-DD") : null;
+            const dateValue = new Date(dateISOString);
+            // The `<input type="date">` element will accept dates
+            // formatted as "YYYY-MM-DD".
+            return !isNaN(dateValue) ?
+                dateValue.toISOString().split('T')[0] : null;
         },
         asDateISOString: function(dateInputField) {
-            const dateValue = moment(dateInputField, "YYYY-MM-DD");
-            return dateValue.isValid() ? dateValue.toISOString() : null;
+            const dateValue = new Date(dateInputField);
+            return !isNaN(dateValue) ? dateValue.toISOString() : null;
         },
         autoReload: function() {
         },
@@ -1312,8 +1318,12 @@ var typeAheadMixin = {
             vm.query = '';
             vm.$nextTick(function() {
                 var inputs = vm.$refs.input;
-                if( inputs.length > 0 ) {
-                    inputs[0].focus();
+                if( typeof inputs.length != 'undefined' ) {
+                    if( inputs.length > 0 ) {
+                        inputs[0].focus();
+                    }
+                } else {
+                    inputs.focus();
                 }
             });
             vm.$emit('typeaheadreset');

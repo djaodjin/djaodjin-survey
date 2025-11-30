@@ -177,7 +177,7 @@ Vue.component('portfolios-grant-list', {
     methods: {
         // `this` inside methods points to the Vue instance
         // `event` is the native DOM event
-        addAccount: function(dataset, newAccount) {
+        addAccount: function(newAccount, dataset) {
             var vm = this;
             newAccount.campaign = vm.campaign;
             dataset.push(newAccount);
@@ -188,7 +188,7 @@ Vue.component('portfolios-grant-list', {
             dataset.splice(index, 1);
             return false;
         },
-        addGrantee: function(grantees, newGrantee) {
+        addGrantee: function(newGrantee, grantees) {
             var vm = this;
             vm.grant.grantee = newGrantee;
             vm.populateAccounts([vm.grant.grantee]);
@@ -342,7 +342,7 @@ Vue.component('portfolios-request-list', {
     methods: {
         // `this` inside methods points to the Vue instance
         // `event` is the native DOM event
-        addAccount: function(dataset, newAccount) {
+        addAccount: function(newAccount, dataset) {
             var vm = this;
             newAccount.is_new = true;
             newAccount.full_name = "ukwn";
@@ -536,7 +536,7 @@ Vue.component('query-individual-account', {
             vm.samples = [];
             vm.selectedSample = -1;
         },
-        selectAccount: function(dataset, newAccount) {
+        selectAccount: function(newAccount, dataset) {
             var vm = this;
             vm.account = newAccount;
             vm.reqGet(vm._safeUrl(
@@ -595,7 +595,7 @@ Vue.component('query-group-accounts', {
         }
     },
     methods: {
-        addAccount: function(dataset, newAccount) {
+        addAccount: function(newAccount, dataset) {
             var vm = this;
             newAccount['full_name'] = newAccount.printable_name;
             var group = vm.items.results[vm.selectedItem];
@@ -865,12 +865,6 @@ var AccountTypeAhead = Vue.component('account-typeahead', {
     data: function data() {
         return {
             url: this.$urls.api_account_candidates,
-            items: [],
-            query: '',
-            current: -1,
-            loading: false,
-            selectFirst: false,
-            queryParamName: 'q'
         };
     },
     methods: {
@@ -925,10 +919,17 @@ var AccountTypeAhead = Vue.component('account-typeahead', {
             if( typeof newItem.printable_name !== 'undefined' ) {
                 vm.query = newItem.printable_name;
             }
-            vm.$emit('selectitem', vm.dataset, newItem);
-            // XXX We are letting the parent decide to do reset or not
-            // vm.reset();
-        }
+            vm.$emit('selectitem', newItem, vm.dataset);
+            // We are letting the parent decide to do reset or not.
+        },
+        clearAndForget: function() {
+            var vm = this;
+            vm.clear();
+            // We need to keep the `onHit` selection, if there was an `onHit`.
+            if( typeof vm.prev !== 'undefined' ) {
+                vm.query = vm.prev;
+            }
+        },
     }
 });
 
@@ -989,7 +990,7 @@ Vue.component('campaign-typeahead', {
     onHit: function(newItem) {
       var vm = this;
       if( newItem.title ) {
-        vm.$emit('selectitem', vm.dataset, newItem);
+        vm.$emit('selectitem', newItem, vm.dataset);
         vm.query = newItem.title;
       }
       vm.clear();
@@ -1024,12 +1025,12 @@ QuestionTypeahead = Vue.component('question-typeahead', {
     onHit: function(newItem) {
       var vm = this;
       if( newItem.title ) {
-        vm.$emit('selectitem', vm.dataset, newItem);
+        vm.$emit('selectitem', newItem, vm.dataset);
         vm.query = newItem.title;
       }
       vm.clear();
     },
-    selectCampaign: function(dataset, campaign) {
+    selectCampaign: function(campaign, dataset) {
         var vm = this;
         vm.filterCampaign = campaign;
         vm.url = vm._safeUrl(this.$urls.api_question_typeahead, campaign.slug);
@@ -1073,13 +1074,11 @@ Vue.component('enum-choices-typeahead', {
         typeAheadMixin
     ],
     props: [
-        'question',
+        'dataset',
         'value'
     ],
     data: function () {
         return {
-            url: this.$urls.api_units + '/' + this.question.default_unit.slug
-                + '/choices',
             query: this.value ? this.value : '',
             prev: this.value ? this.value : '',
         };
@@ -1094,7 +1093,7 @@ Vue.component('enum-choices-typeahead', {
                 vm.query = newItem.text;
             }
             vm.clear();
-            vm.$emit('selectitem', newItem.text, vm.question);
+            vm.$emit('selectitem', newItem, vm.dataset);
         },
         clearAndForget: function() {
             var vm = this;
@@ -1102,7 +1101,7 @@ Vue.component('enum-choices-typeahead', {
             // We need to keep the `onHit` selection, if there was an `onHit`.
             vm.query = vm.prev;
         },
-    },
+    }
 });
 
     exports.QueryAccountsByAffinity = QueryAccountsByAffinity;

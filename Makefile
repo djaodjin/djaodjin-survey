@@ -112,8 +112,6 @@ $(installTop)/.npm/djaodjin-survey-packages: $(srcDir)/testsite/package.json
 	$(installDirs) -d $(ASSETS_DIR)/vendor
 	$(installFiles) $(installTop)/node_modules/d3/d3.js $(ASSETS_DIR)/vendor
 	$(installFiles) $(installTop)/node_modules/jquery/dist/jquery.js $(ASSETS_DIR)/vendor
-	$(installFiles) $(installTop)/node_modules/moment/moment.js $(ASSETS_DIR)/vendor
-	$(installFiles) $(installTop)/node_modules/moment-timezone/builds/moment-timezone-with-data.js $(ASSETS_DIR)/vendor
 	$(installFiles) $(installTop)/node_modules/nvd3/build/nv.d3.css $(ASSETS_DIR)/vendor
 	$(installFiles) $(installTop)/node_modules/nvd3/build/nv.d3.js $(ASSETS_DIR)/vendor
 	$(installFiles) $(installTop)/node_modules/vue/dist/vue.js $(ASSETS_DIR)/vendor
