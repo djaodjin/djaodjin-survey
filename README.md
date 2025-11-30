@@ -41,8 +41,9 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/))
 - **Python:** 3.12, **Django:** 5.2 (latest)
 
-0.17.3
+0.17.4
 
+  * returns 200 (instead of 201) if we are just re-sending portfolio requests
   * prevents 500 error if an extra field doesnot exist
   * adds dynamic set of content fields in benchmark query
 
