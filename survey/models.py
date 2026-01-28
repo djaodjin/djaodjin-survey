@@ -106,6 +106,10 @@ class Unit(models.Model):
         SYSTEM_IMPERIAL,
     ]
 
+    EXTENDED_METRIC_SYSTEMS =  METRIC_SYSTEMS + [
+        SYSTEM_ENUMERATED     # to record "not relevant"
+    ]
+
     NUMERICAL_SYSTEMS = METRIC_SYSTEMS + [
         SYSTEM_RANK
     ]
@@ -125,6 +129,13 @@ class Unit(models.Model):
             return Choice.objects.filter(
                 question__isnull=True, unit=self).order_by('rank')
         return Choice.objects.none()
+
+    @property
+    def equivalences(self):
+        # We return the unit itself in the set of equivalent units to simplify
+        # inclusion tests in the UI front-end.
+        return Unit.objects.filter(
+            models.Q(pk=self.pk) | models.Q(target_equivalences__source=self))
 
     def __str__(self):
         return str(self.slug)
@@ -719,7 +730,7 @@ class AnswerManager(models.Manager):
 
     def get_frozen_answers(self, campaign, samples, prefix=None, excludes=None):
         queryset = self.raw(sql_frozen_answers(
-            campaign, samples, prefix=prefix, excludes=excludes))
+            samples, prefix=prefix, campaign=campaign, excludes=excludes))
         if DJANGO_VERSION[0] >= 3:
             return queryset.prefetch_related(
                 'unit', 'collected_by', 'question', 'question__content',

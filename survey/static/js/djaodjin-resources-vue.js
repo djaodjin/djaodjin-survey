@@ -239,7 +239,10 @@ var paramsMixin = {
     computed: {
         _start_at: {
             get: function() {
-                return this.asDateInputField(this.params.start_at);
+                if( this.params.start_at ) {
+                    return this.asDateInputField(this.params.start_at);
+                }
+                return null;
             },
             set: function(newVal) {
                 if( newVal ) {
@@ -263,7 +266,10 @@ var paramsMixin = {
                 //
                 // const dateValue = moment(this.params.ends_at).add(1,'days');
                 // return dateValue.isValid() ? dateValue.format("YYYY-MM-DD") : null;
-                return this.asDateInputField(this.params.ends_at);
+                if( this.params.ends_at ) {
+                    return this.asDateInputField(this.params.ends_at);
+                }
+                return null;
             },
             set: function(newVal) {
                 if( newVal ) {

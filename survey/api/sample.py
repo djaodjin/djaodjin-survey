@@ -1,4 +1,4 @@
-# Copyright (c) 2025, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -185,7 +185,13 @@ def update_or_create_answer(datapoint, question, sample, created_at,
     created = False
     measured = datapoint.get('measured', None)
     unit = datapoint.get('unit', question.default_unit)
-    LOGGER.debug("%s %s [%s]", measured, unit, measured.__class__)
+    LOGGER.debug("update_or_create_answer["\
+        "settings.CONVERT_TO_QUESTION_SYSTEM=%s,"\
+        "settings.FORCE_ONLY_QUESTION_UNIT=%s, "\
+        "settings.DENORMALIZE_FOR_PRECISION=%s] %s %s [%s]",
+        settings.CONVERT_TO_QUESTION_SYSTEM,
+        settings.FORCE_ONLY_QUESTION_UNIT,
+        settings.DENORMALIZE_FOR_PRECISION, measured, unit, measured.__class__)
     measured_collected = None
     unit_collected = None
     try:
@@ -223,7 +229,9 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                             'measured': measured, 'source_unit': unit_collected,
                             'target_unit': question.default_unit})
 
-                LOGGER.debug("%s %s [%s]", measured, unit, measured.__class__)
+                LOGGER.debug("%s %s [%s, CONVERT_TO_QUESTION_SYSTEM=%s]",
+                    measured, unit, measured.__class__,
+                    settings.CONVERT_TO_QUESTION_SYSTEM)
 
                 # 2a. If we can store the collected measure without
                 # lose of precision in the question unit, let's do that.
@@ -248,7 +256,11 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                             unit = equiv.target
                             break
 
-                LOGGER.debug("%s %s [%s]", measured, unit, measured.__class__)
+                LOGGER.debug("%s %s [%s, FORCE_ONLY_QUESTION_UNIT=%s,"\
+                    " DENORMALIZE_FOR_PRECISION=%s]",
+                    measured, unit, measured.__class__,
+                    settings.FORCE_ONLY_QUESTION_UNIT,
+                    settings.DENORMALIZE_FOR_PRECISION)
 
                 # 3. When the converted measure rounded to the closest
                 # integer fits the database number of bits for an integer,
@@ -274,7 +286,12 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                             unit = equiv.target
                             break
 
-                LOGGER.debug("%s %s [%s]", measured, unit, measured.__class__)
+                LOGGER.debug("%s %s [%s, FORCE_ONLY_QUESTION_UNIT=%s,"\
+                    " DENORMALIZE_FOR_PRECISION=%s, MEASURED_MAX_VALUE=%s]",
+                    measured, unit, measured.__class__,
+                    settings.FORCE_ONLY_QUESTION_UNIT,
+                    settings.DENORMALIZE_FOR_PRECISION,
+                    Answer.MEASURED_MAX_VALUE)
 
                 # We are only storing integers in the database
                 # Implementation Note: In Python 3, the plain `int` type is
@@ -295,12 +312,6 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                     raise ValidationError(
                         _("overflow encoding '%(measured)s' in %(unit)s.") % {
                         'measured': measured, 'unit': unit})
-
-                # Stores only one Answer with equivalent unit per Sample.
-                Answer.objects.filter(Q(unit=unit) |
-                    Q(unit__in=UnitEquivalences.objects.filter(
-                        target=unit).values('source')),
-                    sample=sample, question=question).delete()
 
             if unit.system not in Unit.NUMERICAL_SYSTEMS:
                 if unit.system == Unit.SYSTEM_ENUMERATED:
@@ -333,12 +344,15 @@ def update_or_create_answer(datapoint, question, sample, created_at,
 
             # Create or update the answer
             if measured is not None:
+                # Stores only one Answer with equivalent unit per Sample.
                 answer, created = Answer.objects.update_or_create(
-                    sample=sample, question=question, unit=unit,
                     defaults={
                         'measured': measured,
+                        'unit': unit,
                         'created_at': created_at,
-                        'collected_by': collected_by})
+                        'collected_by': collected_by},
+                    sample=sample, question=question,
+                    unit__in=unit.equivalences)
 
             if measured_collected:
                 # We have converted the datapoint collected from the user
@@ -349,10 +363,12 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                         collected=measured_collected,
                         answer=answer,
                         unit=unit_collected)
+                LOGGER.debug("save answer as collected: %s %s [%s]",
+                    measured_collected, unit_collected,
+                    measured_collected.__class__)
 
             if sample and sample.updated_at != created_at:
-                sample.updated_at = created_at
-                sample.save()
+                sample.save(update_fields={'updated_at': created_at})
 
     except DataError as err:
         LOGGER.exception(err)
@@ -563,9 +579,10 @@ class SampleAPIView(SampleMixin, generics.RetrieveAPIView):
 
 class SampleAnswersMixin(SampleMixin):
 
-    def get_answers(self, prefix=None, sample=None, excludes=None):
+    def _get_answers_sql(self, prefix=None, sample=None, excludes=None):
         """
-        Returns answers on a sample. In case the sample is still active,
+        Returns a SQL statement that queries answers on a sample.
+        In case the sample is still active,
         also returns questions on the associated campaign with no answer.
 
         The answers can be filtered such that only questions with a path
@@ -728,9 +745,65 @@ LEFT OUTER JOIN answers
       'prefix': prefix,
       'sample': sample.pk,
   }
+        return query_text
+
+
+    def get_answers(self, prefix=None, sample=None, excludes=None):
+        """
+        Returns answers on a sample. In case the sample is still active,
+        also returns questions on the associated campaign with no answer.
+
+        The answers can be filtered such that only questions with a path
+        starting by `prefix` are included. Questions included whose
+        extra field does not contain `excludes` can be further removed
+        from the results.
+        """
+        return Answer.objects.raw(self._get_answers_sql(
+            prefix=prefix, sample=sample, excludes=excludes)).prefetch_related(
+            'unit', 'collected_by', 'question', 'question__content',
+            'question__default_unit')
+
+
+    def get_answers_collected(self, prefix=None, sample=None, excludes=None):
+        """
+        Returns answers on a sample. In case the sample is still active,
+        also returns questions on the associated campaign with no answer.
+
+        The answers can be filtered such that only questions with a path
+        starting by `prefix` are included. Questions included whose
+        extra field does not contain `excludes` can be further removed
+        from the results.
+        """
+        answers_sql = self._get_answers_sql(
+            prefix=prefix, sample=sample, excludes=excludes)
+        query_text = """WITH answers AS (
+%(answers_sql)s
+)
+SELECT
+    answers.id AS id,
+    answers.created_at AS created_at,
+    answers.question_id AS question_id,
+    COALESCE(survey_answercollected.unit_id, answers.unit_id) AS unit_id,
+-- XXX "django.db.utils.ProgrammingError: COALESCE types text and integer cannot be matched"
+--    COALESCE(survey_answercollected.collected, answers.measured) AS measured,
+    answers.measured AS measured,
+    answers.denominator AS denominator,
+    answers.collected_by_id AS collected_by_id,
+    answers.sample_id AS sample_id,
+    answers._rank AS _rank,
+    answers.required AS required,
+    answers.ref_num AS ref_num,
+    COALESCE(survey_answercollected.collected,
+        answers._measured_text) AS _measured_text,
+    answers.frozen AS frozen
+FROM answers
+LEFT OUTER JOIN survey_answercollected
+ON answers.id = survey_answercollected.answer_id
+""" % {'answers_sql': answers_sql}
         return Answer.objects.raw(query_text).prefetch_related(
-      'unit', 'collected_by', 'question', 'question__content',
-      'question__default_unit')
+            'unit', 'collected_by', 'question', 'question__content',
+            'question__default_unit')
+
 
     def get_questions_by_key(self, prefix=None, initial=None):
         """

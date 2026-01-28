@@ -1,4 +1,4 @@
-# Copyright (c) 2025, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,7 @@ from ..docs import extend_schema
 from ..filters import SearchFilter
 from ..models import Choice, Unit
 from .serializers import (ChoiceSerializer, ConvertUnitSerializer, EnumField,
-    UnitSerializer)
+    UnitSerializer, UnitDetailSerializer)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -167,7 +167,7 @@ class UnitDetailAPIView(generics.RetrieveAPIView):
         }
     """
     queryset = Unit.objects.all()
-    serializer_class = UnitSerializer
+    serializer_class = UnitDetailSerializer
     lookup_field = 'slug'
     lookup_url_kwarg = 'unit'
     search_fields = ( # applies to `Choice`, not `self.object` (of type `Unit`)
@@ -286,29 +286,7 @@ class UnitListAPIView(generics.ListAPIView):
           "results": [{
             "slug": "assessment",
             "title": "assessments",
-            "system": "enum",
-            "choices": [
-                {
-                    "rank": 1,
-                    "text": "mostly-yes",
-                    "descr": "Mostly yes"
-                },
-                {
-                    "rank": 2,
-                    "text": "yes",
-                    "descr": "Yes"
-                },
-                {
-                    "rank": 3,
-                    "text": "no",
-                    "descr": "No"
-                },
-                {
-                    "rank": 4,
-                    "text": "mostly-no",
-                    "descr": "Mostly no"
-                }
-            ]
+            "system": "enum"
           }]
         }
     """

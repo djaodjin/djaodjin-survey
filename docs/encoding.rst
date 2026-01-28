@@ -34,7 +34,7 @@ was created in the database.
     .. code-block:: json
 
         {
-              "created_at":"2023-01-01",
+              "created_at":"2025-01-01",
               "items":[{
                 "slug":"main-factory",
                 "measured":"65",
@@ -47,7 +47,7 @@ TABLE survey_answer:
 +----+------------+-------------+---------------+--------+---------------+
 | id | created_at | measured    | unit          | sample | question      |
 +====+============+=============+===============+========+===============+
-| 1  | 2022-01-01 |          65 | m2            |     1  | factory-size  |
+| 1  | 2025-01-01 |          65 | m2            |     1  | factory-size  |
 +----+------------+-------------+---------------+--------+---------------+
 
 TABLE survey_sample:
@@ -55,7 +55,7 @@ TABLE survey_sample:
 +----+------------+--------------+----------------+-----------+
 | id | created_at | account      | campaign       | is_frozen |
 +====+============+==============+================+===========+
-|  1 | 2023-01-27 | main-factory | null           | true      |
+|  1 | 2025-01-27 | main-factory | null           | true      |
 +----+------------+--------------+----------------+-----------+
 
 
@@ -77,8 +77,8 @@ to encode the date at which the recording period started (i.e. baseline).
     .. code-block:: json
 
         {
-              "baseline_at":"2022-01-01",
-              "created_at":"2023-01-01",
+              "baseline_at":"2024-01-01",
+              "created_at":"2025-01-01",
               "items":[{
                 "slug":"main-factory",
                 "measured":"12",
@@ -91,9 +91,9 @@ TABLE survey_answer:
 +----+------------+-------------+---------------+--------+---------------+
 | id | created_at | measured    | unit          | sample | question      |
 +====+============+=============+===============+========+===============+
-| 1  | 2022-01-01 |           0 | tons          |     1  | ghg-emissions |
+| 1  | 2024-01-01 |           0 | tons          |     1  | ghg-emissions |
 +----+------------+-------------+---------------+--------+---------------+
-| 2  | 2023-01-01 |          12 | tons          |     2  | ghg-emissions |
+| 2  | 2025-01-01 |          12 | tons          |     2  | ghg-emissions |
 +----+------------+-------------+---------------+--------+---------------+
 
 
@@ -102,9 +102,9 @@ TABLE survey_sample:
 +----+------------+--------------+----------------+-----------+
 | id | created_at | account      | campaign       | is_frozen |
 +====+============+==============+================+===========+
-|  1 | 2023-01-27 | main-factory | null           | true      |
+|  1 | 2025-01-27 | main-factory | null           | true      |
 +----+------------+--------------+----------------+-----------+
-|  2 | 2023-01-27 | main-factory | null           | true      |
+|  2 | 2025-01-27 | main-factory | null           | true      |
 +----+------------+--------------+----------------+-----------+
 
 
@@ -119,8 +119,8 @@ dummy record to encode the baseline date.
         .. code-block:: json
 
             {
-              "baseline_at":"2023-01-01",
-              "created_at":"2024-01-01",
+              "baseline_at":"2024-01-01",
+              "created_at":"2025-01-01",
               "items":[{
                 "slug":"main-factory",
                 "measured":"8",
@@ -133,11 +133,11 @@ TABLE survey_answer:
 +----+------------+-------------+---------------+--------+---------------+
 | id | created_at | measured    | unit          | sample | question      |
 +====+============+=============+===============+========+===============+
-| 1  | 2022-01-01 |        0    | tons          |     1  | ghg-emissions |
+| 1  | 2023-01-01 |        0    | tons          |     1  | ghg-emissions |
 +----+------------+-------------+---------------+--------+---------------+
-| 2  | 2023-01-01 |       12    | tons          |     2  | ghg-emissions |
+| 2  | 2024-01-01 |       12    | tons          |     2  | ghg-emissions |
 +----+------------+-------------+---------------+--------+---------------+
-| 3  | 2024-01-01 |        8    | tons          |     3  | ghg-emissions |
+| 3  | 2025-01-01 |        8    | tons          |     3  | ghg-emissions |
 +----+------------+-------------+---------------+--------+---------------+
 
 
@@ -146,11 +146,11 @@ TABLE survey_sample:
 +----+------------+--------------+----------------+-----------+
 | id | created_at | account      | campaign       | is_frozen |
 +====+============+==============+================+===========+
-|  1 | 2023-01-27 | main-factory | null           | true      |
+|  1 | 2024-01-12 | main-factory | null           | true      |
 +----+------------+--------------+----------------+-----------+
-|  2 | 2023-01-27 | main-factory | null           | true      |
+|  2 | 2024-01-12 | main-factory | null           | true      |
 +----+------------+--------------+----------------+-----------+
-|  3 | 2024-01-12 | main-factory | null           | true      |
+|  3 | 2025-01-27 | main-factory | null           | true      |
 +----+------------+--------------+----------------+-----------+
 
 
@@ -179,7 +179,7 @@ TABLE survey_answer:
 +----+------------+-------------+---------------+--------+-----------------+
 | id | created_at | measured    | unit          | sample | question        |
 +====+============+=============+===============+========+=================+
-| 1  | 2023-01-01 |           1 | yes-no        |     1  | code-of-conduct |
+| 1  | 2025-01-27 |           1 | yes-no        |     1  | code-of-conduct |
 +----+------------+-------------+---------------+--------+-----------------+
 
 TABLE survey_choice:
@@ -197,7 +197,7 @@ TABLE survey_sample:
 +----+------------+--------------+----------------+
 | id | created_at | account      | campaign       |
 +====+============+==============+================+
-|  1 | 2023-01-27 | supplier 1   | sustainability |
+|  1 | 2025-01-27 | supplier 1   | sustainability |
 +----+------------+--------------+----------------+
 
 The primary key of the ``Choice`` model for the enumerated value matching
@@ -228,7 +228,7 @@ TABLE survey_answer:
 +----+------------+-------------+---------------+--------+------------------+
 | id | created_at | measured    | unit          | sample | question         |
 +====+============+=============+===============+========+==================+
-| 1  | 2023-01-01 |           1 | freetext      |     1  | improvement-plan |
+| 1  | 2025-01-27 |           1 | freetext      |     1  | improvement-plan |
 +----+------------+-------------+---------------+--------+------------------+
 
 TABLE survey_choice:
@@ -244,7 +244,7 @@ TABLE survey_sample:
 +----+------------+--------------+----------------+
 | id | created_at | account      | campaign       |
 +====+============+==============+================+
-|  1 | 2023-01-27 | supplier 1   | sustainability |
+|  1 | 2025-01-27 | supplier 1   | sustainability |
 +----+------------+--------------+----------------+
 
 ``Answer.measured`` is used in that case to index the actual text inputed

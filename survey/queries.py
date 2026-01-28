@@ -534,7 +534,42 @@ ORDER BY
     return sql_query
 
 
-def sql_frozen_answers(campaign, samples, prefix=None, excludes=None):
+def _sql_answers_filter(samples, prefix=None):
+    """
+    Returns a 'WHERE' SQL clause to filter `Answer` that can be embed as text
+    in SQL statements.
+    """
+    samples_sql = ""
+    if samples:
+        if isinstance(samples, list):
+            samples_sql = ','.join([
+                str(sample_id) for sample_id in samples])
+        elif isinstance(samples, RawQuerySet):
+            samples_sql = "SELECT id FROM (%s) AS samples" % samples.query.sql
+
+    sep = ""
+    extra_question_clause = ""
+    if prefix:
+        extra_question_clause += (
+            "%(sep)ssurvey_question.path LIKE '%(prefix)s%%%%'\n" % {
+                'sep': sep, 'prefix': prefix})
+        sep = " AND "
+
+    sep = ""
+    answers_filter = ""
+    if samples_sql:
+        answers_filter += "%ssample_id IN (%s)" % (sep, samples_sql)
+        sep = " AND "
+    if extra_question_clause:
+        answers_filter += sep + extra_question_clause
+        sep = " AND "
+    if answers_filter:
+        answers_filter = "WHERE " + answers_filter
+
+    return answers_filter
+
+
+def sql_frozen_answers(samples, prefix=None, campaign=None, excludes=None):
     """
     Returns answers on a set of frozen samples.
 
@@ -543,6 +578,16 @@ def sql_frozen_answers(campaign, samples, prefix=None, excludes=None):
     extra field does not contain `excludes` can be further removed
     from the results.
     """
+    if excludes:
+        excludes_clause = (
+            "survey_question.id NOT IN (SELECT id FROM survey_question"\
+            " WHERE extra LIKE '%%%%%(extra)s%%%%')\n" % {'extra': excludes})
+
+    answers_filter = _sql_answers_filter(samples, prefix=prefix)
+    if excludes_clause:
+        sep = " AND " if answers_filter else " WHERE "
+        answers_filter += sep + excludes_clause
+
     sep = ""
     extra_question_clause = ""
     if prefix:
@@ -550,21 +595,8 @@ def sql_frozen_answers(campaign, samples, prefix=None, excludes=None):
             "%(sep)ssurvey_question.path LIKE '%(prefix)s%%%%'\n" % {
                 'sep': sep, 'prefix': prefix})
         sep = " AND "
-    if excludes:
-        extra_question_clause += (
-            "%(sep)ssurvey_question.id NOT IN (SELECT id FROM survey_question"\
-            " WHERE extra LIKE '%%%%%(extra)s%%%%')\n" % {
-                'sep': sep, 'extra': excludes})
-
-    sample_clause = ""
-    if samples:
-        if isinstance(samples, list):
-            sample_sql = ','.join([
-                str(sample_id) for sample_id in samples])
-        elif isinstance(samples, RawQuerySet):
-            sample_sql = "SELECT id FROM (%s) AS frzsmps" % samples.query.sql
-        sample_clause += (
-            "sample_id IN (%s)" % sample_sql)
+    if excludes_clause:
+        extra_question_clause += sep + excludes_clause
 
     sep = ""
     campaign_questions_filters = ""
@@ -578,17 +610,6 @@ def sql_frozen_answers(campaign, samples, prefix=None, excludes=None):
         sep = " AND "
     if campaign_questions_filters:
         campaign_questions_filters = "WHERE " + campaign_questions_filters
-
-    sep = ""
-    additional_filters = ""
-    if sample_clause:
-        additional_filters += sep + sample_clause
-        sep = " AND "
-    if extra_question_clause:
-        additional_filters += sep + extra_question_clause
-        sep = " AND "
-    if additional_filters:
-        additional_filters  = "WHERE " + additional_filters
 
     sql_query = """
 WITH answers AS (
@@ -609,7 +630,7 @@ WITH answers AS (
     LEFT OUTER JOIN survey_choice
       ON survey_choice.id = survey_answer.measured
       AND survey_choice.unit_id = survey_answer.unit_id
-    %(additional_filters)s
+    %(answers_filter)s
 ),
 -- The following brings all current questions in the campaign
 -- in an attempt to present a consistent display (i.e. order by rank).
@@ -657,26 +678,108 @@ INNER JOIN %(accounts_table)s
 ORDER BY questions.id, answers.unit_id, %(accounts_table)s.full_name""" % {
       'convert_to_text': ("" if is_sqlite3() else "::text"),
       'campaign_questions_filters': campaign_questions_filters,
-      'additional_filters': additional_filters,
+      'answers_filter': answers_filter,
       'accounts_table': get_account_model()._meta.db_table,
   }
     return sql_query
 
 
-def get_benchmarks_counts(samples, prefix="/", period_type=None,
+def sql_benchmarks_samples(samples, prefix="/", period_type=None,
+                           extra_fields=None):
+    """
+    Returns a SQL statement that aggregates enumerated choices, optionally
+    per period ('yearly' or 'monthly'), over a set of `samples`
+    for each question that starts with `prefix`.
+    """
+    answers_filter = _sql_answers_filter(samples, prefix=prefix)
+    sep = " AND " if answers_filter else " WHERE "
+    answers_filter += (
+        "%ssurvey_question.default_unit_id = survey_answer.unit_id" % sep)
+
+    group_by_period = ""
+    if period_type:
+        group_by_period = as_sql_date_trunc('survey_sample.created_at',
+            period_type=period_type)
+
+    extra_fields_select = ""
+    extra_fields_propagate = ""
+    content_table = get_content_model()._meta.db_table
+    if extra_fields:
+        for field in extra_fields:
+            extra_fields_select += (
+                "%(content_table)s.%(field)s AS question_%(field)s," % {
+                    'content_table': content_table, 'field': field})
+            extra_fields_propagate += (
+                "question_%(field)s," % {'field': field})
+
+    # answers_by_question_choice is identical to `sql_benchmarks_counts`
+    # but we retrieve the account with a specific answer instead of aggregating.
+    sql_query = """
+WITH answers_by_question_choice AS (
+SELECT
+  survey_answer.sample_id AS sample_id,
+  survey_answer.question_id AS question_id,
+  survey_question.path AS question_path,
+  %(extra_fields_select)s
+  survey_unit.id AS question_default_unit_id,
+  survey_unit.slug AS question_default_unit_slug,
+  survey_unit.title AS question_default_unit_title,
+  survey_unit.system AS question_default_unit_system,
+  CASE WHEN survey_unit.system IN (%(enum_systems)s) THEN survey_choice.text
+  ELSE 'present' END AS choice
+FROM survey_answer
+INNER JOIN survey_question
+  ON survey_answer.question_id = survey_question.id
+INNER JOIN survey_unit
+  ON survey_question.default_unit_id = survey_unit.id
+INNER JOIN %(content_table)s
+  ON survey_question.content_id = %(content_table)s.id
+LEFT OUTER JOIN survey_choice
+  ON (survey_unit.id = survey_choice.unit_id AND
+  survey_choice.id = survey_answer.measured)
+%(answers_filter)s
+)
+SELECT
+  question_id AS id,
+  question_path,
+  %(extra_fields_propagate)s
+  question_default_unit_id,
+  question_default_unit_slug,
+  question_default_unit_title,
+  question_default_unit_system,
+  choice,
+  %(select_period)s
+  answers_by_question_choice.sample_id AS sample_id
+FROM answers_by_question_choice
+INNER JOIN survey_sample
+  ON answers_by_question_choice.sample_id = survey_sample.id
+ORDER BY question_id ASC,%(group_by_period)s choice ASC;""" % {
+    'enum_systems': ",".join([str(system) for system in [
+        UNIT_SYSTEM_ENUMERATED, UNIT_SYSTEM_DATETIME]]),
+                        # XXX target year are stored as choices
+    'answers_filter': answers_filter,
+    'select_period': (
+        "%s AS period," % group_by_period if group_by_period else ""),
+    'group_by_period': (
+        " %s," % group_by_period if group_by_period else ""),
+    'content_table': content_table,
+    'extra_fields_select': extra_fields_select,
+    'extra_fields_propagate': extra_fields_propagate
+    }
+    return sql_query
+
+
+def sql_benchmarks_counts(samples, prefix="/", period_type=None,
                           extra_fields=None):
     """
     Returns a SQL statement that aggregates enumerated choices, optionally
     per period ('yearly' or 'monthly'), over a set of `samples`
     for each question that starts with `prefix`.
     """
-    samples_sql = ""
-    if samples:
-        if isinstance(samples, list):
-            samples_sql = ','.join([
-                str(sample_id) for sample_id in samples])
-        elif isinstance(samples, RawQuerySet):
-            samples_sql = "SELECT id FROM (%s) AS samples" % samples.query.sql
+    answers_filter = _sql_answers_filter(samples, prefix=prefix)
+    sep = " AND " if answers_filter else " WHERE "
+    answers_filter += (
+        "%ssurvey_question.default_unit_id = survey_answer.unit_id" % sep)
 
     group_by_period = ""
     if period_type:
@@ -717,10 +820,7 @@ INNER JOIN %(content_table)s
 LEFT OUTER JOIN survey_choice
   ON (survey_unit.id = survey_choice.unit_id AND
   survey_choice.id = survey_answer.measured)
-WHERE
-  survey_question.default_unit_id = survey_answer.unit_id AND
-  survey_question.path LIKE '%(prefix)s%%%%' AND
-  survey_answer.sample_id IN (%(samples)s)
+%(answers_filter)s
 )
 SELECT
   question_id AS id,
@@ -750,8 +850,7 @@ ORDER BY question_id ASC,%(group_by_period)s choice ASC;""" % {
     'enum_systems': ",".join([str(system) for system in [
         UNIT_SYSTEM_ENUMERATED, UNIT_SYSTEM_DATETIME]]),
                         # XXX target year are stored as choices
-    'prefix': prefix,
-    'samples': samples_sql,
+    'answers_filter': answers_filter,
     'select_period': (
         "%s AS period," % group_by_period if group_by_period else ""),
     'group_by_period': (

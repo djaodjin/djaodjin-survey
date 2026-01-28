@@ -43,18 +43,18 @@ the latest initiated request, so it means we have 5 cases:
 | last_frozen_sample is not None and       | Update                  |
 | portfolio.ends_at is not None and        |                         |
 | last_frozen_sample.created_at            |                         |
-|   < portfolio.ends_at                    |                         |
-|   < doubleoptin.created_at               |                         |
+| < portfolio.ends_at                      |                         |
+| < doubleoptin.created_at                 |                         |
 +------------------------------------------+-------------------------+
 | last_frozen_sample is not None and       | Share                   |
 | portfolio.ends_at is not None and        |                         |
 | portfolio.ends_at                        |                         |
-|   < last_frozen_sample.created_at        |                         |
-|   < doubleoptin.created_at               |                         |
+| < last_frozen_sample.created_at          |                         |
+| < doubleoptin.created_at                 |                         |
 +------------------------------------------+-------------------------+
 | last_frozen_sample is not None and       | Share                   |
 | portfolio.ends_at is not None and        |                         |
 | portfolio.ends_at                        |                         |
-|   < doubleoptin.created_at               |                         |
-|   < last_frozen_sample.created_at        |                         |
+| < doubleoptin.created_at                 |                         |
+| < last_frozen_sample.created_at          |                         |
 +------------------------------------------+-------------------------+

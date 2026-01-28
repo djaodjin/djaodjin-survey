@@ -1,4 +1,4 @@
-# Copyright (c) 2025, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@ from django.http import Http404
 from django.template.defaultfilters import slugify
 from rest_framework import generics, response as http, status
 from rest_framework.exceptions import ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.mixins import DestroyModelMixin, UpdateModelMixin
 
 from .. import settings
@@ -40,10 +41,10 @@ from ..helpers import (construct_periods, convert_dates_to_utc,
     datetime_or_now, extra_as_internal)
 from ..mixins import (AccountMixin, CampaignMixin, DateRangeContextMixin,
     EditableFilterMixin as EditableFilterBaseMixin, MatrixMixin, SampleMixin)
-from ..models import (Answer, Choice, Matrix, EditableFilter,
+from ..models import (Answer, Campaign, Choice, Matrix, EditableFilter,
     EditableFilterEnumeratedAccounts, Sample, Unit, UnitEquivalences)
 from ..pagination import MetricsPagination
-from ..queries import get_benchmarks_counts
+from ..queries import sql_benchmarks_counts, sql_benchmarks_samples
 from ..utils import (get_accessible_accounts, get_account_model,
     get_question_model, get_engaged_accounts, get_account_serializer,
     get_question_serializer, handle_uniq_error)
@@ -118,7 +119,34 @@ class EditableFilterMixin(AccountMixin, EditableFilterBaseMixin):
         return self._editable_filter
 
 
-class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
+class BenchmarkCampaignMixin(CampaignMixin):
+    """
+    Overrides `campaign` property so the campaign can be passed through
+    a query parameter in benchmarks APIs.
+    """
+
+    def get_query_param(self, key, default_value=None):
+        try:
+            return self.request.query_params.get(key, default_value)
+        except AttributeError:
+            pass
+        return self.request.GET.get(key, default_value)
+
+    @property
+    def campaign(self):
+        if not hasattr(self, '_campaign'):
+            campaign_slug = self.kwargs.get(self.campaign_url_kwarg)
+            if not campaign_slug:
+                campaign_slug = self.get_query_param(self.campaign_url_kwarg)
+            if campaign_slug:
+                self._campaign = get_object_or_404(
+                    Campaign.objects.all(), slug=campaign_slug)
+            else:
+                self._campaign = None
+        return self._campaign
+
+
+class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
     """
     Base class to aggregate answers
     """
@@ -165,7 +193,11 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
     def _flush_choices(self, questions_by_key, row, choices, extra_fields=None):
         """
         Populates `questions_by_key` with benchmark data aggregated in choices.
+
+        `choices` is an `OrderedDict` index by `Choice.text` that will be
+        transformed into a list of tuple.
         """
+        #pylint:disable=too-many-locals
         question_id = row.pk
         start_at = getattr(row, 'period', None)
         if question_id not in questions_by_key:
@@ -194,10 +226,16 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
             }]
         assert len(question['benchmarks']) == 1
         values = question['benchmarks'][0].get('values')
+        choice_list = []
+        for choice, choice_d in choices.items():
+            count = choice_d['count']
+            if not count:
+                count = len(choice_d['samples'])
+            choice_list += [(choice, count, choice_d['samples'])]
         if start_at:
-            values += [(start_at, choices)]
+            values += [(start_at, choice_list)]
         else:
-            values += choices
+            values += choice_list
 
 
     def get_questions_by_key(self, prefix=None, initial=None):
@@ -252,17 +290,28 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
 
             # samples that will be counted in the benchmark
             if samples:
-                sql_query = get_benchmarks_counts(samples, prefix=prefix,
+                sql_query = sql_benchmarks_counts(samples, prefix=prefix,
                     period_type=period_type, extra_fields=extra_fields)
+                if False:
+                    # XXX only executes when accounts are accessible.
+                    sql_query = sql_benchmarks_samples(samples, prefix=prefix,
+                        period_type=period_type, extra_fields=extra_fields)
                 queryset = get_question_model().objects.raw(sql_query)
 
-                choices = []
+                choices = OrderedDict()
                 prev_row = None
                 prev_period_start_at = None
                 for question in queryset:
                     question_id = question.pk
                     choice = question.choice
-                    count = question.nb_samples
+                    try:
+                        count = question.nb_samples
+                    except AttributeError:
+                        count = 0
+                    try:
+                        sample_id = question.sample_id
+                    except AttributeError:
+                        sample_id = None
                     period_start_at = getattr(question, 'period', None)
                     if ((prev_row and prev_row.pk != question_id) or
                         (period_start_at and (prev_period_start_at and
@@ -270,10 +319,15 @@ class BenchmarkMixin(DateRangeContextMixin, CampaignMixin):
                         self._flush_choices(
                             questions_by_key, prev_row, choices,
                             extra_fields=extra_fields)
-                        choices = []
+                        choices = OrderedDict()
                     prev_period_start_at = period_start_at
                     prev_row = question
-                    choices += [(choice, count)]
+                    if choice not in choices:
+                        choices.update({choice: {'count': 0, 'samples': []}})
+                    if count:
+                        choices[choice]['count'] += count
+                    if sample_id:
+                        choices[choice]['samples'] += [sample_id]
                 if prev_row:
                     self._flush_choices(
                         questions_by_key, prev_row, choices,
@@ -445,7 +499,7 @@ class BenchmarkIndexAPIView(BenchmarkAllIndexAPIView):
 
 
 class AccessiblesAccountsMixin(AccountsDateRangeMixin,
-                               CampaignMixin, AccountMixin):
+                               BenchmarkCampaignMixin, AccountMixin):
     """
     Query accounts by 'accessibles' affinity
     """
@@ -594,7 +648,7 @@ class AccessiblesBenchmarkIndexAPIView(AccessiblesBenchmarkAPIView):
 
 
 class EngagedAccountsMixin(AccountsDateRangeMixin,
-                           CampaignMixin, AccountMixin):
+                           BenchmarkCampaignMixin, AccountMixin):
     """
     Query accounts by 'accessibles' affinity
     """
@@ -743,7 +797,7 @@ class EngagedBenchmarkIndexAPIView(EngagedBenchmarkAPIView):
 
 
 class EditableFilterAccountsMixin(AccountsDateRangeMixin,
-                                  CampaignMixin, EditableFilterMixin):
+                                  BenchmarkCampaignMixin, EditableFilterMixin):
     """
     Query accounts for a custom filter
     """

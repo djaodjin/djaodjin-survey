@@ -206,12 +206,22 @@ class UnitSerializer(serializers.ModelSerializer):
     system = EnumField(choices=Unit.SYSTEMS,
         help_text=_("One of standard (metric system), imperial,"\
             " rank, enum, or freetext"))
-    choices = serializers.SerializerMethodField(required=False)
 
     class Meta:
         model = Unit
-        fields = ('slug', 'title', 'system', 'choices')
-        read_only_fields = ('slug', 'choices',)
+        fields = ('slug', 'title', 'system',)
+        read_only_fields = ('slug',)
+
+
+class UnitDetailSerializer(UnitSerializer):
+
+    choices = serializers.SerializerMethodField(required=False)
+    equivalences = serializers.ListField(child=UnitSerializer(), required=False)
+
+    class Meta(UnitSerializer.Meta):
+        fields = UnitSerializer.Meta.fields + ('choices', 'equivalences',)
+        read_only_fields = UnitSerializer.Meta.read_only_fields + (
+            'choices', 'equivalences',)
 
     def get_choices(self, dictionary):
         # enables filtered choices
@@ -239,6 +249,9 @@ class UnitSerializer(serializers.ModelSerializer):
 
 
 class ConvertUnitSerializer(UnitSerializer):
+    """
+    Value converted to unit
+    """
 
     value = serializers.SerializerMethodField()
 

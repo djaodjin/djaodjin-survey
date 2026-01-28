@@ -674,20 +674,27 @@ Vue.component('query-group-accounts', {
 
 var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
     mixins: [
-        itemMixin
+        itemMixin // includes `_start_at`/`_ends_at` from `paramsMixin`
+                  // through `httpRequestMixin`
     ],
     props: [
+        'campaign',
         'disabled',
+        'endsAt',
         'period',
-        'prefix'
+        'prefix',
+        'startAt',
     ],
     data: function() {
         return {
             affinityType: "all",
             params: {
+                campaign: null,
                 start_at: null,
                 ends_at: null,
-                period_type: null
+                period_type: null,
+                accounts_start_at: null,
+                accounts_ends_at: null,
             }
         }
     },
@@ -697,7 +704,10 @@ var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
             if( !affinityType ) {
                 affinityType = vm.affinityType;
             }
+            vm.params.start_at = vm.startAt ? vm.startAt : null;
+            vm.params.ends_at = vm.endsAt ? vm.endsAt : null;
             vm.params.period_type = vm.period ? vm.period : null;
+            vm.params.campaign = vm.campaign ? vm.campaign : null;
             const title = vm.$el.querySelector(
                 '[value="' + affinityType + '"]').textContent;
             const url = vm._safeUrl(vm._safeUrl(
@@ -711,6 +721,50 @@ var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
             vm.$emit('updatedataset', dataset);
         },
     },
+    computed: {
+        _accounts_start_at: {
+            get: function() {
+                if( this.params.accounts_start_at ) {
+                    return this.asDateInputField(this.params.accounts_start_at);
+                }
+                return null;
+            },
+            set: function(newVal) {
+                if( newVal ) {
+                    // The setter might be call with `newVal === null`
+                    // when the date is incorrect (ex: 09/31/2022).
+                    this.$set(this.params, 'accounts_start_at',
+                        this.asDateISOString(newVal));
+                }
+            }
+        },
+        _accounts_ends_at: {
+            get: function() {
+                // form field input="date" will expect ends_at as a String
+                // but will literally cut the hour part regardless of timezone.
+                // We don't want an empty list as a result.
+                // If we use moment `endOfDay` we get 23:59:59 so we
+                // add a full day instead. It seemed clever to run the following
+                // code but that prevented entering the year part in the input
+                // field (as oppossed to use the widget).
+                //
+                // const dateValue = moment(this.params.ends_at).add(1,'days');
+                // return dateValue.isValid() ? dateValue.format("YYYY-MM-DD") : null;
+                if( this.params.accounts_ends_at ) {
+                    return this.asDateInputField(this.params.accounts_ends_at);
+                }
+                return null;
+            },
+            set: function(newVal) {
+                if( newVal ) {
+                    // The setter might be call with `newVal === null`
+                    // when the date is incorrect (ex: 09/31/2022).
+                    this.$set(this.params, 'accounts_ends_at',
+                        this.asDateISOString(newVal));
+                }
+            }
+        },
+    }
 });
 
 
@@ -1025,6 +1079,7 @@ QuestionTypeahead = Vue.component('question-typeahead', {
     onHit: function(newItem) {
       var vm = this;
       if( newItem.title ) {
+        if( vm.filterCampaign ) newItem.campaign = vm.filterCampaign.slug;
         vm.$emit('selectitem', newItem, vm.dataset);
         vm.query = newItem.title;
       }

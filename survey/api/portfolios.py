@@ -630,9 +630,9 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                 requests_initiated += [(portfolio, [account_data])]
 
         message = serializer.validated_data.get('message')
-        for request in requests_initiated:
-            portfolio = request[0]
-            recipients = request[1]
+        for req in requests_initiated:
+            portfolio = req[0]
+            recipients = req[1]
             signals.portfolios_request_initiated.send(sender=__name__,
                 portfolios=[portfolio], recipients=recipients, message=message,
                 request=self.request)
