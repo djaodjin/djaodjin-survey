@@ -578,6 +578,7 @@ def sql_frozen_answers(samples, prefix=None, campaign=None, excludes=None):
     extra field does not contain `excludes` can be further removed
     from the results.
     """
+    excludes_clause = ""
     if excludes:
         excludes_clause = (
             "survey_question.id NOT IN (SELECT id FROM survey_question"\

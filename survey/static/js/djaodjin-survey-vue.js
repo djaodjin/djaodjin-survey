@@ -108,7 +108,7 @@ Vue.component('portfolios-received-list', {
             vm.reqPost(portfolio.api_accept,
             function(resp) { // success
                 vm.items.results.splice(idx, 1);
-                vm.showMessages(
+                showMessages(
                     ["You have accepted the request(s)."],
                         "success");
             });
@@ -118,7 +118,7 @@ Vue.component('portfolios-received-list', {
             vm.reqDelete(portfolio.api_accept,
             function(resp) { // success
                 vm.items.results.splice(idx, 1);
-                vm.showMessages(
+                showMessages(
                     ["You have denied the request(s)."],
                         "success");
             });
@@ -358,7 +358,7 @@ Vue.component('portfolios-request-list', {
             var vm = this;
             vm.reqPost(vm.url, vm.request,
             function(resp) { // success
-                vm.showMessages(
+                showMessages(
                     ["Your porfolio request(s) was successfully sent."],
                     "success");
                 vm.requests = [];
