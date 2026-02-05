@@ -28,7 +28,7 @@ from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F, Q, Max
+from django.db.models import F, Max
 from django.db.utils import DataError
 from rest_framework import generics, mixins
 from rest_framework import response as http
@@ -37,7 +37,7 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED
 
 from .. import settings
-from ..compat import six, is_authenticated, gettext_lazy as _
+from ..compat import gettext_lazy as _, is_authenticated, six
 from ..docs import OpenApiResponse, extend_schema
 from ..filters import (CampaignFilter, DateRangeFilter, OrderingFilter,
     SampleStateFilter)
@@ -158,8 +158,8 @@ def attach_answers(units, questions_by_key, queryset,
                 break
 
 
-def update_or_create_answer(datapoint, question, sample, created_at,
-                            collected_by=None):
+def update_or_create_answer(datapoint, question, sample,
+                            at_time=None, collected_by=None):
     """
     Encodes and persists a `datapoint` for an account (i.e. `sample.account`)
     to `question`, collected at date/time `created_at`, in the database.
@@ -184,7 +184,14 @@ def update_or_create_answer(datapoint, question, sample, created_at,
     answer = None
     created = False
     measured = datapoint.get('measured', None)
+    if measured is None:
+        return answer, created
     unit = datapoint.get('unit', question.default_unit)
+    if unit.system in Unit.METRIC_SYSTEMS:
+        created_at = datapoint.get('created_at', at_time)
+    else:
+        created_at = at_time
+    at_time = datetime_or_now(at_time)
     LOGGER.debug("update_or_create_answer["\
         "settings.CONVERT_TO_QUESTION_SYSTEM=%s,"\
         "settings.FORCE_ONLY_QUESTION_UNIT=%s, "\
@@ -201,7 +208,13 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                 try:
                     try:
                         # In Python 3, the plain `int` type is unbounded.
-                        measured = int(measured)
+                        measured_as_int = int(measured)
+                        # We are not ready to loose precision at this point,
+                        # so if a float was passed, we will move to the Decimal
+                        # pipeline.
+                        if measured_as_int != measured:
+                            raise ValueError
+                        measured = measured_as_int
                     except ValueError:
                         measured = decimal.Decimal(measured)
                 except (ValueError, decimal.InvalidOperation, DataError):
@@ -353,6 +366,8 @@ def update_or_create_answer(datapoint, question, sample, created_at,
                         'collected_by': collected_by},
                     sample=sample, question=question,
                     unit__in=unit.equivalences)
+                LOGGER.debug("save answer: %s %s [%s]",
+                    measured, unit, measured.__class__)
 
             if measured_collected:
                 # We have converted the datapoint collected from the user
@@ -531,11 +546,8 @@ class AnswerAPIView(SampleMixin, mixins.CreateModelMixin,
 
         user = self.request.user if is_authenticated(self.request) else None
         update_or_create_answer(
-            datapoint,
-            question=self.question,
-            sample=self.sample,
-            created_at=created_at,
-            collected_by=user)
+            datapoint, self.question, self.sample,
+            at_time=created_at, collected_by=user)
 
     def perform_create(self, serializer):
         return self.perform_update(serializer)
@@ -1137,8 +1149,8 @@ class SampleAnswersAPIView(SampleAnswersMixin, mixins.CreateModelMixin,
 
         .. code-block:: http
 
-            POST /api/supplier-1/sample/4c6675a5d5af46c796b8033a7731a86e/\
-answers/code-of-conduct HTTP/1.1
+            POST /api/supplier-1/sample/4c6675a5d5af46c796b8033a7731a86e\
+/answers/code-of-conduct HTTP/1.1
 
         .. code-block:: json
 
@@ -1168,7 +1180,7 @@ answers/code-of-conduct HTTP/1.1
             validated_data = [serializer.validated_data]
 
         user = self.request.user if is_authenticated(self.request) else None
-        created_at = datetime_or_now()
+        at_time = datetime_or_now()
         at_least_one_created = False
         results = []
         errors = []
@@ -1177,15 +1189,12 @@ answers/code-of-conduct HTTP/1.1
             raise ValidationError({
                 'detail': _("cannot update answers in a frozen sample")})
 
+        first_answer = not self.sample.answers.exists()
         for datapoint in validated_data:
-            measured = datapoint.get('measured')
-            if measured is None:
-                continue
             try:
                 answer, created = update_or_create_answer(
-                    datapoint, question=self.question,
-                    sample=self.sample, created_at=created_at,
-                    collected_by=user)
+                    datapoint, self.question, self.sample,
+                    at_time=at_time, collected_by=user)
                 if answer:
                     results += [answer]
                 if created:
@@ -1195,11 +1204,9 @@ answers/code-of-conduct HTTP/1.1
         if errors:
             raise ValidationError(errors)
 
-        first_answer = False #XXX
-        headers = self.get_success_headers(serializer.data)
         return self.get_http_response(results,
             status=HTTP_201_CREATED if at_least_one_created else HTTP_200_OK,
-            headers=headers, first_answer=first_answer)
+            first_answer=first_answer)
 
     @staticmethod
     def _expand_choices(results):
@@ -1217,7 +1224,7 @@ answers/code-of-conduct HTTP/1.1
         return results
 
     def get_http_response(self, results, status=HTTP_200_OK, headers=None,
-                          first_answer=False):#pylint:disable=unused-argument
+                          first_answer=False):
         self._expand_choices(results)
         serializer = self.get_serializer(results, many=True)
         return http.Response(serializer.data, status=status, headers=headers)

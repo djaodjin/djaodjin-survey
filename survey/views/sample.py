@@ -131,9 +131,8 @@ class AnswerUpdateView(SampleMixin, UpdateView):
                 with transaction.atomic():
                     created_at = datetime_or_now()
                     update_or_create_answer(
-                        datapoint, question=self.object.question,
-                        sample=self.object.sample, created_at=created_at,
-                        collected_by=user)
+                        datapoint, self.object.question, self.object.sample,
+                        at_time=created_at, collected_by=user)
             except ValidationError as err:
                 errors += [err]
         if errors:

@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,19 +26,20 @@
 import logging
 
 from django.db import transaction
-from django.db.models import F, Sum
+from django.db.models import Sum
 from rest_framework import status
 from rest_framework.generics import (get_object_or_404, RetrieveAPIView,
     ListAPIView)
 from rest_framework.response import Response as HttpResponse
 from rest_framework.exceptions import ValidationError
 
-from ..compat import gettext_lazy as _, six
+from ..compat import gettext_lazy as _, is_authenticated, six
 from ..docs import extend_schema
 from ..filters import AggregateByPeriodFilter, DateRangeFilter
 from ..helpers import datetime_or_now, get_extra
 from ..mixins import AccountMixin, EditableFilterMixin, QuestionMixin
 from ..models import Answer, Sample, Unit
+from .sample import update_or_create_answer
 from .serializers import (AnswerSerializer, DatapointSerializer,
     EditableFilterValuesCreateSerializer, UnitQueryParamSerializer)
 from ..utils import get_question_model
@@ -147,8 +148,7 @@ class AccountsValuesAPIView(AccountMixin, ListAPIView):
     def get_queryset(self):
         queryset = Answer.objects.filter(
             sample__account__filters__editable_filter__account=self.account
-        ).order_by('-created_at').select_related('sample__account').annotate(
-            account=F('sample__account'))
+        ).distinct().order_by('-created_at').select_related('sample__account')
         return queryset
 
 
@@ -182,8 +182,9 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
           }]
         }
     """
-    serializer_class = AnswerSerializer
+    serializer_class = DatapointSerializer
     filter_backends = (DateRangeFilter,)
+    datapoint_slug = 'account'
 
     def get_serializer_class(self):
         if self.request.method.lower() == 'post':
@@ -211,7 +212,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
         queryset = Answer.objects.filter(
             question=self.editable_filter_question,
             sample__account__filters__editable_filter=self.editable_filter
-        ).order_by('created_at')
+        ).distinct().order_by('-created_at').select_related('sample__account')
         return queryset
 
     def post(self, request, *args, **kwargs):
@@ -266,14 +267,16 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        created_at = datetime_or_now(serializer.validated_data['created_at'])
+        at_time = datetime_or_now()
+        ends_at = datetime_or_now(serializer.validated_data['created_at'])
         baseline_at = serializer.validated_data.get('baseline_at')
         if baseline_at:
             baseline_at = datetime_or_now(baseline_at)
 
-        at_time = datetime_or_now()
         measures_by_accounts = {}
         question = self.editable_filter_question
+        user = self.request.user if is_authenticated(self.request) else None
+
         for item in serializer.validated_data['items']:
             measured = item.get('measured')
             if measured is None:
@@ -285,72 +288,70 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
                     measured = round(float(measured))
                 except ValueError:
                     raise ValidationError({"measured": "must be a number"})
-            account = item.get('slug') # `account` will be an `Account` model.
+            account = item.get(self.datapoint_slug)
+            # `account` will be an `Account` model.
             if account not in measures_by_accounts:
                 measures_by_accounts[account] = []
             measures_by_accounts[account] += [{
                 'measured': measured,
                 'unit': item.get('unit') # `unit` will be a `Unit` model.
             }]
+
+        answers_created = []
         with transaction.atomic():
             for account, measures in six.iteritems(measures_by_accounts):
-                create_answers = []
-                sample = Sample(
-                    account=account,
-                    created_at=at_time,
-                    updated_at=at_time,
-                    is_frozen=True)
-                for measure in measures:
+                sample, created = Sample.objects.get_or_create(
+                    account=account, created_at=ends_at, is_frozen=True,
+                    defaults={'updated_at': at_time})
+                if not created:
+                    sample.updated_at = at_time
+                    sample.save(update_fields={'updated_at'})
+
+                for datapoint in measures:
                     # If we already have a data point for that account
                     # and metric at the end of the period, we update it.
                     # the start date of the period.
-                    measured = measure['measured']
-                    try:
-                        answer = Answer.objects.get(
-                            created_at=created_at,
-                            sample__account=account,
-                            question=question,
-                            unit=measure['unit'])
-                        answer.measured = measured
-                        answer.save()
-                    except Answer.DoesNotExist:
-                        if not sample.pk:
-                            sample.save()
-                        create_answers += [Answer(
-                            sample=sample,
-                            question=question,
-                            created_at=created_at,
-                            collected_by=self.request.user,
-                            unit=measure['unit'],
-                            measured=measured)]
+                    answer, created = update_or_create_answer(
+                        datapoint, question, sample,
+                        at_time=at_time, collected_by=user)
+                    if answer:
+                        datapoint.update({'unit': answer.unit})
+                        if created:
+                            answers_created += [answer]
+
                 if baseline_at:
+                    baseline_sample, created = Sample.objects.get_or_create(
+                        account=account, created_at=baseline_at, is_frozen=True,
+                        defaults={'updated_at': at_time})
                     create_baseline_answers = []
-                    baseline_sample = Sample(
-                        account=account,
-                        created_at=at_time,
-                        updated_at=at_time,
-                        is_frozen=True)
-                    for measure in measures:
+                    for datapoint in measures:
                         # If we already have a data point for that account
                         # and metric at ``baseline_at``, we don't create
                         # a dummy (i.e. measured == 0) data point to store
                         # the start date of the period.
+                        baseline_unit = datapoint['unit']
                         if not Answer.objects.filter(
                             created_at=baseline_at,
                             sample__account=account,
                             question=question,
-                            unit=measure['unit']).exists():
-                            if not baseline_sample.pk:
-                                baseline_sample.save()
+                            unit=baseline_unit).exists():
                             create_baseline_answers += [
                                 Answer(
+                                    created_at=baseline_at,
                                     sample=baseline_sample,
                                     question=question,
-                                    created_at=baseline_at,
-                                    collected_by=self.request.user,
-                                    unit=measure['unit'],
+                                    collected_by=user,
+                                    unit=baseline_unit,
                                     measured=0)]
+                    if create_baseline_answers and not created:
+                        baseline_sample.updated_at = at_time
+                        baseline_sample.save(update_fields={'updated_at'})
                     Answer.objects.bulk_create(create_baseline_answers)
-                Answer.objects.bulk_create(create_answers)
+                    answers_created += create_baseline_answers
 
-        return HttpResponse(serializer.data, status=status.HTTP_201_CREATED)
+        serializer = self.serializer_class(answers_created, many=True,
+            context=self.get_serializer_context())
+        return HttpResponse({
+            'count': len(serializer.data),
+            'results': serializer.data
+        }, status=status.HTTP_201_CREATED)

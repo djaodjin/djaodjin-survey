@@ -179,16 +179,22 @@ class UnitEquivalences(models.Model):
 
     def as_source_unit(self, value):
         if not self.content:
-            raise NotImplementedError("cannot convert %s to %s" % (
-                self.target, self.source))
+            # Implementation Note: We do not use `self.source`
+            # and `self.target` to prevent unnecessary SQL queries
+            # in batch conversions.
+            raise NotImplementedError("We have a `UnitEquivalences`,"\
+                " but cannot convert between units")
         return convert_to_source_unit(
             value, self.factor, self.scale, self.content)
 
 
     def as_target_unit(self, value):
         if not self.content:
-            raise NotImplementedError("cannot convert %s to %s" % (
-                self.source, self.target))
+            # Implementation Note: We do not use `self.source`
+            # and `self.target` to prevent unnecessary SQL queries
+            # in batch conversions.
+            raise NotImplementedError("We have a `UnitEquivalences`,"\
+                " but cannot convert between units")
         return convert_to_target_unit(
             value, self.factor, self.scale, self.content)
 
@@ -786,6 +792,13 @@ class Answer(models.Model):
         if self.sample_id:
             return '%s-%d' % (self.sample.slug, self.rank)
         return str(self.question.content)
+
+    @property
+    def account(self):
+        if not hasattr(self, '_account'):
+            #pylint:disable=attribute-defined-outside-init
+            self._account = self.sample.account
+        return self._account
 
     @property
     def measured_text(self):

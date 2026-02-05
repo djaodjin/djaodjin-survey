@@ -1,4 +1,4 @@
-# Copyright (c) 2025, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,7 @@ from ..compat import gettext_lazy as _, reverse, six
 from ..models import (EditableFilterEnumeratedAccounts, Answer, Campaign,
     Choice, EditableFilter, Matrix, PortfolioDoubleOptIn,
     Sample, Unit, convert_to_target_unit)
-from ..utils import (get_account_model, get_belongs_model, get_question_model,
-    get_account_serializer)
+from ..utils import get_account_model, get_belongs_model, get_question_model
 
 
 class EnumField(serializers.ChoiceField):
@@ -92,6 +91,33 @@ class ExtraField(serializers.CharField):
             except (TypeError, ValueError):
                 pass
         return super(ExtraField, self).to_representation(value)
+
+
+class MeasuredField(serializers.Field):
+    """
+    Accepts to create datapoint where measured is a 'str', 'int' or 'float'.
+
+    Serialized datapoint from the database will always be either 'int' or
+    'str'.
+    """
+
+    def to_internal_value(self, data):
+        if isinstance(data, (float, int)):
+            return data
+        if isinstance(data, str):
+            try:
+                # In Python 3, the plain `int` type is unbounded.
+                return int(data)
+            except ValueError:
+                return data
+        raise ValidationError(_("field should be a 'str', 'int' or 'float'"))
+
+    def to_representation(self, value):
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            return value
+        raise ValidationError(_("field should be a 'str' or 'int'"))
 
 
 class NoModelSerializer(serializers.Serializer):
@@ -173,13 +199,13 @@ class AnswerSerializer(serializers.ModelSerializer):
     """
     Serializer of ``Answer`` when used individually.
     """
-    unit = serializers.SlugRelatedField(required=False, allow_null=True,
+    measured = MeasuredField(required=True, allow_null=True,
+        help_text=_("measurement in unit"))
+    unit = serializers.SlugRelatedField(required=False, #XXXallow_null=True,
         queryset=Unit.objects.all(), slug_field='slug',
         help_text=_("Unit the measured field is in"))
-    measured = serializers.CharField(required=True, allow_null=True,
-        allow_blank=True, help_text=_("measurement in unit"))
 
-    created_at = serializers.DateTimeField(read_only=True,
+    created_at = serializers.DateTimeField(required=False,
         help_text=_("Date/time of creation (in ISO format)"))
     # We are not using a `UserSerializer` here because retrieving profile
     # information must go through the profiles API.
@@ -190,7 +216,7 @@ class AnswerSerializer(serializers.ModelSerializer):
     class Meta(object):
         model = Answer
         fields = ('unit', 'measured', 'created_at', 'collected_by')
-        read_only_fields = ('created_at', 'collected_by')
+        read_only_fields = ('collected_by',)
 
 
 class ChoiceSerializer(serializers.ModelSerializer):
@@ -429,41 +455,25 @@ class SampleSerializer(SampleCreateSerializer):
 
 class DatapointSerializer(AnswerSerializer):
     """
-    Serializer of ``Answer`` when used to retrieve data points.
+    Serializer of ``Answer`` when used to retrieve or create data points.
     """
-    account = serializers.SerializerMethodField()
+    unit = serializers.SlugRelatedField(                # switch to required
+        queryset=Unit.objects.all(), slug_field='slug',
+        help_text=_("Unit the measured field is in"))
+    account = serializers.SlugRelatedField(slug_field='slug',
+        queryset=get_account_model().objects.all(),
+        help_text=("Account this sample belongs to."))
 
     class Meta(object):
         model = AnswerSerializer.Meta.model
         fields = AnswerSerializer.Meta.fields + ('account',)
-
-    @staticmethod
-    def get_account(obj):
-        serializer_class = get_account_serializer()
-        return serializer_class().to_representation(obj.sample.account)
-
-
-class EditableFilterAnswerSerializer(AnswerSerializer):
-    """
-    Serializer of ``Answer`` when used to create data points.
-    """
-    slug = serializers.SlugRelatedField(slug_field='slug',
-        queryset=get_account_model().objects.all(),
-        help_text=("Account this sample belongs to."))
-    unit = serializers.SlugRelatedField(
-        queryset=Unit.objects.all(), slug_field='slug',
-        help_text=_("Unit the measured field is in"))
-
-    class Meta(object):
-        model = AnswerSerializer.Meta.model
-        fields = AnswerSerializer.Meta.fields + ('slug',)
 
 
 class EditableFilterValuesCreateSerializer(NoModelSerializer):
 
     baseline_at = serializers.CharField(required=False)
     created_at = serializers.CharField()
-    items = EditableFilterAnswerSerializer(many=True)
+    items = DatapointSerializer(many=True)
 
     class Meta(object):
         fields = ('baseline_at', 'created_at', 'items',)

@@ -312,7 +312,7 @@ const djApi = {
         // - http(elem, url, data, success)
         // - http(elem, url, data, success, fail)
         args['elem'] = elem;
-        if( typeof url != 'string' && !self._isArray(arg) ) {
+        if( typeof url != 'string' && !self._isArray(url) ) {
             throw '`url` should be a string or an array of ajax queries';
         }
         args['url'] = url;
