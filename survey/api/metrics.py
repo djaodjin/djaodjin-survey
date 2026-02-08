@@ -293,6 +293,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
             if account not in measures_by_accounts:
                 measures_by_accounts[account] = []
             measures_by_accounts[account] += [{
+                'created_at': ends_at,
                 'measured': measured,
                 'unit': item.get('unit') # `unit` will be a `Unit` model.
             }]
