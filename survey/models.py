@@ -988,14 +988,19 @@ class Portfolio(models.Model):
     """
     grantee = models.ForeignKey(settings.ACCOUNT_MODEL,
         on_delete=models.PROTECT, db_index=True,
-        related_name='portfolios_granted')
+        related_name='portfolios_granted',
+        help_text=_("Profile a dataset was shared with"))
     account = models.ForeignKey(settings.ACCOUNT_MODEL,
         on_delete=models.PROTECT, db_index=True,
-        related_name='portfolios')
-    ends_at = models.DateTimeField(null=True)
+        related_name='portfolios',
+        help_text=_("Profile the dataset belongs to"))
+    ends_at = models.DateTimeField(null=True,
+        help_text=_("All datapoints before ``ends_at`` are shared"\
+        " with ``grantee``"))
     campaign = models.ForeignKey('Campaign', null=True,
         on_delete=models.PROTECT, db_index=True,
-        related_name='portfolios')
+        related_name='portfolios',
+        help_text=_("When specified the campaign the datapoints belong to"))
     extra = get_extra_field_class()(null=True, blank=True,
         help_text=_("Extra meta data (can be stringify JSON)"))
 
@@ -1231,19 +1236,24 @@ class PortfolioDoubleOptIn(models.Model):
     # someone to register an AccountModel.
     grantee = models.ForeignKey(settings.ACCOUNT_MODEL, null=True,
         on_delete=models.PROTECT, db_index=True,
-        related_name='portfolio_double_optin_grantees')
+        related_name='portfolio_double_optin_grantees',
+        help_text=_("Profile a dataset will be shared with"))
     account = models.ForeignKey(settings.ACCOUNT_MODEL,
         on_delete=models.PROTECT, db_index=True,
-        related_name='portfolio_double_optin_accounts')
+        related_name='portfolio_double_optin_accounts',
+        help_text=_("Profile the dataset belongs to"))
     campaign = models.ForeignKey('Campaign', null=True,
         on_delete=models.PROTECT,
-        related_name='portfolio_double_optins')
-    ends_at = models.DateTimeField(null=True)
+        related_name='portfolio_double_optins',
+        help_text=_("When present, campaign the datapoints were collected for"))
+    ends_at = models.DateTimeField(null=True,
+        help_text=_("When the request/grant expires"))
     state = models.PositiveSmallIntegerField(
         choices=STATES, default=OPTIN_REQUEST_INITIATED,
         help_text=_("state of the opt-in"))
     initiated_by = models.ForeignKey(settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE)
+        on_delete=models.CASCADE,
+        help_text=_("User that initiated the request/grant"))
     verification_key = models.CharField(max_length=40, null=True, unique=True)
     extra = get_extra_field_class()(null=True, blank=True,
         help_text=_("Extra meta data (can be stringify JSON)"))

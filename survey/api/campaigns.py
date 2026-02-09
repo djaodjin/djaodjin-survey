@@ -171,7 +171,7 @@ class SmartCampaignListMixin(DateRangeContextMixin):
 class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
                           generics.ListCreateAPIView):
     """
-    Lists profile campaigns
+    Lists editable campaigns
 
     Lists campaigns that belongs to a profile.
 

@@ -116,8 +116,10 @@ class AccountsValuesAPIView(AccountMixin, ListAPIView):
     """
     Lists quantitative measurements
 
-    Returns a list of {{page_size}} records.
-    XXX What was entered in the system?
+    Returns a list of {{PAGE_SIZE}} data points that were previously
+    entered in the platform through the
+    `Records quantitative measurements <#api_filters_accounts_values_create>`_
+    API call.
 
     **Tags**: assessments
 
@@ -156,8 +158,11 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
     """
     Lists quantitative measurements for a group
 
-    Returns a list of {{page_size}} records.
-    XXX What was entered in the system?
+    Returns a list of {{PAGE_SIZE}} data points for a group
+    ``{editable_filter}}`` that were previously entered in the platform
+    through the
+    `Records quantitative measurements <#api_filters_accounts_values_create>`_
+    API call.
 
     **Tags**: assessments
 

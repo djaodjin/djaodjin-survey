@@ -2145,7 +2145,7 @@ class EditableFilterObjectsAPIView(AccountMixin, generics.ListCreateAPIView):
 
 class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
     """
-    Lists defined group of profiles
+    Lists groups of profiles
 
     Returns a list of {{PAGE_SIZE}} groups that belong to `{profile}`.
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -73,11 +73,12 @@ class PortfoliosAPIView(SmartPortfolioListMixin, generics.ListAPIView):
     Lists active grants and requests
 
     Lists all grants and requests that have to be accepted or denied
-    by *account*.
+    by ``{profile}``.
 
-    If you want to get all requests that have been initiated by *account*,
-    see /api/{account}/requests. If you want to get all grants that have been
-    initiated *account*, see /api/{account}/grants.
+    If you want to get all requests that have been initiated by ``{profile}``,
+    see `Lists initiated requests <#api_portfolios_requests_list>`_. If you
+    want to get all grants that have been initiated ``{profile}``,
+    see `Lists initiated grants <#api_portfolios_grants_list>`_.
 
     **Tags**: portfolios
 
@@ -171,7 +172,7 @@ class PortfoliosGrantsAPIView(SmartPortfolioListMixin,
     """
     Lists initiated grants
 
-    Lists all grants currently pending initiated by *account*.
+    Lists all grants currently pending initiated by ``{profile}``.
 
     **Tags**: portfolios
 
@@ -374,8 +375,8 @@ class PortfoliosGrantAcceptAPIView(AccountMixin, generics.DestroyAPIView):
     accepts the request, making the `account`'s answers up-to-date `ends_at`
     available to `grantee`.
 
-    Note that *account* parameter is the `grantee` we have send data to here,
-    while the *account* parameter is the `account` owning that data  when
+    Note that ``{profile}`` parameter is the `grantee` we have send data to here,
+    while the ``{profile}`` parameter is the `account` owning that data  when
     calling `POST /api/{account}/grants`.
 
     **Tags**: portfolios
@@ -462,7 +463,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
     """
     Lists initiated requests
 
-    Lists all requests currently pending initiated by *account*.
+    Lists all requests currently pending initiated by ``{profile}``.
 
     **Tags**: portfolios
 
@@ -655,13 +656,14 @@ class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):
         """
         Accepts request
 
-        A `grantee` has made a request to *account*'s portfolio. The *account*
-        accepts the request, making the *account*'s answers up-to-date `ends_at`
-        available to `grantee`.
+        A `grantee` has made a request to ``{profile}``'s portfolio.
+        The ``{profile}`` accepts the request, making the ``{profile}``'s
+        answers up-to-date `ends_at` available to `grantee`.
 
-        Note that *account* is the actual *account* we are looking to access data
-        from here, while the *account* parameter is the `grantee` when calling
-        `POST /api/{account}/requests`.
+        Note that ``{profile}`` is the actual ``{profile}`` we are looking
+        to access data from here, while the ``{profile}`` parameter
+        is the `grantee` when calling
+        `Initiates request <#api_portfolios_requests_create>`_.
 
         **Tags**: portfolios
 

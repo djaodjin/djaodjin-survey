@@ -347,7 +347,8 @@ class QuestionSerializer(serializers.ModelSerializer):
     """
     title = serializers.CharField(required=False, allow_blank=True,
         help_text=_("Short description"))
-    default_unit = UnitSerializer()
+    default_unit = UnitSerializer(
+        help_text=_("Default unit for measured field when none is specified"))
     ui_hint = EnumField(choices=get_question_model().UI_HINTS, required=False,
         help_text=_("Hint for the user interface on"\
             " how to present the input field"))
@@ -377,7 +378,7 @@ class SampleAnswerSerializer(QuestionSerializer):
 
 class CampaignSerializer(serializers.ModelSerializer):
     """
-    Short description of the campaign.
+    Short description of the campaign
     """
 
     account = serializers.SlugRelatedField(
@@ -678,12 +679,13 @@ class PortfolioReceivedSerializer(serializers.ModelSerializer):
 
     grantee = serializers.SlugRelatedField(
         queryset=get_account_model().objects.all(),
-        slug_field=settings.ACCOUNT_LOOKUP_FIELD)
+        slug_field=settings.ACCOUNT_LOOKUP_FIELD,
+        help_text=_("Profile a dataset will be shared with"))
     account = serializers.SlugRelatedField(
         queryset=get_account_model().objects.all(),
-        slug_field=settings.ACCOUNT_LOOKUP_FIELD)
-    campaign = CampaignSerializer(allow_null=True,
-        help_text=_("Campaign granted/requested"))
+        slug_field=settings.ACCOUNT_LOOKUP_FIELD,
+        help_text=_("Profile the dataset belongs to"))
+    campaign = CampaignSerializer(allow_null=True)
     state = EnumField(choices=PortfolioDoubleOptIn.STATES)
     expected_behavior = EnumField(
         choices=PortfolioDoubleOptIn.EXPECTED_BEHAVIOR, required=False)
