@@ -1,3 +1,11 @@
+0.18.0
+
+  * matches behavior when creating datapoints through answers and values API
+  * uses djaodjin-resources.js and djApi
+  * displays quantitative data in collected units in input forms
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 10 Feb 2026 15:35:00 -0700
+
 0.17.4
 
   * returns 200 (instead of 201) if we are just re-sending portfolio requests
