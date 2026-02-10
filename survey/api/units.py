@@ -208,7 +208,7 @@ class ChoiceListAPIView(generics.ListAPIView):
 
     .. code-block:: http
 
-        GET /api/units/assessment/search?q=yes HTTP/1.1
+        GET /api/units/assessment/choices?q=yes HTTP/1.1
 
     responds
 

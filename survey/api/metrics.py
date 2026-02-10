@@ -138,6 +138,7 @@ class AccountsValuesAPIView(AccountMixin, ListAPIView):
           "next": null,
           "previous": null,
           "results": [{
+            "account": "supplier-1",
             "created_at": "2020-01-01T00:00:00Z",
             "measured": 12,
             "unit": "t"
@@ -177,10 +178,11 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
     .. code-block:: json
 
         {
-          "count": 0,
+          "count": 1,
           "next": null,
           "previous": null,
           "results": [{
+            "account": "main-factory",
             "created_at": "2020-01-01T00:00:00Z",
             "measured": 12,
             "unit": "t"
@@ -245,7 +247,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
             {
               "created_at": "2020-01-01T00:00:00Z",
               "items": [{
-                "slug": "main-factory",
+                "account": "main-factory",
                 "measured": 12,
                 "unit": "t"
               }]
@@ -258,7 +260,7 @@ class AccountsFilterValuesAPIView(EditableFilterMixin, ListAPIView):
             {
               "created_at": "2020-01-01T00:00:00Z",
               "items": [{
-                "slug": "main-factory",
+                "account": "main-factory",
                 "measured": 12,
                 "unit": "t"
               }]

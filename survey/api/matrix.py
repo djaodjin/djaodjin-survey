@@ -1118,7 +1118,7 @@ class CompareAPIView(DateRangeContextMixin, CampaignMixin, AccountMixin,
 
     .. code-block:: http
 
-        GET /api/energy-utility/reporting/sustainability/matrix/compare\
+        GET /api/energy-utility/reporting/sustainability/compare\
 /sustainability HTTP/1.1
 
     responds
@@ -1362,7 +1362,7 @@ class CompareIndexAPIView(CompareAPIView):
 
     .. code-block:: http
 
-        GET /api/energy-utility/reporting/sustainability/matrix/compare HTTP/1.1
+        GET /api/energy-utility/reporting/sustainability/compare HTTP/1.1
 
     responds
 
@@ -1374,6 +1374,10 @@ class CompareIndexAPIView(CompareAPIView):
           "results": []
         }
     """
+
+    @extend_schema(operation_id='compare_index')
+    def get(self, request, *args, **kwargs):
+        return super(CompareIndexAPIView, self).get(request, *args, **kwargs)
 
 
 class MatrixCreateAPIView(generics.ListCreateAPIView):

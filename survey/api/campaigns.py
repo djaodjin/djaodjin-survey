@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,7 @@ import logging
 
 from rest_framework import generics
 
+from ..docs import extend_schema
 from ..mixins import CampaignMixin, CampaignQuerysetMixin, DateRangeContextMixin
 from .serializers import (CampaignSerializer, CampaignDetailSerializer,
     CampaignCreateSerializer)
@@ -47,7 +48,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
     .. code-block:: http
 
-        GET /api/alliance/campaigns/sustainability HTTP/1.1
+        GET /api/editables/alliance/campaigns/sustainability HTTP/1.1
 
     responds
 
@@ -148,7 +149,7 @@ class CampaignAPIView(CampaignMixin, generics.RetrieveDestroyAPIView):
 
         .. code-block:: http
 
-            DELETE /api/alliance/campaign/sustainability HTTP/1.1
+            DELETE /api/editables/alliance/campaign/sustainability HTTP/1.1
         """
         #pylint:disable=useless-super-delegation
         return super(CampaignAPIView, self).delete(request, *args, **kwargs)
@@ -181,7 +182,7 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
 
     .. code-block:: http
 
-        GET /api/alliance/campaigns HTTP/1.1
+        GET /api/editables/alliance/campaigns HTTP/1.1
 
     responds
 
@@ -205,6 +206,12 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
             return CampaignCreateSerializer
         return super(CampaignListAPIView, self).get_serializer_class()
 
+    @extend_schema(operation_id='editables_campaign_index')
+    def get(self, request, *args, **kwargs):
+        return super(CampaignListAPIView, self).get(
+            request, *args, **kwargs)
+
+
     def post(self, request, *args, **kwargs):
         """
         Creates a campaign
@@ -217,7 +224,7 @@ class CampaignListAPIView(SmartCampaignListMixin, CampaignQuerysetMixin,
 
         .. code-block:: http
 
-            POST /api/alliance/campaigns HTTP/1.1
+            POST /api/editables/alliance/campaigns HTTP/1.1
 
         .. code-block:: json
 
