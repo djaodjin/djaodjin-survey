@@ -235,7 +235,7 @@
 },
 {
   "fields" : {
-      "path": "/sustainability/esg-strategy-heading/governance-policies/employee-code-of-conduct",
+      "path": "/sustainability/esg-strategy-heading/report-externally",
       "ui_hint" : "radio",
       "content": 1,
       "default_unit": 200
