@@ -37,15 +37,15 @@ Releases
 
 Tested with
 
+- **Python:** 3.12, **Django:** 5.2 ([LTS](https://www.djangoproject.com/download/))
+- **Python:** 3.14, **Django:** 6.0 (next)
+- **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
-- **Python:** 3.10, **Django:** 4.2 ([LTS](https://www.djangoproject.com/download/))
-- **Python:** 3.12, **Django:** 5.2 (latest)
 
-0.18.0
+0.18.1
 
-  * matches behavior when creating datapoints through answers and values API
-  * uses djaodjin-resources.js and djApi
-  * displays quantitative data in collected units in input forms
+  * allows `created_at: null`
+  * starts testing with Django6
 
 [previous release notes](changelog)
 
