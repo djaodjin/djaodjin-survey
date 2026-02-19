@@ -205,7 +205,7 @@ class AnswerSerializer(serializers.ModelSerializer):
         queryset=Unit.objects.all(), slug_field='slug',
         help_text=_("Unit the measured field is in"))
 
-    created_at = serializers.DateTimeField(required=False,
+    created_at = serializers.DateTimeField(required=False, allow_null=True,
         help_text=_("Date/time of creation (in ISO format)"))
     # We are not using a `UserSerializer` here because retrieving profile
     # information must go through the profiles API.

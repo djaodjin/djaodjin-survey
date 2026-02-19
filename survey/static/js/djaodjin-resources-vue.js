@@ -756,6 +756,15 @@ var typeAheadMixin = {
             return newText;
         },
 
+        isExactMatch: function(key) {
+            var vm = this;
+            if( vm.isEmpty ) return true;
+            for( let idx = 0; idx < vm.items.length; ++idx ) {
+                if( vm.items[idx][key] === vm.query ) return true;
+            }
+            return false;
+        },
+
         cancel: function() {},
 
         clear: function() {
@@ -835,8 +844,12 @@ var typeAheadMixin = {
                 vm.loading = false;
                 vm.$nextTick(function() {
                     var inputs = vm.$refs.input;
-                    if( inputs.length > 0 ) {
-                        inputs[0].focus();
+                    if( typeof inputs.length != 'undefined' ) {
+                        if( inputs.length > 0 ) {
+                            inputs[0].focus();
+                        }
+                    } else {
+                        inputs.focus();
                     }
                     if (vm.selectFirst) {
                         vm.down();

@@ -187,9 +187,10 @@ def update_or_create_answer(datapoint, question, sample,
     if measured is None:
         return answer, created
     unit = datapoint.get('unit', question.default_unit)
+    created_at = None
     if unit.system in Unit.METRIC_SYSTEMS:
         created_at = datapoint.get('created_at', at_time)
-    else:
+    if not created_at:
         created_at = at_time
     at_time = datetime_or_now(at_time)
     LOGGER.debug("update_or_create_answer["\
