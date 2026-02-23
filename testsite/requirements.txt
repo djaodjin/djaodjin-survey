@@ -26,8 +26,10 @@ django-debug-toolbar==3.5.0 ; python_version < "3.10"
 django-extensions==4.1      ; python_version >= "3.10"
 django-extensions==3.2.3    ; python_version < "3.10"
                                   # 3.2.0 required by Django==4.0
-gunicorn==23.0.0
-PyJWT==2.6.0
+gunicorn==23.0.0                  # requires Py3.7
+PyJWT==2.11.0                     # 2.11.0 supports Python 3.14
+                                  # 2.10.0 requires Python>=3.9
+                                  # 2.6.0 requires Python>=3.7
 
 # development
 coreapi==2.3.3

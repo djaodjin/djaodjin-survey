@@ -358,17 +358,30 @@ def update_or_create_answer(datapoint, question, sample,
 
             # Create or update the answer
             if measured is not None:
-                # Stores only one Answer with equivalent unit per Sample.
-                answer, created = Answer.objects.update_or_create(
-                    defaults={
-                        'measured': measured,
-                        'unit': unit,
-                        'created_at': created_at,
-                        'collected_by': collected_by},
-                    sample=sample, question=question,
-                    unit__in=unit.equivalences)
-                LOGGER.debug("save answer: %s %s [%s]",
-                    measured, unit, measured.__class__)
+                try:
+                    # Stores only one Answer with equivalent unit per Sample.
+                    answer, created = Answer.objects.update_or_create(
+                        defaults={
+                            'measured': measured,
+                            'unit': unit,
+                            'created_at': created_at,
+                            'collected_by': collected_by},
+                        sample=sample, question=question,
+                        unit__in=unit.equivalences)
+                    LOGGER.debug("save answer: %s %s [%s]",
+                        measured, unit, measured.__class__)
+                except Answer.MultipleObjectsReturned as err:
+                    LOGGER.warning("cannot update answer because of '%s'."\
+                        " deleting and re-creating %s %s [%s]", err, measured,
+                        unit, measured.__class__)
+                    Answer.objects.filter(sample=sample, question=question,
+                            unit__in=unit.equivalences).delete()
+                    answer = Answer.objects.create(
+                        sample=sample, question=question,
+                        unit=unit, measured=measured,
+                        created_at=created_at,
+                        collected_by=collected_by)
+                    created = True
 
             if measured_collected:
                 # We have converted the datapoint collected from the user
