@@ -92,7 +92,6 @@ def attach_answers(units, questions_by_key, queryset,
                     'descr': choice.descr if choice.descr else choice.text
                         } for choice in default_unit.choices]}
                     enum_units[default_unit.pk] = default_unit_dict
-                default_unit = copy.deepcopy(default_unit_dict)
             value = {
                 'path': path,
                 'frozen': bool(getattr(resp, 'frozen', False)),
@@ -152,10 +151,22 @@ def attach_answers(units, questions_by_key, queryset,
                 'question', 'unit', 'rank'):
         default_unit = questions_by_key[choice.question_id].get(
             'default_unit')
+        if not isinstance(default_unit, dict):
+            default_unit = copy.deepcopy(enum_units[default_unit.pk])
+            questions_by_key[choice.question_id].update({
+                'default_unit': default_unit})
+        found = False
+        default_unit_choices = default_unit.get('choices', [])
         for default_unit_choice in default_unit.get('choices'):
             if choice.text == default_unit_choice.get('text'):
                 default_unit_choice.update({'descr': choice.descr})
+                found = True
                 break
+        if not found:
+            default_unit_choices += [{
+                'text': choice.text, 'descr': choice.descr}]
+            if not 'choices' in default_unit:
+                default_unit.update({'choices': default_unit_choices})
 
 
 def update_or_create_answer(datapoint, question, sample,
