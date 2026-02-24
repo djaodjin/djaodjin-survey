@@ -42,10 +42,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.18.1
+0.18.2
 
-  * allows `created_at: null`
-  * starts testing with Django6
+  * expands unit to dict only when question-specific choices
+  * updates primary answer even when unit equilavence has changed
 
 [previous release notes](changelog)
 

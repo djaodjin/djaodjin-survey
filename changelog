@@ -1,3 +1,10 @@
+0.18.2
+
+  * expands unit to dict only when question-specific choices
+  * updates primary answer even when unit equilavence has changed
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 24 Feb 2026 15:25:00 -0700
+
 0.18.1
 
   * allows `created_at: null`
