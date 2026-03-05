@@ -536,6 +536,9 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
             return PortfolioRequestCreateSerializer
         return super(PortfoliosRequestsAPIView, self).get_serializer_class()
 
+    @extend_schema(responses={
+        200: OpenApiResponse(PortfolioOptInSerializer(many=True)),
+        201: OpenApiResponse(PortfolioOptInSerializer(many=True))})
     def post(self, request, *args, **kwargs):
         """
         Initiates request
@@ -579,11 +582,14 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
         serializer.is_valid(raise_exception=True)
         status_code = status.HTTP_200_OK
         account_model = get_account_model()
-        ends_at = datetime_or_now()
+        at_time = datetime_or_now()
         defaults = {
             'state': PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
-            'initiated_by': self.request.user
+            'initiated_by': self.request.user,
         }
+        if 'ends_at' in request.data:
+            defaults.update({
+                'ends_at': serializer.validated_data.get('ends_at')})
         campaign = serializer.validated_data.get('campaign')
         accounts = serializer.validated_data['accounts']
         requests_initiated = []
@@ -610,15 +616,16 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                     defaults=account_data, **lookups)
 
                 double_optin_queryset = PortfolioDoubleOptIn.objects.filter(
-                    Q(ends_at__isnull=True) | Q(ends_at__gt=ends_at),
+                    Q(ends_at__isnull=True) | Q(ends_at__gt=at_time),
                     grantee=self.account,
                     account=account,
                     campaign=campaign).order_by('-created_at')
                 portfolio = double_optin_queryset.first()
                 if portfolio:
                     portfolio.state = defaults.get('state')
-                    portfolio.ends_at = defaults.get('ends_at')
                     portfolio.initiated_by = defaults.get('initiated_by')
+                    if 'ends_at' in defaults:
+                        portfolio.ends_at = defaults.get('ends_at')
                     portfolio.save()
                 else:
                     portfolio = PortfolioDoubleOptIn.objects.create(
@@ -638,7 +645,11 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                 portfolios=[portfolio], recipients=recipients, message=message,
                 request=self.request)
 
-        return HttpResponse(serializer.data, status=status_code)
+        results = self.serializer_class(many=True,
+            context=self.get_serializer_context()).to_representation(
+            [optin[0] for optin in requests_initiated])
+
+        return HttpResponse(results, status=status_code)
 
 
 class PortfoliosRequestAcceptAPIView(AccountMixin, generics.DestroyAPIView):

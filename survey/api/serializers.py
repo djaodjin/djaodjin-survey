@@ -652,14 +652,15 @@ class PortfolioRequestCreateSerializer(serializers.ModelSerializer):
     accounts = InviteeSerializer(many=True)
     campaign = serializers.SlugRelatedField(required=False,
         queryset=Campaign.objects.all(), slug_field='slug')
-    message = serializers.CharField(required=False, allow_null=True)
+    ends_at = serializers.DateTimeField(required=False, allow_null=True,
+     help_text=_("Date/time at which the request expires (in ISO 8601 format)"))
     extra = ExtraField(required=False,
         help_text=_("Extra meta data (can be stringify JSON)"))
+    message = serializers.CharField(required=False, allow_null=True)
 
     class Meta:
         model = PortfolioDoubleOptIn
-        fields = ('accounts', 'campaign', 'message', 'ends_at', 'extra')
-        read_only_fields = ('ends_at',)
+        fields = ('accounts', 'campaign', 'ends_at', 'extra', 'message')
 
 
 class PortfolioOptInUpdateSerializer(serializers.ModelSerializer):
