@@ -28,7 +28,7 @@ from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import F, Max
+from django.db.models import F, Q, Max
 from django.db.utils import DataError
 from rest_framework import generics, mixins
 from rest_framework import response as http
@@ -40,7 +40,7 @@ from .. import settings
 from ..compat import gettext_lazy as _, is_authenticated, six
 from ..docs import OpenApiResponse, extend_schema
 from ..filters import (CampaignFilter, DateRangeFilter, OrderingFilter,
-    SampleStateFilter)
+    SampleStateFilter, SearchFilter)
 from ..helpers import datetime_or_now, extra_as_internal
 from ..mixins import AccountMixin, SampleMixin
 from ..models import (Answer, AnswerCollected, Choice, Portfolio, Sample, Unit,
@@ -2455,3 +2455,67 @@ class SampleRespondentsIndexAPIView(SampleRespondentsAPIView):
     def get(self, request, *args, **kwargs):
         return super(SampleRespondentsIndexAPIView, self).get(
             request, *args, **kwargs)
+
+
+class AccessibleSamplesAPIView(AccountMixin, generics.ListAPIView):
+    """
+    Search samples
+
+    Returns accessible samples for a profile
+
+    **Tags**: benchmarks
+
+    **Examples**
+
+    .. code-block:: http
+
+        GET /api/energy-utility/responses HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "count": 1,
+            "previous": null,
+            "next": null,
+            "results": [
+            {
+                "slug": "46f66f70f5ad41b29c4df08f683a9a7a",
+                "created_at": "2018-01-24T17:03:34.926193Z",
+                "campaign": "sustainability",
+                "is_frozen": false,
+                "extra": null
+            }
+            ]
+        }
+    """
+    search_fields = (
+        'is_frozen',
+        'campaign',
+        'slug',
+    )
+    alternate_fields = {
+        'campaign': 'campaign__slug',
+    }
+    ordering_fields = (
+        ('created_at', 'created_at'),
+        ('campaign__title', 'campaign__title'),
+        ('is_frozen', 'is_frozen'),
+    )
+
+    ordering = ('-created_at',)
+
+    filter_backends = (CampaignFilter, SampleStateFilter, DateRangeFilter,
+        SearchFilter, OrderingFilter)
+
+    serializer_class = SampleSerializer
+
+    def get_queryset(self):
+        queryset = Sample.objects.filter(
+            Q(account=self.account) |
+            (Q(account__portfolios__grantee=self.account) &
+             Q(account__portfolios__ends_at__gte=F('created_at'))),
+            extra__isnull=True         # XXX convinience
+        ).select_related('account').select_related('campaign')
+        return queryset

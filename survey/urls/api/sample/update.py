@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,8 @@ from ....api.sample import (SampleAPIView,
     SampleAnswersAPIView, SampleAnswersIndexAPIView,
     SampleCandidatesAPIView, SampleCandidatesIndexAPIView,
     SampleFreezeAPIView, SampleRecentCreateAPIView,
-    SampleRespondentsAPIView, SampleRespondentsIndexAPIView)
+    SampleRespondentsAPIView, SampleRespondentsIndexAPIView,
+    AccessibleSamplesAPIView)
 from ....api.matrix import SampleBenchmarksAPIView, SampleBenchmarksIndexAPIView
 from ....compat import path
 
@@ -59,4 +60,7 @@ urlpatterns = [
         SampleAPIView.as_view(), name='survey_api_sample'),
     path('sample',
         SampleRecentCreateAPIView.as_view(), name='survey_api_sample_list'),
+    path('responses',
+        AccessibleSamplesAPIView.as_view(),
+        name='survey_api_accessible_samples'),
 ]

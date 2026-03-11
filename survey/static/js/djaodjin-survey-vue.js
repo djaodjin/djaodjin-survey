@@ -500,9 +500,12 @@ Vue.component('query-individual-account', {
         itemMixin
     ],
     props: [
+        'campaign',
         'disabled',
+        'endsAt',
         'period',
-        'prefix'
+        'prefix',
+        'startAt',
     ],
     data: function() {
         return {
@@ -574,17 +577,21 @@ Vue.component('query-individual-account', {
 
 Vue.component('query-group-accounts', {
     mixins: [
-        itemListMixin
+        itemListMixin,
+        accountDetailMixin
     ],
     props: [
+        'campaign',
         'disabled',
+        'endsAt',
         'period',
-        'prefix'
+        'prefix',
+        'startAt',
     ],
     data: function() {
         return {
-            url: this.$urls.api_account_groups,
-            newItem: {title: ""},
+            url: this.$urls.api_account_groups + (this.$viewName ? "?q_f=extra&q=" + this.$viewName : ""),
+            newItem: {title: "", extra: this.$viewName ? {tags: [this.$viewName]} : {}},
             selectedItem: -1,
             addAccountEnabled: false,
             params: {
@@ -619,7 +626,9 @@ Vue.component('query-group-accounts', {
             });
         },
         getAccounts: function(group) {
+            var vm = this;
             if( group && typeof group.accounts != 'undefined' ) {
+                vm.populateAccounts(group.accounts);
                 return group.accounts;
             }
             return [];
@@ -628,7 +637,8 @@ Vue.component('query-group-accounts', {
             var vm = this;
             if( vm.selectedItem >= 0 ) {
                 var group = vm.items.results[vm.selectedItem];
-                vm.reqGet(vm._safeUrl(vm.url, group.slug), function(resp) {
+                vm.reqGet(vm._safeUrl(vm.url, group.slug),
+                function(resp) {
                     vm.items.results[vm.selectedItem].accounts = resp.results;
                     vm.$forceUpdate();
                 });

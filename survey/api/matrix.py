@@ -156,6 +156,8 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
     default_unit = 'profiles'
     valid_units = ('percentage',)
     title = "Benchmarks"
+    force_aggregate = True     # We can only retrieve individual names
+                               # if their responses are accessibles.
 
     filter_backends = (AggregateByPeriodFilter,)
 
@@ -292,8 +294,9 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
             if samples:
                 sql_query = sql_benchmarks_counts(samples, prefix=prefix,
                     period_type=period_type, extra_fields=extra_fields)
-                if False:
-                    # XXX only executes when accounts are accessible.
+                if not self.force_aggregate:
+                    # only executes when accounts are accessibles, and
+                    # we are retrieving a list of these accounts.
                     sql_query = sql_benchmarks_samples(samples, prefix=prefix,
                         period_type=period_type, extra_fields=extra_fields)
                 queryset = get_question_model().objects.raw(sql_query)
@@ -309,7 +312,7 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
                     except AttributeError:
                         count = 0
                     try:
-                        sample_id = question.sample_id
+                        sample_id = question.sample_slug
                     except AttributeError:
                         sample_id = None
                     period_start_at = getattr(question, 'period', None)
@@ -503,6 +506,7 @@ class AccessiblesAccountsMixin(AccountsDateRangeMixin,
     """
     Query accounts by 'accessibles' affinity
     """
+    accounts_set_title = "accessible"
 
     def get_accounts(self):
         """
@@ -650,8 +654,9 @@ class AccessiblesBenchmarkIndexAPIView(AccessiblesBenchmarkAPIView):
 class EngagedAccountsMixin(AccountsDateRangeMixin,
                            BenchmarkCampaignMixin, AccountMixin):
     """
-    Query accounts by 'accessibles' affinity
+    Query accounts by 'engaged' affinity
     """
+    accounts_set_title = "engaged"
 
     def get_accounts(self):
         """

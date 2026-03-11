@@ -485,6 +485,8 @@ class EditableFilterSerializer(serializers.ModelSerializer):
     account = serializers.SlugRelatedField(read_only=True,
         slug_field=settings.BELONGS_LOOKUP_FIELD,
         help_text=_("Account the group belongs to"))
+    extra = ExtraField(required=False, allow_null=True, allow_blank=True,
+        help_text=_("Extra meta data (can be stringify JSON)"))
 
     class Meta:
         model = EditableFilter

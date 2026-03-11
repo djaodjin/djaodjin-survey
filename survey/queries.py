@@ -750,7 +750,8 @@ SELECT
   question_default_unit_system,
   choice,
   %(select_period)s
-  answers_by_question_choice.sample_id AS sample_id
+  answers_by_question_choice.sample_id AS sample_id,
+  survey_sample.slug AS sample_slug -- identifier returned to client
 FROM answers_by_question_choice
 INNER JOIN survey_sample
   ON answers_by_question_choice.sample_id = survey_sample.id
