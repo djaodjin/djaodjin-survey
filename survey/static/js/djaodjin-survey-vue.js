@@ -590,11 +590,16 @@ Vue.component('query-group-accounts', {
     ],
     data: function() {
         return {
-            url: this.$urls.api_account_groups + (this.$viewName ? "?q_f=extra&q=" + this.$viewName : ""),
-            newItem: {title: "", extra: this.$viewName ? {tags: [this.$viewName]} : {}},
+            url: this.$urls.api_account_groups,
+            newItem: {
+                title: "",
+                extra: this.$groupAccountsView ? {
+                    tags: [this.$groupAccountsView]} : {}},
             selectedItem: -1,
             addAccountEnabled: false,
             params: {
+                q_f: this.$groupAccountsView ? 'extra' : null,
+                q: this.$groupAccountsView ? this.$groupAccountsView : null,
                 start_at: null,
                 ends_at: null,
                 period_type: null
@@ -644,12 +649,18 @@ Vue.component('query-group-accounts', {
                 });
             }
         },
-        removeAccount: function(idx) {
+        removeAccount: function(index) {
             var vm = this;
             var group = vm.items.results[vm.selectedItem];
-            vm.reqDelete(vm._safeUrl(vm._safeUrl(vm.url, group.slug), idx));
+            const rank = group.accounts[index].rank;
+            vm.reqDelete(
+                vm._safeUrl(vm._safeUrl(vm.url, group.slug), rank.toString()),
+            function() {
+                group.accounts.splice(index, 1);
+                vm.addAccountEnabled = (group.accounts.length == 0);
+                vm.$forceUpdate();
+            });
         },
-
         accountsLoaded: function() {
             const vm = this;
             if( vm.selectedItem >= 0 ) {
@@ -666,14 +677,17 @@ Vue.component('query-group-accounts', {
         },
         validate: function() {
             var vm = this;
-            const group = vm.items.results[vm.selectedItem];
-            const title = group.title;
-            const url = vm._safeUrl(vm._safeUrl(
-                vm.$urls.api_benchmarks_index, group.slug),
-                vm.prefix) + vm.getQueryString();
-            const dataset = {title: title, url: url};
-            vm.$emit('updatedataset', dataset);
-            vm.$refs.account.reset();
+            if( vm.items.results && (vm.selectedItem >= 0 &&
+                vm.selectedItem < vm.items.results.length) ) {
+                const group = vm.items.results[vm.selectedItem];
+                const title = group.title;
+                const url = vm._safeUrl(vm._safeUrl(
+                    vm.$urls.api_benchmarks_index, group.slug),
+                    vm.prefix) + vm.getQueryString();
+                const dataset = {title: title, url: url};
+                vm.$emit('updatedataset', dataset);
+                vm.$refs.account.reset();
+            }
         },
     },
     mounted: function() {
@@ -791,8 +805,9 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
         return {
             url: this.$urls.api_account_groups,
             newItem: {
-                'title': "",
-            },
+                title: "",
+                extra: this.$accountsByAnswersView ? {
+                    tags: [this.$accountsByAnswersView]} : {}},
             newPredicate: {
                 'question': null,
                 'measured': null
@@ -801,6 +816,9 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
             addPredicateEnabled: false,
             questions: [],
             params: {
+                q_f: this.$accountsByAnswersView ? 'extra' : null,
+                q: this.$accountsByAnswersView ?
+                    this.$accountsByAnswersView : null,
                 start_at: null,
                 ends_at: null,
                 period_type: null
@@ -822,7 +840,7 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
             var vm = this;
             var group = vm.items.results[vm.selectedItem];
             const data = {
-                'path': vm.newPredicate.question.path,
+                'question': vm.newPredicate.question.path,
                 'measured': vm.newPredicate.measured,
             };
             vm.reqPost(vm._safeUrl(vm.url, group.slug), data,
@@ -840,8 +858,10 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
         },
         getChoices: function(question) {
             const vm = this;
-            const unit = question ? vm.cachedUnits[question.default_unit.slug] : null;
-            return unit ? unit.choices : [];
+            const unit = question ?
+                  vm.cachedUnits[question.default_unit.slug] : null;
+            return unit ? (
+                unit.choices ? unit.choices : [{text: 'Present'}]) : [];
         },
         getPredicates: function(group) {
             if( group && typeof group.predicates != 'undefined' ) {
@@ -854,9 +874,8 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
             if( vm.selectedItem >= 0 ) {
                 var group = vm.items.results[vm.selectedItem];
                 vm.reqGet(vm._safeUrl(vm.url, group.slug), function(resp) {
-                    vm.items.results[vm.selectedItem].predicates = resp.accounts_by;
-                    vm.addPredicateEnabled = (
-                      vm.items.results[vm.selectedItem].predicates.length == 0);
+                    group.predicates = resp.results;
+                    vm.addPredicateEnabled = (group.predicates.length == 0);
                     vm.$forceUpdate();
                 });
             }
@@ -875,7 +894,19 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
             }
             return true;
         },
-        selectQuestion: function(dataset, question) {
+        removePredicate: function(index) {
+            var vm = this;
+            var group = vm.items.results[vm.selectedItem];
+            const rank = group.predicates[index].rank;
+            vm.reqDelete(
+                vm._safeUrl(vm._safeUrl(vm.url, group.slug), rank.toString()),
+            function() {
+                group.predicates.splice(index, 1);
+                vm.addPredicateEnabled = (group.predicates.length == 0);
+                vm.$forceUpdate();
+            });
+        },
+        selectQuestion: function(question, dataset) {
             var vm = this;
             vm.newPredicate.question = question;
             if( !vm.unitDetailsLoaded(question) ) {
@@ -889,17 +920,21 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
         },
         unitDetailsLoaded: function(question) {
             const vm = this;
-            return question && vm.cachedUnits.hasOwnProperty(question.default_unit.slug);
+            return question && vm.cachedUnits.hasOwnProperty(
+                question.default_unit.slug);
         },
         validate: function() {
             var vm = this;
-            const group = vm.items.results[vm.selectedItem];
-            const title = group.title;
-            const url = vm._safeUrl(vm._safeUrl(
-                vm.$urls.api_benchmarks_index, group.slug
-            ), vm.prefix) + vm.getQueryString();
-            const dataset = {title: title, url: url};
-            vm.$emit('updatedataset', dataset);
+            if( vm.items.results && (vm.selectedItem >= 0 &&
+                vm.selectedItem < vm.items.results.length) ) {
+                const group = vm.items.results[vm.selectedItem];
+                const title = group.title;
+                const url = vm._safeUrl(vm._safeUrl(
+                    vm.$urls.api_benchmarks_index, group.slug
+                ), vm.prefix) + vm.getQueryString();
+                const dataset = {title: title, url: url};
+                vm.$emit('updatedataset', dataset);
+            }
         },
     },
     computed: {

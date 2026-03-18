@@ -1939,7 +1939,8 @@ class AccountsFilterDetailAPIView(EditableFilterMixin,
 
     def create_by_answers_predicate(self, validated_data):
         question = generics.get_object_or_404(
-            get_question_model().objects.all(), path=validated_data.get('path'))
+            get_question_model().objects.all(),
+            path=validated_data.get('question'))
         measured = validated_data.get('measured')
         with transaction.atomic():
             last_rank = EditableFilterEnumeratedAccounts.objects.filter(
@@ -1948,11 +1949,13 @@ class AccountsFilterDetailAPIView(EditableFilterMixin,
             if not last_rank:
                 last_rank = 0
 
+            filter_accounts__kwargs = {}
             unit = question.default_unit
             if unit.system == Unit.SYSTEM_ENUMERATED:
                 try:
                     measured = Choice.objects.get(question__isnull=True,
                         unit=unit, text=measured).pk
+                    filter_accounts__kwargs.update({'measured': measured})
                 except Choice.DoesNotExist:
                     choices = Choice.objects.filter(question__isnull=True,
                         unit=unit)
@@ -1962,10 +1965,10 @@ class AccountsFilterDetailAPIView(EditableFilterMixin,
                          for choice in six.itervalues(choices)]))
 
             enum_account = EditableFilterEnumeratedAccounts.objects.create(
-                question=question,
-                measured=measured,
                 editable_filter=self.editable_filter,
-                rank=last_rank + 1)
+                rank=last_rank + 1,
+                question=question,
+                **filter_accounts__kwargs)
         return enum_account
 
 

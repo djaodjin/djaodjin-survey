@@ -754,7 +754,7 @@ class CohortSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='account.full_name',
         required=False,
         help_text=_("Human readable name for the profile"))
-    path = serializers.CharField(source='question.path', required=False,
+    question = QuestionSerializer(required=False,
         help_text=_("Path for the question used to filter profiles"))
     measured = serializers.CharField(source='humanize_measured', required=False,
         help_text=_("Answer to the question used to filter profiles"))
@@ -765,7 +765,8 @@ class CohortSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EditableFilterEnumeratedAccounts
-        fields = ('slug', 'full_name', 'path', 'measured', 'extra')
+        fields = ('rank', 'slug', 'full_name', 'question', 'measured', 'extra')
+        read_only_fields = ('rank',)
 
 
 class CohortAddSerializer(CohortSerializer):
@@ -774,7 +775,7 @@ class CohortAddSerializer(CohortSerializer):
         help_text=_("Unique identifier for the profile"))
     full_name = serializers.CharField(required=False,
         help_text=_("Human readable name for the profile"))
-    path = serializers.CharField(required=False,
+    question = serializers.CharField(required=False,
         help_text=_("Path for the question used to filter profiles"))
     measured = serializers.CharField(required=False,
         help_text=_("Answer to the question used to filter profiles"))
@@ -784,18 +785,19 @@ class CohortAddSerializer(CohortSerializer):
     class Meta:
         model = CohortSerializer.Meta.model
         fields = CohortSerializer.Meta.fields
+        read_only_fields = CohortSerializer.Meta.read_only_fields
 
     def validate(self, attrs):
         slug = attrs.get('slug', None)
         full_name = attrs.get('full_name', None)
-        path = attrs.get('path', None)
+        path = attrs.get('question', None)
         measured = attrs.get('measured', None)
         if not (slug or full_name or (path and measured)):
             raise ValidationError(
                 _("An account or a question/answer must be specified"))
         return attrs
 
-    def validate_path(self, obj):
+    def validate_question(self, obj):
         if not get_question_model().objects.filter(path=obj).exists():
             raise ValidationError(
                 _("Question with the specificed path does not exist."))
