@@ -364,6 +364,9 @@ class Campaign(SlugifyFieldMixin, models.Model):
     slug = models.SlugField(unique=True,
         help_text=_("Unique identifier that can be used in a URL"))
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True,
+        help_text=_("Date/time at which updated questions have been"\
+        " published (in ISO format)"))
     title = models.CharField(max_length=150,
         help_text=_("Title of the campaign as displayed in user interfaces"))
     description = models.TextField(null=True, blank=True,
