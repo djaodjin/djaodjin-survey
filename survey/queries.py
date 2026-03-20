@@ -1,4 +1,4 @@
-# Copyright (c) 2025, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # see LICENSE.
 """
 This file contains SQL statements as building blocks for benchmarking
@@ -11,6 +11,7 @@ from django.db.utils import DEFAULT_DB_ALIAS
 from django.db.models.query import RawQuerySet
 
 from . import settings
+from .compat import timezone_or_utc
 from .helpers import MONTHLY, YEARLY
 
 
@@ -20,6 +21,15 @@ UNIT_SYSTEM_RANK = 2
 UNIT_SYSTEM_ENUMERATED = 3
 UNIT_SYSTEM_FREETEXT = 4
 UNIT_SYSTEM_DATETIME = 5
+
+def as_sql_datetime(val, db_key=None):
+    if is_sqlite3(db_key):
+        # Convert to UTC, then drop the timezone such that `isoformat`
+        # does not add a '+00:00' suffix, since Django/SQLite backend
+        # uses TEXT comparaison.
+        return val.astimezone(
+            timezone_or_utc()).replace(tzinfo=None).isoformat(" ")
+    return val.isoformat()
 
 
 def as_sql_date_trunc(field_name, db_key=None, period_type=YEARLY):
@@ -143,11 +153,11 @@ INNER JOIN survey_question ON survey_answer.question_id = survey_question.id""")
     if start_at:
         secondary_filters_clause += (
             " AND survey_sample.created_at >= '%(start_at)s'" % {
-                'start_at': start_at.isoformat()})
+                'start_at': as_sql_datetime(start_at)})
     if ends_at:
         secondary_filters_clause += (
             " AND survey_sample.created_at < '%(ends_at)s'" % {
-            'ends_at': ends_at.isoformat()})
+            'ends_at': as_sql_datetime(ends_at)})
 
     grantees_join = ""
     if grantees:

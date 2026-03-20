@@ -191,6 +191,9 @@ def construct_yearly_periods(first_date, last_date, tzone=None):
             tzinfo=tzinfo)
         period_ends_at += [ends_at]
         at_time += relativedelta(years=1)
+    if at_time != last_date:
+        # last period may be shorter than a year.
+        period_ends_at += [last_date]
     return period_ends_at
 
 

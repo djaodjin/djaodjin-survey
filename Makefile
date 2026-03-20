@@ -88,7 +88,8 @@ initdb: clean-dbs
 	cd $(srcDir) && $(MANAGE) loaddata \
 		testsite/fixtures/engineering-si-units.json \
 		testsite/fixtures/engineering-alt-units.json \
-		testsite/fixtures/default-db.json
+		testsite/fixtures/default-db.json \
+		testsite/fixtures/200-benchmarks.json
 
 
 vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-survey-packages

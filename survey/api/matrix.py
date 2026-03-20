@@ -156,9 +156,6 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
     default_unit = 'profiles'
     valid_units = ('percentage',)
     title = "Benchmarks"
-    force_aggregate = True     # We can only retrieve individual names
-                               # if their responses are accessibles.
-
     filter_backends = (AggregateByPeriodFilter,)
 
     @property
@@ -189,10 +186,15 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
         in subclasses to select specific set of accounts whose answers are
         aggregated.
         """
-        return get_account_model().objects.all()
+        show_individual_profiles = False
+        accounts_queryset = get_account_model().objects.all()
+        LOGGER.debug("%s - show_individual_profiles=%s",
+            accounts_queryset.query, show_individual_profiles)
+        return accounts_queryset, show_individual_profiles
 
 
-    def _flush_choices(self, questions_by_key, row, choices, extra_fields=None):
+    def _flush_choices(self, questions_by_key, row, choices, nb_accounts,
+                       extra_fields=None):
         """
         Populates `questions_by_key` with benchmark data aggregated in choices.
 
@@ -229,11 +231,15 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
         assert len(question['benchmarks']) == 1
         values = question['benchmarks'][0].get('values')
         choice_list = []
+        total_count = 0
         for choice, choice_d in choices.items():
             count = choice_d['count']
             if not count:
                 count = len(choice_d['samples'])
             choice_list += [(choice, count, choice_d['samples'])]
+            total_count += count
+        if total_count < nb_accounts:
+            choice_list += [('No response', nb_accounts - total_count, [])]
         if start_at:
             values += [(start_at, choice_list)]
         else:
@@ -249,7 +255,7 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
         questions_by_key = super(BenchmarkMixin, self).get_questions_by_key(
             prefix=prefix, initial=initial)
 
-        accounts = self.get_accounts()
+        accounts, show_individual_profiles = self.get_accounts()
         self.nb_accounts = accounts.count()
         if self.nb_accounts < 1:
             return questions_by_key
@@ -286,15 +292,18 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
                 # Calling `get_latest_frozen_by_accounts` with an `accounts`
                 # arguments evaluating to `False` will return all the latest
                 # frozen samples.
+                grantees = None
+                if show_individual_profiles:
+                    grantees = [self.account]
                 samples = Sample.objects.get_latest_frozen_by_accounts(
                     self.campaign, start_at=start_at, ends_at=ends_at,
-                    accounts=accounts, tags=[])
+                    accounts=accounts, grantees=grantees, tags=[])
 
             # samples that will be counted in the benchmark
             if samples:
                 sql_query = sql_benchmarks_counts(samples, prefix=prefix,
                     period_type=period_type, extra_fields=extra_fields)
-                if not self.force_aggregate:
+                if show_individual_profiles:
                     # only executes when accounts are accessibles, and
                     # we are retrieving a list of these accounts.
                     sql_query = sql_benchmarks_samples(samples, prefix=prefix,
@@ -321,7 +330,7 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
                         prev_period_start_at != period_start_at))):
                         self._flush_choices(
                             questions_by_key, prev_row, choices,
-                            extra_fields=extra_fields)
+                            self.nb_accounts, extra_fields=extra_fields)
                         choices = OrderedDict()
                     prev_period_start_at = period_start_at
                     prev_row = question
@@ -334,7 +343,7 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
                 if prev_row:
                     self._flush_choices(
                         questions_by_key, prev_row, choices,
-                        extra_fields=extra_fields)
+                        self.nb_accounts, extra_fields=extra_fields)
 
             start_at = ends_at
 
@@ -512,9 +521,13 @@ class AccessiblesAccountsMixin(AccountsDateRangeMixin,
         """
         Returns account accessibles by a profile in a specific date range.
         """
-        return get_accessible_accounts([self.account], campaign=self.campaign,
-            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
-            aggregate_set=True)
+        show_individual_profiles = True
+        accounts_queryset = get_accessible_accounts(
+            [self.account], campaign=self.campaign,
+            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at)
+        LOGGER.debug("%s - show_individual_profiles=%s",
+            accounts_queryset.query, show_individual_profiles)
+        return accounts_queryset, show_individual_profiles
 
 
 class AccessiblesBenchmarkAPIView(AccessiblesAccountsMixin, BenchmarkAPIView):
@@ -662,9 +675,13 @@ class EngagedAccountsMixin(AccountsDateRangeMixin,
         """
         Returns account accessibles by a profile in a specific date range.
         """
-        return get_engaged_accounts([self.account], campaign=self.campaign,
-            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
-            aggregate_set=True)
+        show_individual_profiles = True
+        accounts_queryset = get_engaged_accounts([self.account],
+            campaign=self.campaign,
+            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at)
+        LOGGER.debug("%s - show_individual_profiles=%s",
+            accounts_queryset.query, show_individual_profiles)
+        return accounts_queryset, show_individual_profiles
 
 
 class EngagedBenchmarkAPIView(EngagedAccountsMixin, BenchmarkAPIView):
@@ -811,31 +828,61 @@ class EditableFilterAccountsMixin(AccountsDateRangeMixin,
         """
         Returns account accessibles by a profile in a specific date range.
         """
+        show_individual_profiles = False
         accounts_start_at = self.accounts_start_at
         accounts_ends_at = self.accounts_ends_at
 
         select_by_answers = EditableFilterEnumeratedAccounts.objects.filter(
             editable_filter=self.editable_filter).exclude(
-                question__isnull=True)
+                question__isnull=True).order_by('rank')
         if select_by_answers.exists():
             # Select accounts based on answers to a question.
-            kwargs = {}
+            samples_kwargs = {'samples__is_frozen': True}
             if accounts_start_at:
-                kwargs.update({'samples__created_at__gte': accounts_start_at})
+                samples_kwargs.update({
+                    'samples__created_at__gte': accounts_start_at})
             if accounts_ends_at:
-                kwargs.update({'samples__created_at__lt': accounts_ends_at})
-            # XXX supports only one predicate
-            select_by = select_by_answers.first()
-            return get_account_model().objects.filter(
-                samples__is_frozen=True,
-                samples__answers__question=select_by.question,
-                samples__answers__unit=select_by.question.default_unit,
-                samples__answers__measured=select_by.measured,
-                *kwargs)
+                samples_kwargs.update({
+                    'samples__created_at__lt': accounts_ends_at})
+            accounts_queryset = None
+            for select_by in select_by_answers:
+                if select_by.measured:
+                    answers_kwargs = {
+                        'samples__answers__measured': select_by.measured}
+                else:
+                    answers_kwargs = {}
+                answers_kwargs.update(samples_kwargs)
+                if accounts_queryset is None:
+                    # Base set of accounts to apply the `select_by_answers`
+                    # filter
+                    accounts_queryset = get_account_model().objects.all()
+                    if select_by.affinity == 'engaged':
+                        show_individual_profiles = True
+                        accounts_queryset = get_engaged_accounts(
+                            [self.account], campaign=self.campaign,
+                            start_at=accounts_start_at,
+                            ends_at=accounts_ends_at)
+                    elif select_by.affinity == 'accessibles':
+                        show_individual_profiles = True
+                        accounts_queryset = get_accessible_accounts(
+                            [self.account], campaign=self.campaign,
+                            start_at=accounts_start_at,
+                            ends_at=accounts_ends_at)
+                # XXX This is not creating the optimized SQL query we would
+                # be expecting, but it is none-the-less correct. OK for now.
+                accounts_queryset = accounts_queryset.filter(
+                    samples__answers__question=select_by.question,
+                    samples__answers__unit=select_by.question.default_unit,
+                    **answers_kwargs)
+        else:
+            # we are dealing with a nomminative group of accounts
+            show_individual_profiles = True
+            accounts_queryset = get_account_model().objects.filter(
+                filters__editable_filter=self.editable_filter)
 
-        # we are dealing with a nomminative group of accounts
-        return get_account_model().objects.filter(
-            filters__editable_filter=self.editable_filter)
+        LOGGER.debug("%s - show_individual_profiles=%s",
+            accounts_queryset.query, show_individual_profiles)
+        return accounts_queryset, show_individual_profiles
 
 
 class EditableFilterBenchmarkAPIView(EditableFilterAccountsMixin,
@@ -1601,7 +1648,11 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
 
     def get_accounts(self):
         #pylint:disable=unused-argument
-        return get_account_model().objects.all()
+        show_individual_profiles = False
+        accounts_queryset = get_account_model().objects.all()
+        LOGGER.debug("%s - show_individual_profiles=%s",
+            accounts_queryset.query, show_individual_profiles)
+        return accounts_queryset, show_individual_profiles
 
     def get_likely_metric(self, cohort_slug):
         """
@@ -1642,12 +1693,10 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
         cut = matrix.cut
         if not cohorts:
             # We don't have any cohorts, let's show individual accounts instead.
+            accounts, show_individual_profiles = self.get_accounts()
             if cut:
                 includes, excludes = cut.as_kwargs()
-                accounts = self.get_accounts().filter(
-                    **includes).exclude(**excludes)
-            else:
-                accounts = self.get_accounts()
+                accounts = accounts.filter(**includes).exclude(**excludes)
             cohort_serializer = get_account_serializer()
             # Implementation Note: switch cohorts from an queryset
             # of `EditableFilter` to a queryset of `Account` ...
@@ -1671,8 +1720,9 @@ class MatrixDetailAPIView(MatrixMixin, generics.RetrieveUpdateDestroyAPIView):
                 cohort['likely_metric'] = likely_metric
 
         scores.update(val)
+        accounts, show_individual_profiles = self.get_accounts()
         scores.update({"values": self.aggregate_scores(
-            metric, cohorts, cut, accounts=self.get_accounts())})
+            metric, cohorts, cut, accounts=accounts)})
         result += [scores]
         if public_cohorts:
             public_scores = {}
@@ -1942,6 +1992,10 @@ class AccountsFilterDetailAPIView(EditableFilterMixin,
             get_question_model().objects.all(),
             path=validated_data.get('question'))
         measured = validated_data.get('measured')
+        affinity = validated_data.get('affinity')
+        filter_accounts__kwargs = {}
+        if affinity:
+            filter_accounts__kwargs.update({'affinity': affinity})
         with transaction.atomic():
             last_rank = EditableFilterEnumeratedAccounts.objects.filter(
                 editable_filter=self.editable_filter).aggregate(
@@ -1949,7 +2003,6 @@ class AccountsFilterDetailAPIView(EditableFilterMixin,
             if not last_rank:
                 last_rank = 0
 
-            filter_accounts__kwargs = {}
             unit = question.default_unit
             if unit.system == Unit.SYSTEM_ENUMERATED:
                 try:
@@ -2028,7 +2081,10 @@ class AccountsFilterEnumeratedAPIView(EditableFilterMixin,
             #     unless we have a role for that supplier.
             serializer.instance.account.full_name = full_name
             serializer.instance.account.save()
-
+        affinity = serializer.validated_data.get('affinity')
+        if affinity:
+            serializer.instance.affinity = affinity
+            serializer.instance.save(update_fields={'affinity'})
 
     @extend_schema(operation_id='filters_accounts_update_item')
     def put(self, request, *args, **kwargs):

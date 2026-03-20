@@ -933,6 +933,8 @@ class EditableFilterEnumeratedAccounts(models.Model):
     question = models.ForeignKey(settings.QUESTION_MODEL, null=True,
         on_delete=models.CASCADE)
     measured = models.IntegerField(null=True)
+    affinity = models.SlugField(
+        help_text=_("The set of accounts the filter is based on"))
 
     class Meta:
         unique_together = ('editable_filter', 'rank')

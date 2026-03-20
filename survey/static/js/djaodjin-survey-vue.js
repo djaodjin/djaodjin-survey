@@ -719,7 +719,8 @@ var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
                 period_type: null,
                 accounts_start_at: null,
                 accounts_ends_at: null,
-            }
+            },
+            addPredicateEnabled: false,
         }
     },
     methods: {
@@ -808,6 +809,7 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
                 title: "",
                 extra: this.$accountsByAnswersView ? {
                     tags: [this.$accountsByAnswersView]} : {}},
+            affinityType: 'all',
             newPredicate: {
                 'question': null,
                 'measured': null
@@ -821,7 +823,9 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
                     this.$accountsByAnswersView : null,
                 start_at: null,
                 ends_at: null,
-                period_type: null
+                period_type: null,
+                accounts_start_at: null,
+                accounts_ends_at: null,
             },
             cachedUnits: {}
         }
@@ -842,6 +846,7 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
             const data = {
                 'question': vm.newPredicate.question.path,
                 'measured': vm.newPredicate.measured,
+                'affinity': vm.affinityType
             };
             vm.reqPost(vm._safeUrl(vm.url, group.slug), data,
             function(resp) {
@@ -923,6 +928,16 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
             return question && vm.cachedUnits.hasOwnProperty(
                 question.default_unit.slug);
         },
+        updateAffinity: function(event) {
+            var vm = this;
+            var group = vm.items.results[vm.selectedItem];
+            if( group.predicates && group.predicates.length > 0 ) {
+                const rank = group.predicates[0].rank;
+                vm.reqPut(vm._safeUrl(vm._safeUrl(vm.url, group.slug),
+                    rank.toString()), {affinity: vm.affinityType},
+                function success() {});
+            }
+        },
         validate: function() {
             var vm = this;
             if( vm.items.results && (vm.selectedItem >= 0 &&
@@ -943,6 +958,48 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
         },
         hasQuestions: function() {
             return this.questions && this.questions.length > 0;
+        },
+        _accounts_start_at: {
+            get: function() {
+                if( this.params.accounts_start_at ) {
+                    return this.asDateInputField(this.params.accounts_start_at);
+                }
+                return null;
+            },
+            set: function(newVal) {
+                if( newVal ) {
+                    // The setter might be call with `newVal === null`
+                    // when the date is incorrect (ex: 09/31/2022).
+                    this.$set(this.params, 'accounts_start_at',
+                        this.asDateISOString(newVal));
+                }
+            }
+        },
+        _accounts_ends_at: {
+            get: function() {
+                // form field input="date" will expect ends_at as a String
+                // but will literally cut the hour part regardless of timezone.
+                // We don't want an empty list as a result.
+                // If we use moment `endOfDay` we get 23:59:59 so we
+                // add a full day instead. It seemed clever to run the following
+                // code but that prevented entering the year part in the input
+                // field (as oppossed to use the widget).
+                //
+                // const dateValue = moment(this.params.ends_at).add(1,'days');
+                // return dateValue.isValid() ? dateValue.format("YYYY-MM-DD") : null;
+                if( this.params.accounts_ends_at ) {
+                    return this.asDateInputField(this.params.accounts_ends_at);
+                }
+                return null;
+            },
+            set: function(newVal) {
+                if( newVal ) {
+                    // The setter might be call with `newVal === null`
+                    // when the date is incorrect (ex: 09/31/2022).
+                    this.$set(this.params, 'accounts_ends_at',
+                        this.asDateISOString(newVal));
+                }
+            }
         }
     },
     mounted: function() {

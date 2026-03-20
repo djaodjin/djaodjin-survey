@@ -765,7 +765,8 @@ class CohortSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = EditableFilterEnumeratedAccounts
-        fields = ('rank', 'slug', 'full_name', 'question', 'measured', 'extra')
+        fields = ('rank', 'slug', 'full_name', 'question', 'measured',
+            'affinity', 'extra')
         read_only_fields = ('rank',)
 
 
