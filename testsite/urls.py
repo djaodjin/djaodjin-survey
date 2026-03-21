@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,9 @@ URLs for the djaodjin-survey django app testsite.
 """
 
 import debug_toolbar
+from django.conf import settings
 from django.views.generic import RedirectView, TemplateView
+from django.views.static import serve as django_static_serve
 from survey.compat import reverse_lazy, path, re_path, include
 
 from .api.auth import LoginAPIView
@@ -35,6 +37,8 @@ from .api.accounts import AccountsAPIView
 
 urlpatterns = [
     path('__debug__/', include(debug_toolbar.urls)),
+    re_path(r'(?P<path>favicon.ico)', django_static_serve,
+        {'document_root': settings.STATIC_ROOT}),
     re_path(r'^$',
         TemplateView.as_view(template_name='index.html'), name='home'),
     # survey.urls.api

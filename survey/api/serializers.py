@@ -754,6 +754,8 @@ class CohortSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(source='account.full_name',
         required=False,
         help_text=_("Human readable name for the profile"))
+    affinity = serializers.SlugField(required=False,
+        help_text=_("The set of accounts the filter is based on"))
     question = QuestionSerializer(required=False,
         help_text=_("Path for the question used to filter profiles"))
     measured = serializers.CharField(source='humanize_measured', required=False,
