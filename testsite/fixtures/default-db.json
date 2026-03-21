@@ -525,8 +525,8 @@
 {
   "fields": {
     "slug": "dda134c8b4da487da9169e771794de12",
-    "created_at": "2025-12-31T00:00:00+00:00",
-    "updated_at": "2025-12-31T00:00:00+00:00",
+    "created_at": "2026-01-01T00:00:00+00:00",
+    "updated_at": "2026-01-01T00:00:00+00:00",
     "campaign": 1,
     "account": 20,
     "is_frozen": true
@@ -570,11 +570,20 @@
 {
   "fields": {
     "grantee": 4,
+    "account": 6,
+    "campaign": 1,
+    "ends_at": "2025-12-31T12:00:00+00:00"
+  },
+  "model": "survey.Portfolio", "pk": 1
+},
+{
+  "fields": {
+    "grantee": 4,
     "account": 19,
     "campaign": 1,
     "ends_at": "2026-01-01T00:00:00+00:00"
   },
-  "model": "survey.Portfolio", "pk": 1
+  "model": "survey.Portfolio", "pk": 2
 },
 {
   "fields": {
