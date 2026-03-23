@@ -525,6 +525,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
     """
     lookup_field = settings.ACCOUNT_LOOKUP_FIELD
     serializer_class = PortfolioOptInSerializer
+    notification_serializer_fields = settings.NOTIFICATION_SERIALIZER_FIELDS
 
     def get_queryset(self):
         # Look up request to be accepted through the 'verification_key'
@@ -615,6 +616,21 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                 account, unused_created = account_model.objects.get_or_create(
                     defaults=account_data, **lookups)
 
+                # fill receipients information with additional information
+                # we can find in the database.
+                empty = False
+                notification_account_data = {}
+                for field_name in self.notification_serializer_fields:
+                    if field_name in account_data:
+                        continue
+                    field_value = getattr(account, field_name, None)
+                    if not field_value:
+                        empty = True
+                        break
+                    notification_account_data.update({field_name: field_value})
+                if not empty:
+                    account_data.update(notification_account_data)
+
                 double_optin_queryset = PortfolioDoubleOptIn.objects.filter(
                     Q(ends_at__isnull=True) | Q(ends_at__gt=at_time),
                     grantee=self.account,
@@ -635,7 +651,8 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                     verification_key=PortfolioDoubleOptIn.generate_key(account),
                         **defaults)
                     status_code = status.HTTP_201_CREATED
-                requests_initiated += [(portfolio, [account_data])]
+                requests_initiated += [(
+                    portfolio, [account_data] if account_data else [])]
 
         message = serializer.validated_data.get('message')
         for req in requests_initiated:

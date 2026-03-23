@@ -51,6 +51,7 @@ _SETTINGS = {
     'DENORMALIZE_FOR_PRECISION': True,
     'EXTRA_FIELD': None,
     'FORCE_ONLY_QUESTION_UNIT': False,
+    'NOTIFICATION_SERIALIZER_FIELDS': [],
     'QUESTION_MODEL': 'survey.Question',
     'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionDetailSerializer',
     'SEARCH_FIELDS_PARAM': 'q_f',
@@ -99,6 +100,7 @@ EXTRA_FIELD = _SETTINGS.get('EXTRA_FIELD')
 #: When set to `True`, the measure stored in the database are guarenteed
 #: to be in the question's default_unit. defaults to `False`.
 FORCE_ONLY_QUESTION_UNIT = _SETTINGS.get('FORCE_ONLY_QUESTION_UNIT')
+NOTIFICATION_SERIALIZER_FIELDS = _SETTINGS.get('NOTIFICATION_SERIALIZER_FIELDS')
 QUESTION_MODEL = _SETTINGS.get('QUESTION_MODEL')
 QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
 SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')
