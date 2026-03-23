@@ -180,8 +180,12 @@ def construct_yearly_periods(first_date, last_date, tzone=None):
     `first_date` - i.e. if first_date in Aug 31st, all dates within
     the returned periods will land on Aug 31st.
     """
-    at_time = first_date
     tzinfo = timezone_or_utc(tzone)
+    if first_date.tzinfo is None:
+        first_date = first_date.replace(tzinfo=tzinfo)
+    if last_date.tzinfo is None:
+        last_date = last_date.replace(tzinfo=tzinfo)
+    at_time = first_date
     period_ends_at = []
     while at_time <= last_date:
         # we are interested in 00:00 local time, if we don't have
