@@ -42,10 +42,12 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.18.2
+0.19.0
 
-  * expands unit to dict only when question-specific choices
-  * updates primary answer even when unit equilavence has changed
+  * specifies affinity (defaults to all) in select-accounts-by-answer
+  * enables profile identities in analytics dashboards
+  * adds `updated_at` to `Campaign`
+  * sets deadline for portfolio requests
 
 [previous release notes](changelog)
 
