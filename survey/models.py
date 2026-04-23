@@ -621,7 +621,7 @@ class Sample(models.Model):
         help_text="Unique identifier for the sample. It can be used in a URL.")
     created_at = models.DateTimeField(default=timezone.now,
         help_text="Date/time of creation (in ISO format)")
-    updated_at = models.DateTimeField(auto_now=True,
+    updated_at = models.DateTimeField(default=timezone.now,
         help_text="Date/time of last update (in ISO format)")
     time_spent = models.DurationField(default=datetime.timedelta,
         help_text="Total recorded time to complete the survey")
