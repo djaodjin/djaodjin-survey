@@ -1,5 +1,5 @@
 Django==3.2.25 ; python_version < "3.9"
-Django==4.2.29 ; python_version >= "3.9" and python_version < "3.12"
+Django==4.2.30 ; python_version >= "3.9" and python_version < "3.12"
 Django==5.2.12 ; python_version >= "3.12" and python_version < "3.14"
 Django==6.0.3  ; python_version >= "3.14"
 djangorestframework==3.14.0 ; python_version < "3.9"
