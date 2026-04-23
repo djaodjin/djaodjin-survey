@@ -1,3 +1,10 @@
+0.19.1
+
+  * prevents ORM to override our updates to `updated_at`
+  * removes djresources* dependency on jquery
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Thu, 23 Apr 2026 13:05:00 -0700
+
 0.19.0
 
   * specifies affinity (defaults to all) in select-accounts-by-answer

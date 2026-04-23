@@ -42,12 +42,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.19.0
+0.19.1
 
-  * specifies affinity (defaults to all) in select-accounts-by-answer
-  * enables profile identities in analytics dashboards
-  * adds `updated_at` to `Campaign`
-  * sets deadline for portfolio requests
+  * prevents ORM to override our updates to `updated_at`
+  * removes djresources* dependency on jquery
 
 [previous release notes](changelog)
 
