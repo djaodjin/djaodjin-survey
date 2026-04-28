@@ -78,12 +78,11 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
     def unit(self):
         #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_unit'):
+            self._unit = self.question.default_unit
             unit_slug = self.get_query_param('unit')
             if unit_slug:
                 self._unit = get_object_or_404(
                     Unit.objects.all(), slug=unit_slug)
-            if not self._unit:
-                self._unit = self.question.default_unit
         return self._unit
 
     def get_query_param(self, key):
