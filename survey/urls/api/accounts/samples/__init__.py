@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,18 +22,10 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...api.matrix import (CompareAPIView, CompareIndexAPIView,
-    MatrixCreateAPIView, MatrixDetailAPIView)
-from ...compat import path
+from .....compat import include, path
 
 
 urlpatterns = [
-    path('compare/<path:path>',
-        CompareAPIView.as_view(), name='survey_api_compare_samples'),
-    path('compare',
-        CompareIndexAPIView.as_view(), name='survey_api_compare_samples_index'),
-    path('matrix/<path:path>',
-        MatrixDetailAPIView.as_view(), name='matrix_api'),
-    path('matrix',
-        MatrixCreateAPIView.as_view(), name='matrix_api_base'),
+    path('', include('survey.urls.api.accounts.samples.reset')),
+    path('', include('survey.urls.api.accounts.samples.update')),
 ]

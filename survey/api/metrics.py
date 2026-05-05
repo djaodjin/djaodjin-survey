@@ -25,8 +25,7 @@
 
 import logging
 
-from django.db import transaction
-from django.db.models import Sum
+from django.db import models, transaction
 from rest_framework import status
 from rest_framework.generics import (get_object_or_404, RetrieveAPIView,
     ListAPIView)
@@ -73,6 +72,7 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
     """
     serializer_class = AnswerSerializer
     filter_backends = (AggregateByPeriodFilter,)
+    aggregate_kwargs = {'agg': models.Sum('measured')}
 
     @property
     def unit(self):
@@ -93,19 +93,38 @@ class AggregateMetricsAPIView(AccountMixin, QuestionMixin, RetrieveAPIView):
         return self.request.GET.get(key, None)
 
     def get_queryset(self):
+        # Implementation note:
+        # The inner distinct `Answer` query is necessary when an account
+        # is listed in multiple `EditableFilter`.
+        # If we pass the inner distinct `Answer` query directly to the
+        # `AggregateByPeriodFilter`, the ORM adds a `GROUP BY` clause applied
+        # before `DISTINCT`, instead of after, resulting in answers potentially
+        # being counted multiple times.
         queryset = Answer.objects.filter(
+            pk__in=Answer.objects.filter(
             question__path=self.db_path,
             unit=self.unit,
-            sample__account__filters__editable_filter__account=self.account)
+            sample__account__filters__editable_filter__account=self.account
+        ).values('pk').distinct()).values(
+            'question_id',
+            question_path=models.F('question__path'),
+            question_title=models.F('question__content__title'),
+            question_default_unit_slug=models.F('question__default_unit__slug'),
+            question_default_unit_title=models.F(
+                'question__default_unit__title'),
+            question_default_unit_system=models.F(
+                'question__default_unit__system'))
         return queryset
 
     @extend_schema(parameters=[UnitQueryParamSerializer])
     def get(self, request, *args, **kwargs):
         #pylint:disable=useless-super-delegation
         queryset = self.filter_queryset(self.get_queryset())
-        agg = queryset.aggregate(Sum('measured')).get('measured__sum')
-        if agg is None:
-            agg = 0
+        try:
+            agg = queryset.get()
+        except Answer.DoesNotExist:
+            agg = None
+        agg = 0 if agg is None else agg.get('agg')
         serializer_class = self.get_serializer_class()
         return HttpResponse(serializer_class().to_representation({
             'measured': agg, 'unit': self.unit}))

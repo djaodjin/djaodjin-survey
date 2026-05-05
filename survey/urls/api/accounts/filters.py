@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,12 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...api.matrix import (AccountsFilterDetailAPIView,
+from ....api.matrix import (AccountsFilterDetailAPIView,
     AccountsFilterListAPIView, AccountsFilterEnumeratedAPIView,
     EditableFilterListAPIView, QuestionsFilterDetailAPIView,
     QuestionsFilterListAPIView)
-from ...api.metrics import AccountsValuesAPIView, AccountsFilterValuesAPIView
-from ...compat import path
+from ....api.metrics import AccountsValuesAPIView, AccountsFilterValuesAPIView
+from ....compat import path
 
 
 urlpatterns = [

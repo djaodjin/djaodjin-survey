@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,11 +24,11 @@
 
 from rest_framework.views import APIView
 
-from ...api.portfolios import (PortfoliosAPIView,
+from ....api.portfolios import (PortfoliosAPIView,
     PortfoliosGrantsAPIView, PortfoliosGrantAcceptAPIView,
     PortfoliosRequestsAPIView, PortfoliosRequestAcceptAPIView,
     PortfolioUpdateAPIView, PortfolioDoubleOptinUpdateAPIView)
-from ...compat import path
+from ....compat import path
 
 
 urlpatterns = [

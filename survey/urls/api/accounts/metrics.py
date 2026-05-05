@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -24,13 +24,13 @@
 
 from rest_framework.views import APIView
 
-from ...api.metrics import AggregateMetricsAPIView
-from ...compat import path
+from ....api.metrics import AggregateMetricsAPIView
+from ....compat import path
 
 
 urlpatterns = [
     path('metrics/aggregate/<path:path>',
         AggregateMetricsAPIView.as_view(), name='survey_api_aggregate_metric'),
-    path('metrics/aggregate/',
+    path('metrics/aggregate',
         APIView.as_view(schema=None), name='survey_api_aggregate_metric_base'),
 ]

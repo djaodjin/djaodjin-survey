@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,12 +22,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...api.matrix import (BenchmarkIndexAPIView,
+from ....api.matrix import (BenchmarkIndexAPIView,
     BenchmarkAPIView, BenchmarkAllIndexAPIView,
     AccessiblesBenchmarkAPIView, AccessiblesBenchmarkIndexAPIView,
     EngagedBenchmarkAPIView, EngagedBenchmarkIndexAPIView,
     EditableFilterBenchmarkAPIView, EditableFilterBenchmarkIndexAPIView)
-from ...compat import path
+from ....compat import path
 
 
 urlpatterns = [

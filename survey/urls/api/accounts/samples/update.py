@@ -22,14 +22,15 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ....api.sample import (SampleAPIView,
+from .....api.sample import (SampleAPIView,
     SampleAnswersAPIView, SampleAnswersIndexAPIView,
     SampleCandidatesAPIView, SampleCandidatesIndexAPIView,
     SampleFreezeAPIView, SampleRecentCreateAPIView,
     SampleRespondentsAPIView, SampleRespondentsIndexAPIView,
     AccessibleSamplesAPIView)
-from ....api.matrix import SampleBenchmarksAPIView, SampleBenchmarksIndexAPIView
-from ....compat import path
+from .....api.matrix import (SampleBenchmarksAPIView,
+    SampleBenchmarksIndexAPIView)
+from .....compat import path
 
 
 urlpatterns = [

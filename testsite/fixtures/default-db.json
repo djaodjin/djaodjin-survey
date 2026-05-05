@@ -703,6 +703,27 @@
 },
 {
   "fields": {
+    "slug": "dda134c8b4da487da9169e771794de13",
+    "created_at": "2026-01-01T00:00:00+00:00",
+    "updated_at": "2026-01-01T00:00:00+00:00",
+    "account": 9,
+    "is_frozen": true
+  },
+  "model": "survey.sample", "pk": 6
+},
+{
+  "fields": {
+    "created_at": "2026-01-01T00:00:00+00:00",
+    "sample": 6,
+    "question": 4,
+    "collected_by": 5,
+    "unit": 36,
+    "measured": 12
+  },
+  "model": "survey.answer", "pk": 11
+},
+{
+  "fields": {
     "slug": "factory-size",
     "title": "Factory footprint area",
     "account": 6,

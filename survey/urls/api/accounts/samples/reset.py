@@ -22,12 +22,15 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ...compat import include, path
+from .....api.sample import SampleResetAPIView, SampleResetIndexAPIView
+from .....compat import path
 
 
 urlpatterns = [
-    path('', include('survey.urls.api.noauth')),
-    path('', include('survey.urls.api.campaigns')),
-    # <account>
-    path('', include('survey.urls.api.accounts')),
+    path('sample/<slug:sample>/reset/<path:path>',
+        SampleResetAPIView.as_view(),
+        name='survey_api_sample_reset'),
+    path('sample/<slug:sample>/reset',
+        SampleResetIndexAPIView.as_view(),
+        name='survey_api_sample_reset_index'),
 ]

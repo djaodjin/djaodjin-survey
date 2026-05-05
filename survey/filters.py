@@ -479,8 +479,11 @@ class AggregateByPeriodFilter(DateRangeFilter):
                     'question_default_unit_system',
                     'choice',
                     'period')
+
         # XXX Calling QuerySet.annotate() after union() is not supported.
-        return queryset.annotate(count=models.Count('sample_id'))
+        aggregate_kwargs = getattr(view, 'aggregate_kwargs',
+            {'count': models.Count('sample_id')})
+        return queryset.annotate(**aggregate_kwargs)
 
 
     def get_schema_operation_parameters(self, view):

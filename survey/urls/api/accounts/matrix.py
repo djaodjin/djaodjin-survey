@@ -1,4 +1,4 @@
-# Copyright (c) 2023, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -22,15 +22,18 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from ....api.sample import SampleResetAPIView, SampleResetIndexAPIView
+from ....api.matrix import (CompareAPIView, CompareIndexAPIView,
+    MatrixCreateAPIView, MatrixDetailAPIView)
 from ....compat import path
 
 
 urlpatterns = [
-    path('sample/<slug:sample>/reset/<path:path>',
-        SampleResetAPIView.as_view(),
-        name='survey_api_sample_reset'),
-    path('sample/<slug:sample>/reset',
-        SampleResetIndexAPIView.as_view(),
-        name='survey_api_sample_reset_index'),
+    path('compare/<path:path>',
+        CompareAPIView.as_view(), name='survey_api_compare_samples'),
+    path('compare',
+        CompareIndexAPIView.as_view(), name='survey_api_compare_samples_index'),
+    path('matrix/<path:path>',
+        MatrixDetailAPIView.as_view(), name='matrix_api'),
+    path('matrix',
+        MatrixCreateAPIView.as_view(), name='matrix_api_base'),
 ]

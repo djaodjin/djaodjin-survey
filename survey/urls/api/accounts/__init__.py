@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,12 @@ from ....compat import include, path
 
 
 urlpatterns = [
-    path('', include('survey.urls.api.sample.reset')),
-    path('', include('survey.urls.api.sample.update')),
+    path('', include('survey.urls.api.accounts.filters')),
+    path('', include('survey.urls.api.accounts.samples')),
+    path('', include('survey.urls.api.accounts.portfolios')),
+    path('', include('survey.urls.api.accounts.benchmarks')),
+    path('', include('survey.urls.api.accounts.metrics')),
+    # <account>/reporting
+    path('reporting/<slug:campaign>/',
+        include('survey.urls.api.accounts.matrix')),
 ]
