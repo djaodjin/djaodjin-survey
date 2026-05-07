@@ -1283,8 +1283,8 @@ class PortfolioDoubleOptIn(models.Model):
     @staticmethod
     def generate_key(account):
         random_key = str(random.random()).encode('utf-8')
-        salt = hashlib.sha1(random_key).hexdigest()[:5]
-        verification_key = hashlib.sha1(
+        salt = hashlib.sha256(random_key).hexdigest()[:5]
+        verification_key = hashlib.sha256(
             (salt+str(account)).encode('utf-8')).hexdigest()
         return verification_key
 
