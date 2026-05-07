@@ -42,10 +42,11 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.19.1
+0.20.0
 
-  * prevents ORM to override our updates to `updated_at`
-  * removes djresources* dependency on jquery
+  * replaces sha1 by sha256
+  * fixes sum in metrics/aggregate API
+  * fixes 500 calling metrics/aggregate API
 
 [previous release notes](changelog)
 
