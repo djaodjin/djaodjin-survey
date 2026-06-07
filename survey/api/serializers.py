@@ -659,10 +659,15 @@ class PortfolioRequestCreateSerializer(serializers.ModelSerializer):
     extra = ExtraField(required=False,
         help_text=_("Extra meta data (can be stringify JSON)"))
     message = serializers.CharField(required=False, allow_null=True)
+    cc = serializers.ListField(
+        child=serializers.EmailField(),
+        required=False, default=list,
+        help_text=_("Additional email addresses"
+            " to notify besides the primary recipient"))
 
     class Meta:
         model = PortfolioDoubleOptIn
-        fields = ('accounts', 'campaign', 'ends_at', 'extra', 'message')
+        fields = ('accounts', 'campaign', 'ends_at', 'extra', 'message', 'cc')
 
 
 class PortfolioOptInUpdateSerializer(serializers.ModelSerializer):

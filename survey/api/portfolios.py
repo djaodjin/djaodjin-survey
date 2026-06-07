@@ -593,6 +593,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                 'ends_at': serializer.validated_data.get('ends_at')})
         campaign = serializer.validated_data.get('campaign')
         accounts = serializer.validated_data['accounts']
+        cc = serializer.validated_data.get('cc', [])
         requests_initiated = []
         with transaction.atomic():
             for serialized_account in accounts:
@@ -615,6 +616,14 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                     account_data.pop(field_name)
                 account, unused_created = account_model.objects.get_or_create(
                     defaults=account_data, **lookups)
+
+                email = serialized_account.get('email')
+                if not unused_created and not account.email:
+                    if email:
+                        account.email = email
+                        account.save(update_fields=['email'])
+                if email and account.email != email:
+                    cc.append(email)
 
                 # fill receipients information with additional information
                 # we can find in the database.
@@ -660,7 +669,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
             recipients = req[1]
             signals.portfolios_request_initiated.send(sender=__name__,
                 portfolios=[portfolio], recipients=recipients, message=message,
-                request=self.request)
+                cc=cc, request=self.request)
 
         results = self.serializer_class(many=True,
             context=self.get_serializer_context()).to_representation(
