@@ -36,6 +36,8 @@ from django.conf import settings as django_settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
+from django.db.models import JSONField, Q, TextField
+from django.db.models.functions import Cast
 from django.http.request import split_domain_port, validate_host
 from rest_framework.exceptions import ValidationError
 
@@ -49,7 +51,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
-                            start_at=None, ends_at=None):
+                            start_at=None, ends_at=None, tags=None):
     """
     All accounts which have elected to share samples with at least one
     account in grantees.
@@ -86,6 +88,16 @@ def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
 
         if not aggregate_set:
             queryset = queryset.annotate(_extra=models.F('portfolios__extra'))
+
+        if tags:
+            queryset = queryset.annotate(
+                extra_json=Cast('portfolios__extra', output_field=JSONField()),
+                extra_tags_str=Cast('extra_json__tags', TextField()),
+            )
+            tags_filter = Q()
+            for tag in tags:
+                tags_filter &= Q(extra_tags_str__contains=f'"{tag}"')
+            queryset = queryset.filter(tags_filter)
 
         queryset = queryset.distinct()
 
