@@ -182,9 +182,9 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
 
     def get_accounts(self):
         """
-        By default return all accounts. This method is intended to be overriden
-        in subclasses to select specific set of accounts whose answers are
-        aggregated.
+        Returns all accounts in the database, and as such prevent display
+        of individual answers. `accounts_start_at` and `accounts_ends_at`
+        have no effect.
         """
         show_individual_profiles = False
         accounts_queryset = get_account_model().objects.all()
@@ -519,7 +519,8 @@ class AccessiblesAccountsMixin(AccountsDateRangeMixin,
 
     def get_accounts(self):
         """
-        Returns account accessibles by a profile in a specific date range.
+        Returns accounts accessible by a profile in a specific date range
+        specified by `accounts_start_at` and `accounts_ends_at`.
         """
         show_individual_profiles = True
         accounts_queryset = get_accessible_accounts(
@@ -673,7 +674,8 @@ class EngagedAccountsMixin(AccountsDateRangeMixin,
 
     def get_accounts(self):
         """
-        Returns account accessibles by a profile in a specific date range.
+        Returns accounts engaged by a profile in a specific date range
+        specified by `accounts_start_at` and `accounts_ends_at`.
         """
         show_individual_profiles = True
         accounts_queryset = get_engaged_accounts([self.account],
@@ -826,7 +828,9 @@ class EditableFilterAccountsMixin(AccountsDateRangeMixin,
 
     def get_accounts(self):
         """
-        Returns account accessibles by a profile in a specific date range.
+        Returns accounts either part of a nominative set of accounts,
+        or which have provided a specific answer to a question within
+        the period `accounts_start_at` and `accounts_ends_at`.
         """
         show_individual_profiles = False
         accounts_start_at = self.accounts_start_at

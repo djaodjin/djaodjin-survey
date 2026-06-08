@@ -1259,12 +1259,12 @@ class PortfolioDoubleOptIn(models.Model):
     initiated_by = models.ForeignKey(settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         help_text=_("User that initiated the request/grant"))
-    verification_key = models.CharField(max_length=40, null=True, unique=True)
+    verification_key = models.CharField(max_length=64, null=True, unique=True)
     extra = get_extra_field_class()(null=True, blank=True,
         help_text=_("Extra meta data (can be stringify JSON)"))
 
     # To connect with payment provider.
-    invoice_key = models.CharField(max_length=40, null=True)
+    invoice_key = models.CharField(max_length=64, null=True)
 
     def __str__(self):
         return "<PortfolioDoubleOptIn(grantee='%s', account='%s', "\

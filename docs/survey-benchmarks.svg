@@ -1,0 +1,325 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="2.826799 38.1068 1148.1864 551.1464" width="1148.1864" height="551.1464">
+  <defs>
+    <filter id="Shadow" filterUnits="userSpaceOnUse" x="-111.99184" y="-17.00784">
+      <feGaussianBlur in="SourceAlpha" result="blur" stdDeviation="1.308"/>
+      <feOffset in="blur" result="offset" dx="0" dy="2"/>
+      <feFlood flood-color="black" flood-opacity=".5" result="flood"/>
+      <feComposite in="flood" in2="offset" operator="in"/>
+    </filter>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 0 -3 L 0 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="Reporting_(queries)" fill-opacity="1" stroke="none" stroke-opacity="1" fill="none" stroke-dasharray="none">
+    <title>Reporting (queries)</title>
+    <g id="Reporting_(queries)_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_63_shadow" filter="url(#Shadow)">
+        <path d="M 508.6 314.64 L 553.6 352.3275 L 508.6 390.015 L 463.6 352.3275 Z" fill="white"/>
+        <path d="M 508.6 314.64 L 553.6 352.3275 L 508.6 390.015 L 463.6 352.3275 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_73_shadow" filter="url(#Shadow)">
+        <path d="M 929.88 271.905 L 974.88 309.5925 L 929.88 347.28 L 884.88 309.5925 Z" fill="white"/>
+        <path d="M 929.88 271.905 L 974.88 309.5925 L 929.88 347.28 L 884.88 309.5925 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_74_shadow" filter="url(#Shadow)">
+        <path d="M 929.88 391.9125 L 974.88 429.6 L 929.88 467.2875 L 884.88 429.6 Z" fill="white"/>
+        <path d="M 929.88 391.9125 L 974.88 429.6 L 929.88 467.2875 L 884.88 429.6 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Group_40">
+        <g id="Group_7">
+          <g id="Graphic_2">
+            <path d="M 229.48 432.72 L 229.48 380.232 L 235.312 374.4 L 287.8 374.4 L 287.8 426.888 L 281.968 432.72 Z" fill="white"/>
+            <path d="M 229.48 432.72 L 229.48 380.232 L 235.312 374.4 L 287.8 374.4 L 287.8 426.888 L 281.968 432.72 L 229.48 432.72 M 229.48 380.232 L 281.968 380.232 L 287.8 374.4 M 281.968 380.232 L 281.968 432.72" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_3">
+            <path d="M 223.72 438.48 L 223.72 385.992 L 229.552 380.16 L 282.04 380.16 L 282.04 432.648 L 276.208 438.48 Z" fill="white"/>
+            <path d="M 223.72 438.48 L 223.72 385.992 L 229.552 380.16 L 282.04 380.16 L 282.04 432.648 L 276.208 438.48 L 223.72 438.48 M 223.72 385.992 L 276.208 385.992 L 282.04 380.16 M 276.208 385.992 L 276.208 438.48" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_4">
+            <path d="M 218.68 443.52 L 218.68 391.032 L 224.512 385.2 L 277 385.2 L 277 437.688 L 271.168 443.52 Z" fill="white"/>
+            <path d="M 218.68 443.52 L 218.68 391.032 L 224.512 385.2 L 277 385.2 L 277 437.688 L 271.168 443.52 L 218.68 443.52 M 218.68 391.032 L 271.168 391.032 L 277 385.2 M 271.168 391.032 L 271.168 443.52" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+        </g>
+        <g id="Group_8">
+          <g id="Graphic_11">
+            <path d="M 282.04 432.72 L 282.04 380.232 L 287.872 374.4 L 340.36 374.4 L 340.36 426.888 L 334.528 432.72 Z" fill="white"/>
+            <path d="M 282.04 432.72 L 282.04 380.232 L 287.872 374.4 L 340.36 374.4 L 340.36 426.888 L 334.528 432.72 L 282.04 432.72 M 282.04 380.232 L 334.528 380.232 L 340.36 374.4 M 334.528 380.232 L 334.528 432.72" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_10">
+            <path d="M 276.28 438.48 L 276.28 385.992 L 282.112 380.16 L 334.6 380.16 L 334.6 432.648 L 328.768 438.48 Z" fill="white"/>
+            <path d="M 276.28 438.48 L 276.28 385.992 L 282.112 380.16 L 334.6 380.16 L 334.6 432.648 L 328.768 438.48 L 276.28 438.48 M 276.28 385.992 L 328.768 385.992 L 334.6 380.16 M 328.768 385.992 L 328.768 438.48" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_9">
+            <path d="M 271.24 443.52 L 271.24 391.032 L 277.072 385.2 L 329.56 385.2 L 329.56 437.688 L 323.728 443.52 Z" fill="white"/>
+            <path d="M 271.24 443.52 L 271.24 391.032 L 277.072 385.2 L 329.56 385.2 L 329.56 437.688 L 323.728 443.52 L 271.24 443.52 M 271.24 391.032 L 323.728 391.032 L 329.56 385.2 M 323.728 391.032 L 323.728 443.52" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+        </g>
+        <g id="Group_12">
+          <g id="Graphic_15">
+            <path d="M 334.6 432.72 L 334.6 380.232 L 340.432 374.4 L 392.92 374.4 L 392.92 426.888 L 387.088 432.72 Z" fill="white"/>
+            <path d="M 334.6 432.72 L 334.6 380.232 L 340.432 374.4 L 392.92 374.4 L 392.92 426.888 L 387.088 432.72 L 334.6 432.72 M 334.6 380.232 L 387.088 380.232 L 392.92 374.4 M 387.088 380.232 L 387.088 432.72" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_14">
+            <path d="M 328.84 438.48 L 328.84 385.992 L 334.672 380.16 L 387.16 380.16 L 387.16 432.648 L 381.328 438.48 Z" fill="white"/>
+            <path d="M 328.84 438.48 L 328.84 385.992 L 334.672 380.16 L 387.16 380.16 L 387.16 432.648 L 381.328 438.48 L 328.84 438.48 M 328.84 385.992 L 381.328 385.992 L 387.16 380.16 M 381.328 385.992 L 381.328 438.48" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_13">
+            <path d="M 323.8 443.52 L 323.8 391.032 L 329.632 385.2 L 382.12 385.2 L 382.12 437.688 L 376.288 443.52 Z" fill="white"/>
+            <path d="M 323.8 443.52 L 323.8 391.032 L 329.632 385.2 L 382.12 385.2 L 382.12 437.688 L 376.288 443.52 L 323.8 443.52 M 323.8 391.032 L 376.288 391.032 L 382.12 385.2 M 376.288 391.032 L 376.288 443.52" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+        </g>
+        <g id="Group_24">
+          <g id="Graphic_27">
+            <path d="M 229.48 380.16 L 229.48 327.672 L 235.312 321.84 L 287.8 321.84 L 287.8 374.328 L 281.968 380.16 Z" fill="white"/>
+            <path d="M 229.48 380.16 L 229.48 327.672 L 235.312 321.84 L 287.8 321.84 L 287.8 374.328 L 281.968 380.16 L 229.48 380.16 M 229.48 327.672 L 281.968 327.672 L 287.8 321.84 M 281.968 327.672 L 281.968 380.16" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_26">
+            <path d="M 223.72 385.92 L 223.72 333.432 L 229.552 327.6 L 282.04 327.6 L 282.04 380.088 L 276.208 385.92 Z" fill="white"/>
+            <path d="M 223.72 385.92 L 223.72 333.432 L 229.552 327.6 L 282.04 327.6 L 282.04 380.088 L 276.208 385.92 L 223.72 385.92 M 223.72 333.432 L 276.208 333.432 L 282.04 327.6 M 276.208 333.432 L 276.208 385.92" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_25">
+            <path d="M 218.68 390.96 L 218.68 338.472 L 224.512 332.64 L 277 332.64 L 277 385.128 L 271.168 390.96 Z" fill="white"/>
+            <path d="M 218.68 390.96 L 218.68 338.472 L 224.512 332.64 L 277 332.64 L 277 385.128 L 271.168 390.96 L 218.68 390.96 M 218.68 338.472 L 271.168 338.472 L 277 332.64 M 271.168 338.472 L 271.168 390.96" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+        </g>
+        <g id="Group_20">
+          <g id="Graphic_23">
+            <path d="M 282.04 380.16 L 282.04 327.672 L 287.872 321.84 L 340.36 321.84 L 340.36 374.328 L 334.528 380.16 Z" fill="white"/>
+            <path d="M 282.04 380.16 L 282.04 327.672 L 287.872 321.84 L 340.36 321.84 L 340.36 374.328 L 334.528 380.16 L 282.04 380.16 M 282.04 327.672 L 334.528 327.672 L 340.36 321.84 M 334.528 327.672 L 334.528 380.16" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_22">
+            <path d="M 276.28 385.92 L 276.28 333.432 L 282.112 327.6 L 334.6 327.6 L 334.6 380.088 L 328.768 385.92 Z" fill="white"/>
+            <path d="M 276.28 385.92 L 276.28 333.432 L 282.112 327.6 L 334.6 327.6 L 334.6 380.088 L 328.768 385.92 L 276.28 385.92 M 276.28 333.432 L 328.768 333.432 L 334.6 327.6 M 328.768 333.432 L 328.768 385.92" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_21">
+            <path d="M 271.24 390.96 L 271.24 338.472 L 277.072 332.64 L 329.56 332.64 L 329.56 385.128 L 323.728 390.96 Z" fill="white"/>
+            <path d="M 271.24 390.96 L 271.24 338.472 L 277.072 332.64 L 329.56 332.64 L 329.56 385.128 L 323.728 390.96 L 271.24 390.96 M 271.24 338.472 L 323.728 338.472 L 329.56 332.64 M 323.728 338.472 L 323.728 390.96" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+        </g>
+        <g id="Group_16">
+          <g id="Graphic_19">
+            <path d="M 334.6 380.16 L 334.6 327.672 L 340.432 321.84 L 392.92 321.84 L 392.92 374.328 L 387.088 380.16 Z" fill="white"/>
+            <path d="M 334.6 380.16 L 334.6 327.672 L 340.432 321.84 L 392.92 321.84 L 392.92 374.328 L 387.088 380.16 L 334.6 380.16 M 334.6 327.672 L 387.088 327.672 L 392.92 321.84 M 387.088 327.672 L 387.088 380.16" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_18">
+            <path d="M 328.84 385.92 L 328.84 333.432 L 334.672 327.6 L 387.16 327.6 L 387.16 380.088 L 381.328 385.92 Z" fill="white"/>
+            <path d="M 328.84 385.92 L 328.84 333.432 L 334.672 327.6 L 387.16 327.6 L 387.16 380.088 L 381.328 385.92 L 328.84 385.92 M 328.84 333.432 L 381.328 333.432 L 387.16 327.6 M 381.328 333.432 L 381.328 385.92" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_17">
+            <path d="M 323.8 390.96 L 323.8 338.472 L 329.632 332.64 L 382.12 332.64 L 382.12 385.128 L 376.288 390.96 Z" fill="white"/>
+            <path d="M 323.8 390.96 L 323.8 338.472 L 329.632 332.64 L 382.12 332.64 L 382.12 385.128 L 376.288 390.96 L 323.8 390.96 M 323.8 338.472 L 376.288 338.472 L 382.12 332.64 M 376.288 338.472 L 376.288 390.96" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+        </g>
+        <g id="Group_36">
+          <g id="Graphic_39">
+            <path d="M 229.48 327.6 L 229.48 275.112 L 235.312 269.28 L 287.8 269.28 L 287.8 321.768 L 281.968 327.6 Z" fill="white"/>
+            <path d="M 229.48 327.6 L 229.48 275.112 L 235.312 269.28 L 287.8 269.28 L 287.8 321.768 L 281.968 327.6 L 229.48 327.6 M 229.48 275.112 L 281.968 275.112 L 287.8 269.28 M 281.968 275.112 L 281.968 327.6" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_38">
+            <path d="M 223.72 333.36 L 223.72 280.872 L 229.552 275.04 L 282.04 275.04 L 282.04 327.528 L 276.208 333.36 Z" fill="white"/>
+            <path d="M 223.72 333.36 L 223.72 280.872 L 229.552 275.04 L 282.04 275.04 L 282.04 327.528 L 276.208 333.36 L 223.72 333.36 M 223.72 280.872 L 276.208 280.872 L 282.04 275.04 M 276.208 280.872 L 276.208 333.36" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_37">
+            <path d="M 218.68 338.4 L 218.68 285.912 L 224.512 280.08 L 277 280.08 L 277 332.568 L 271.168 338.4 Z" fill="white"/>
+            <path d="M 218.68 338.4 L 218.68 285.912 L 224.512 280.08 L 277 280.08 L 277 332.568 L 271.168 338.4 L 218.68 338.4 M 218.68 285.912 L 271.168 285.912 L 277 280.08 M 271.168 285.912 L 271.168 338.4" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+        </g>
+        <g id="Group_32">
+          <g id="Graphic_35">
+            <path d="M 282.04 327.6 L 282.04 275.112 L 287.872 269.28 L 340.36 269.28 L 340.36 321.768 L 334.528 327.6 Z" fill="white"/>
+            <path d="M 282.04 327.6 L 282.04 275.112 L 287.872 269.28 L 340.36 269.28 L 340.36 321.768 L 334.528 327.6 L 282.04 327.6 M 282.04 275.112 L 334.528 275.112 L 340.36 269.28 M 334.528 275.112 L 334.528 327.6" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_34">
+            <path d="M 276.28 333.36 L 276.28 280.872 L 282.112 275.04 L 334.6 275.04 L 334.6 327.528 L 328.768 333.36 Z" fill="white"/>
+            <path d="M 276.28 333.36 L 276.28 280.872 L 282.112 275.04 L 334.6 275.04 L 334.6 327.528 L 328.768 333.36 L 276.28 333.36 M 276.28 280.872 L 328.768 280.872 L 334.6 275.04 M 328.768 280.872 L 328.768 333.36" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_33">
+            <path d="M 271.24 338.4 L 271.24 285.912 L 277.072 280.08 L 329.56 280.08 L 329.56 332.568 L 323.728 338.4 Z" fill="white"/>
+            <path d="M 271.24 338.4 L 271.24 285.912 L 277.072 280.08 L 329.56 280.08 L 329.56 332.568 L 323.728 338.4 L 271.24 338.4 M 271.24 285.912 L 323.728 285.912 L 329.56 280.08 M 323.728 285.912 L 323.728 338.4" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+        </g>
+        <g id="Group_28">
+          <g id="Graphic_31">
+            <path d="M 334.6 327.6 L 334.6 275.112 L 340.432 269.28 L 392.92 269.28 L 392.92 321.768 L 387.088 327.6 Z" fill="white"/>
+            <path d="M 334.6 327.6 L 334.6 275.112 L 340.432 269.28 L 392.92 269.28 L 392.92 321.768 L 387.088 327.6 L 334.6 327.6 M 334.6 275.112 L 387.088 275.112 L 392.92 269.28 M 387.088 275.112 L 387.088 327.6" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_30">
+            <path d="M 328.84 333.36 L 328.84 280.872 L 334.672 275.04 L 387.16 275.04 L 387.16 327.528 L 381.328 333.36 Z" fill="white"/>
+            <path d="M 328.84 333.36 L 328.84 280.872 L 334.672 275.04 L 387.16 275.04 L 387.16 327.528 L 381.328 333.36 L 328.84 333.36 M 328.84 280.872 L 381.328 280.872 L 387.16 275.04 M 381.328 280.872 L 381.328 333.36" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+          <g id="Graphic_29">
+            <path d="M 323.8 338.4 L 323.8 285.912 L 329.632 280.08 L 382.12 280.08 L 382.12 332.568 L 376.288 338.4 Z" fill="white"/>
+            <path d="M 323.8 338.4 L 323.8 285.912 L 329.632 280.08 L 382.12 280.08 L 382.12 332.568 L 376.288 338.4 L 323.8 338.4 M 323.8 285.912 L 376.288 285.912 L 382.12 280.08 M 376.288 285.912 L 376.288 338.4" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+          </g>
+        </g>
+      </g>
+      <g id="Group_42">
+        <title>Class with Attributes</title>
+        <g id="Graphic_44">
+          <title>Attributes</title>
+          <rect x="242.64" y="72.33831" width="140.8" height="102.62168" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(248.64 78.33831)" fill="#515556">
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="13" xml:space="preserve">- individual</tspan>
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="35" xml:space="preserve">- group of individuals</tspan>
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="57" xml:space="preserve">- by affinity (alliance)</tspan>
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="79" xml:space="preserve">- by metric</tspan>
+          </text>
+        </g>
+        <g id="Graphic_43">
+          <title>Class Name</title>
+          <rect x="242.64" y="53.28" width="140.8" height="19.058313" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(248.64 53.809155)" fill="#515556">
+            <tspan font-family="Avenir" font-weight="bold" font-size="13" fill="#515556" x="17.333502" y="13" xml:space="preserve">Select accounts</tspan>
+          </text>
+        </g>
+      </g>
+      <g id="Group_51">
+        <title>Class with Attributes</title>
+        <g id="Graphic_53">
+          <title>Attributes</title>
+          <rect x="18" y="324.8" width="130" height="74" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(24 330.8)" fill="#515556">
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="13" xml:space="preserve">- individual</tspan>
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="35" xml:space="preserve">- campaign/section</tspan>
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="57" xml:space="preserve">- by unit?</tspan>
+          </text>
+        </g>
+        <g id="Graphic_52">
+          <title>Class Name</title>
+          <rect x="18" y="298.8" width="130" height="26" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(24 302.8)" fill="#515556">
+            <tspan font-family="Avenir" font-weight="bold" font-size="13" fill="#515556" x="9.2815" y="13" xml:space="preserve">Select questions</tspan>
+          </text>
+        </g>
+      </g>
+      <g id="Line_55">
+        <line x1="312.48932" y1="175.95994" x2="311.61643" y2="258.88057" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_56">
+        <line x1="149" y1="361.8" x2="208.28" y2="361.8" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Group_57">
+        <title>Class with Attributes</title>
+        <g id="Graphic_59">
+          <title>Attributes</title>
+          <rect x="667.44" y="295.28" width="130" height="52" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(673.44 301.28)" fill="#515556">
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="13" xml:space="preserve">Attribute</tspan>
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="35" xml:space="preserve">Attribute</tspan>
+          </text>
+        </g>
+        <g id="Graphic_58">
+          <title>Class Name</title>
+          <rect x="667.44" y="269.28" width="130" height="26" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(673.44 273.28)" fill="#515556">
+            <tspan font-family="Avenir" font-weight="bold" font-size="13" fill="#515556" x="23.2435" y="13" xml:space="preserve">Aggregates</tspan>
+          </text>
+        </g>
+      </g>
+      <g id="Group_60">
+        <title>Class with Attributes</title>
+        <g id="Graphic_62">
+          <title>Attributes</title>
+          <rect x="667.44" y="425.6" width="130" height="52" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(673.44 431.6)" fill="#515556">
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="13" xml:space="preserve">Attribute</tspan>
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="35" xml:space="preserve">Attribute</tspan>
+          </text>
+        </g>
+        <g id="Graphic_61">
+          <title>Class Name</title>
+          <rect x="667.44" y="381.6" width="130" height="44" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(673.44 385.6)" fill="#515556">
+            <tspan font-family="Avenir" font-weight="bold" font-size="13" fill="#515556" x="29.6005" y="13" xml:space="preserve">Individual </tspan>
+            <tspan font-family="Avenir" font-weight="bold" font-size="13" fill="#515556" x="26.994" y="31" xml:space="preserve">Responses</tspan>
+          </text>
+        </g>
+      </g>
+      <g id="Graphic_63">
+        <path d="M 508.6 314.64 L 553.6 352.3275 L 508.6 390.015 L 463.6 352.3275 Z" fill="white"/>
+        <path d="M 508.6 314.64 L 553.6 352.3275 L 508.6 390.015 L 463.6 352.3275 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(480.75 345.43374)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="3.47" y="10" xml:space="preserve">aggregate?</tspan>
+        </text>
+      </g>
+      <g id="Line_64">
+        <line x1="393.41995" y1="351.39436" x2="453.2009" y2="352.18848" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_65">
+        <line x1="553.6" y1="352.3275" x2="656.7006" y2="334.4287" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_66">
+        <line x1="553.6" y1="352.3275" x2="656.9621" y2="381.96087" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_67">
+        <line x1="366.2938" y1="175.6587" x2="501.1499" y2="307.38384" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_69">
+        <rect x="394.58313" y="231.40327" width="80.37" height="22.28" fill="white"/>
+        <text transform="translate(399.58314 236.40327)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="0" y="10" xml:space="preserve">force aggregate</tspan>
+        </text>
+      </g>
+      <g id="Group_70">
+        <title>Class with Attributes</title>
+        <g id="Graphic_72">
+          <title>Attributes</title>
+          <rect x="236.88" y="522.08" width="130" height="52" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(242.88 528.08)" fill="#515556">
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="13" xml:space="preserve">by age</tspan>
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="35" xml:space="preserve">by date</tspan>
+          </text>
+        </g>
+        <g id="Graphic_71">
+          <title>Class Name</title>
+          <rect x="236.88" y="496.08" width="130" height="26" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(242.88 500.08)" fill="#515556">
+            <tspan font-family="Avenir" font-weight="bold" font-size="13" fill="#515556" x="21.8005" y="13" xml:space="preserve">Select dates</tspan>
+          </text>
+        </g>
+      </g>
+      <g id="Graphic_73">
+        <path d="M 929.88 271.905 L 974.88 309.5925 L 929.88 347.28 L 884.88 309.5925 Z" fill="white"/>
+        <path d="M 929.88 271.905 L 974.88 309.5925 L 929.88 347.28 L 884.88 309.5925 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(902.03 296.55875)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x=".965" y="10" xml:space="preserve">presentation </tspan>
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="17.725" y="22.28" xml:space="preserve">unit?</tspan>
+        </text>
+      </g>
+      <g id="Graphic_74">
+        <path d="M 929.88 391.9125 L 974.88 429.6 L 929.88 467.2875 L 884.88 429.6 Z" fill="white"/>
+        <path d="M 929.88 391.9125 L 974.88 429.6 L 929.88 467.2875 L 884.88 429.6 Z" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(902.03 416.56624)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x=".965" y="10" xml:space="preserve">presentation </tspan>
+          <tspan font-family="Helvetica Neue" font-size="10" fill="black" x="17.725" y="22.28" xml:space="preserve">unit?</tspan>
+        </text>
+      </g>
+      <g id="Group_75">
+        <title>Class with Attributes</title>
+        <g id="Graphic_77">
+          <title>Attributes</title>
+          <rect x="1005.84" y="295.28" width="130" height="52" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(1011.84 301.28)" fill="#515556">
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="13" xml:space="preserve">Attribute</tspan>
+            <tspan font-family="Avenir" font-size="13" fill="#515556" x="0" y="35" xml:space="preserve">Attribute</tspan>
+          </text>
+        </g>
+        <g id="Graphic_76">
+          <title>Class Name</title>
+          <rect x="1005.84" y="269.28" width="130" height="26" stroke="#b9c0c1" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+          <text transform="translate(1011.84 273.28)" fill="#515556">
+            <tspan font-family="Avenir" font-weight="bold" font-size="13" fill="#515556" x="23.2435" y="13" xml:space="preserve">Aggregates</tspan>
+          </text>
+        </g>
+      </g>
+      <g id="Line_81">
+        <line x1="301.66125" y1="495.0801" x2="301.0181" y2="453.9187" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+    </g>
+  </g>
+</svg>
