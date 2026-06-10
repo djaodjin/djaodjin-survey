@@ -593,12 +593,17 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                 'ends_at': serializer.validated_data.get('ends_at')})
         campaign = serializer.validated_data.get('campaign')
         accounts = serializer.validated_data['accounts']
-        cc = serializer.validated_data.get('cc', [])
         requests_initiated = []
         with transaction.atomic():
             for serialized_account in accounts:
+                emails = serialized_account.pop('email', [])
+                email = emails[0] if emails else None
+                cc = list(emails[1:]) if len(emails) > 1 else []
+
                 account_data = {}
                 account_data.update(serialized_account)
+                if email:
+                    account_data['email'] = email
 
                 # Django1.11: we need to remove invalid fields when creating
                 # a new grantee account otherwise Django1.11 will raise
@@ -614,11 +619,10 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                         invalid_fields += [field_name]
                 for field_name in invalid_fields:
                     account_data.pop(field_name)
-                account, unused_created = account_model.objects.get_or_create(
+                account, account_created = account_model.objects.get_or_create(
                     defaults=account_data, **lookups)
 
-                email = serialized_account.get('email')
-                if not unused_created and not account.email:
+                if not account_created and not account.email:
                     if email:
                         account.email = email
                         account.save(update_fields=['email'])
@@ -661,15 +665,18 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                         **defaults)
                     status_code = status.HTTP_201_CREATED
                 requests_initiated += [(
-                    portfolio, [account_data] if account_data else [])]
+                    portfolio,
+                    [account_data] if account_data else [],
+                    cc)]
 
         message = serializer.validated_data.get('message')
         for req in requests_initiated:
             portfolio = req[0]
             recipients = req[1]
+            account_cc = req[2]
             signals.portfolios_request_initiated.send(sender=__name__,
                 portfolios=[portfolio], recipients=recipients, message=message,
-                cc=cc, request=self.request)
+                cc=account_cc, request=self.request)
 
         results = self.serializer_class(many=True,
             context=self.get_serializer_context()).to_representation(
