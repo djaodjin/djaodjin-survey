@@ -649,9 +649,18 @@ class PortfolioGrantCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ("ends_at",)
 
 
+class InviteeWithCCSerializer(InviteeSerializer):
+
+    email = serializers.ListField(
+        child=serializers.EmailField(),
+        required=False, default=list,
+        help_text=_("Email addresses for the invitee. The first email"
+            " is the primary recipient, subsequent ones are CC'd"))
+
+
 class PortfolioRequestCreateSerializer(serializers.ModelSerializer):
 
-    accounts = InviteeSerializer(many=True)
+    accounts = InviteeWithCCSerializer(many=True)
     campaign = serializers.SlugRelatedField(required=False,
         queryset=Campaign.objects.all(), slug_field='slug')
     ends_at = serializers.DateTimeField(required=False, allow_null=True,
@@ -659,15 +668,10 @@ class PortfolioRequestCreateSerializer(serializers.ModelSerializer):
     extra = ExtraField(required=False,
         help_text=_("Extra meta data (can be stringify JSON)"))
     message = serializers.CharField(required=False, allow_null=True)
-    cc = serializers.ListField(
-        child=serializers.EmailField(),
-        required=False, default=list,
-        help_text=_("Additional email addresses"
-            " to notify besides the primary recipient"))
 
     class Meta:
         model = PortfolioDoubleOptIn
-        fields = ('accounts', 'campaign', 'ends_at', 'extra', 'message', 'cc')
+        fields = ('accounts', 'campaign', 'ends_at', 'extra', 'message')
 
 
 class PortfolioOptInUpdateSerializer(serializers.ModelSerializer):
