@@ -614,6 +614,11 @@ class InviteeSerializer(NoModelSerializer):
     slug = serializers.SlugField()
     full_name = serializers.CharField(required=False)
     email = serializers.EmailField(required=False)
+    recipients = serializers.ListField(
+        child=serializers.EmailField(),
+        required=False, default=list,
+        help_text=_("Additional email addresses"
+            " to notify besides the primary recipient"))
     printable_name = serializers.SerializerMethodField()
 
     @staticmethod
@@ -649,18 +654,9 @@ class PortfolioGrantCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ("ends_at",)
 
 
-class InviteeWithCCSerializer(InviteeSerializer):
-
-    email = serializers.ListField(
-        child=serializers.EmailField(),
-        required=False, default=list,
-        help_text=_("Email addresses for the invitee. The first email"
-            " is the primary recipient, subsequent ones are CC'd"))
-
-
 class PortfolioRequestCreateSerializer(serializers.ModelSerializer):
 
-    accounts = InviteeWithCCSerializer(many=True)
+    accounts = InviteeSerializer(many=True)
     campaign = serializers.SlugRelatedField(required=False,
         queryset=Campaign.objects.all(), slug_field='slug')
     ends_at = serializers.DateTimeField(required=False, allow_null=True,
