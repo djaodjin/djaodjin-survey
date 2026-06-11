@@ -28,8 +28,7 @@ from functools import reduce
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.db.models import JSONField, Q, TextField
-from django.db.models.functions import Cast, TruncMonth, TruncYear
+from django.db.models.functions import TruncMonth, TruncYear
 from django.db.models.query import RawQuerySet
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter, BaseFilterBackend)
@@ -103,7 +102,7 @@ class SearchFilter(BaseSearchFilter):
         conditions = []
         for search_term in search_terms:
             queries = [
-                models.Q(**{orm_lookup: search_term})
+                self.build_search_query(orm_lookup, search_term)
                 for orm_lookup in orm_lookups
             ]
             conditions.append(reduce(operator.or_, queries))
@@ -116,6 +115,10 @@ class SearchFilter(BaseSearchFilter):
             # We try to avoid this if possible, for performance reasons.
             queryset = queryset.distinct()
         return queryset
+
+
+    def build_search_query(self, orm_lookup, search_term):
+        return models.Q(**{orm_lookup: search_term})
 
 
     def filter_valid_fields(self, queryset, fields, view):
@@ -596,46 +599,18 @@ class SampleStateFilter(StateFilter):
     ]
 
 
-class PortfolioTagsFilter(BaseFilterBackend):
+class PortfolioSearchFilter(SearchFilter):
 
-    tags_param = 'tags'
+    tags_field = 'extra_tags_str'
 
-    def get_query_param(self, request, key, default_value=None):
-        try:
-            return request.query_params.get(key, default_value)
-        except AttributeError:
-            pass
-        return request.GET.get(key, default_value)
+    def get_valid_fields(self, request, queryset, view, context=None):
+        fields = super().get_valid_fields(
+            request, queryset, view, context=context)
+        if self.tags_field not in fields:
+            fields = fields + (self.tags_field,)
+        return fields
 
-    def filter_queryset(self, request, queryset, view):
-        tags_qs = self.get_query_param(request, self.tags_param, '')
-        tags = None
-        if tags_qs:
-            tags = []
-            for tag in tags_qs.split(','):
-                tag = tag.strip()
-                if tag:
-                    tags.append(tag)
-        if not tags:
-            return queryset
-        queryset = queryset.annotate(
-            extra_json=Cast('portfolios__extra', output_field=JSONField()),
-            extra_tags_str=Cast('extra_json__tags', TextField()),
-        )
-        tags_filter = Q()
-        for tag in tags:
-            tags_filter &= Q(extra_tags_str__contains=f'"{tag}"')
-        return queryset.filter(tags_filter)
-
-    def get_schema_operation_parameters(self, view):
-        return [
-            {
-                'name': self.tags_param,
-                'required': False,
-                'in': 'query',
-                'description': force_str("filter by portfolio tags"),
-                'schema': {
-                    'type': 'string',
-                },
-            },
-        ]
+    def build_search_query(self, orm_lookup, search_term):
+        if orm_lookup.startswith(self.tags_field):
+            return models.Q(**{orm_lookup: f'"{search_term}"'})
+        return super().build_search_query(orm_lookup, search_term)
