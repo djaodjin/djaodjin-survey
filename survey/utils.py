@@ -49,7 +49,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
-                            start_at=None, ends_at=None, **filter_kwargs):
+                            start_at=None, ends_at=None):
     """
     All accounts which have elected to share samples with at least one
     account in grantees.
@@ -64,11 +64,10 @@ def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
         settings.ACCESSIBLE_ACCOUNTS_CALLABLE):
         queryset = import_string(settings.ACCESSIBLE_ACCOUNTS_CALLABLE)(
             grantees, campaign=campaign, aggregate_set=aggregate_set,
-            start_at=start_at, ends_at=ends_at, **filter_kwargs)
+            start_at=start_at, ends_at=ends_at)
 
     if queryset is None:
         filter_params = {}
-        filter_params.update(filter_kwargs)
         if start_at:
             # XXX not sure anymore why we use double-optin here...
             filter_params.update({
@@ -87,6 +86,7 @@ def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
 
         if not aggregate_set:
             queryset = queryset.annotate(_extra=models.F('portfolios__extra'))
+
         queryset = queryset.distinct()
 
     return queryset
