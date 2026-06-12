@@ -102,7 +102,7 @@ class SearchFilter(BaseSearchFilter):
         conditions = []
         for search_term in search_terms:
             queries = [
-                models.Q(**{orm_lookup: search_term})
+                self.build_search_query(orm_lookup, search_term)
                 for orm_lookup in orm_lookups
             ]
             conditions.append(reduce(operator.or_, queries))
@@ -115,6 +115,10 @@ class SearchFilter(BaseSearchFilter):
             # We try to avoid this if possible, for performance reasons.
             queryset = queryset.distinct()
         return queryset
+
+
+    def build_search_query(self, orm_lookup, search_term):
+        return models.Q(**{orm_lookup: search_term})
 
 
     def filter_valid_fields(self, queryset, fields, view):
@@ -593,3 +597,25 @@ class SampleStateFilter(StateFilter):
         (False, 'active'),
         (True, 'completed')
     ]
+
+
+class JSONArraySearchFilter(SearchFilter):
+
+    def get_valid_fields(self, request, queryset, view, context=None):
+        fields = super().get_valid_fields(
+            request, queryset, view, context=context)
+        for field in getattr(view, 'json_search_fields', []):
+            if field not in fields:
+                fields = fields + (field,)
+        return fields
+
+    def build_search_query(self, orm_lookup, search_term):
+        json_search_fields = getattr(self, '_json_search_fields', ())
+        for field in json_search_fields:
+            if orm_lookup.startswith(field):
+                return models.Q(**{orm_lookup: f'"{search_term}"'})
+        return super().build_search_query(orm_lookup, search_term)
+
+    def filter_queryset(self, request, queryset, view):
+        self._json_search_fields = getattr(view, 'json_search_fields', ())
+        return super().filter_queryset(request, queryset, view)
