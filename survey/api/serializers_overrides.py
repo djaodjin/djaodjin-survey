@@ -38,13 +38,13 @@ class UserSerializer(serializers.ModelSerializer):
 
     # Only way I found out to remove the ``UniqueValidator``. We are not
     # interested to create new instances here.
-    slug = serializers.CharField(source='username', validators=[
+    slug = serializers.CharField(source='username', required=False, validators=[
         validators.RegexValidator(r'^[\w.@+-]+$', _('Enter a valid username.'),
             'invalid')],
         help_text=_("Effectively the username. The variable is named `slug`"\
             " such that front-end code can be re-used between Organization"\
             " and User records."))
-    email = serializers.EmailField(read_only=True,
+    email = serializers.EmailField(
         help_text=_("E-mail address for the user"))
     created_at = serializers.DateTimeField(source='date_joined', required=False,
         help_text=_("Date/time of creation (in ISO format)"))
