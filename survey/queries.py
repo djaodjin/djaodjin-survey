@@ -42,7 +42,7 @@ def as_sql_date_trunc_month(field_name, db_key=None):
     if is_sqlite3(db_key):
         # We have to return a value that can be converted to a `datetime`
         # by Django `convert_datetimefield_value` function
-        return "strftime('%%Y-%%M-01T00:00:00Z', %s)" % field_name
+        return "strftime('%%Y-%%m-01T00:00:00Z', %s)" % field_name
     return "date_trunc('month', %s)" % field_name
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,9 @@ from ..compat import six
 
 
 class QuestionListAPIView(generics.ListAPIView):
+    """
+    Select questions `get_questions_by_key`
+    """
 
     @property
     def db_path(self):

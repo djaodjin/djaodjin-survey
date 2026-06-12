@@ -19,6 +19,7 @@ Contents:
    models
    encoding
    portfolios
+   analytics
    extensions
 
 Indices and tables
