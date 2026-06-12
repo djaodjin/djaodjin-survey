@@ -32,6 +32,7 @@ from django.views.generic import RedirectView, TemplateView
 from django.views.static import serve as django_static_serve
 from survey.compat import reverse_lazy, path, re_path, include
 
+from . import notifications
 from .api.auth import LoginAPIView
 from .api.accounts import AccountsAPIView
 
