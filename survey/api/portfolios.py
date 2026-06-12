@@ -596,7 +596,6 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
         requests_initiated = []
         with transaction.atomic():
             for serialized_account in accounts:
-                email = serialized_account.get('email')
                 cc = serialized_account.pop('recipients', [])
 
                 account_data = {}
@@ -616,15 +615,8 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                         invalid_fields += [field_name]
                 for field_name in invalid_fields:
                     account_data.pop(field_name)
-                account, account_created = account_model.objects.get_or_create(
+                account, unused_created = account_model.objects.get_or_create(
                     defaults=account_data, **lookups)
-
-                if not account_created and not account.email:
-                    if email:
-                        account.email = email
-                        account.save(update_fields=['email'])
-                if email and account.email != email:
-                    cc.append(email)
 
                 # fill receipients information with additional information
                 # we can find in the database.
