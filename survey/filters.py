@@ -599,18 +599,23 @@ class SampleStateFilter(StateFilter):
     ]
 
 
-class PortfolioSearchFilter(SearchFilter):
-
-    tags_field = 'extra_tags_str'
+class JSONArraySearchFilter(SearchFilter):
 
     def get_valid_fields(self, request, queryset, view, context=None):
         fields = super().get_valid_fields(
             request, queryset, view, context=context)
-        if self.tags_field not in fields:
-            fields = fields + (self.tags_field,)
+        for field in getattr(view, 'json_search_fields', []):
+            if field not in fields:
+                fields = fields + (field,)
         return fields
 
     def build_search_query(self, orm_lookup, search_term):
-        if orm_lookup.startswith(self.tags_field):
-            return models.Q(**{orm_lookup: f'"{search_term}"'})
+        json_search_fields = getattr(self, '_json_search_fields', ())
+        for field in json_search_fields:
+            if orm_lookup.startswith(field):
+                return models.Q(**{orm_lookup: f'"{search_term}"'})
         return super().build_search_query(orm_lookup, search_term)
+
+    def filter_queryset(self, request, queryset, view):
+        self._json_search_fields = getattr(view, 'json_search_fields', ())
+        return super().filter_queryset(request, queryset, view)
