@@ -596,6 +596,8 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
         requests_initiated = []
         with transaction.atomic():
             for serialized_account in accounts:
+                recipients = serialized_account.pop('recipients', [])
+
                 account_data = {}
                 account_data.update(serialized_account)
 
@@ -651,8 +653,9 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
                     verification_key=PortfolioDoubleOptIn.generate_key(account),
                         **defaults)
                     status_code = status.HTTP_201_CREATED
-                requests_initiated += [(
-                    portfolio, [account_data] if account_data else [])]
+                if not recipients:
+                    recipients = [account_data] if account_data else []
+                requests_initiated += [(portfolio, recipients)]
 
         message = serializer.validated_data.get('message')
         for req in requests_initiated:

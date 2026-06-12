@@ -34,7 +34,8 @@ from ..compat import gettext_lazy as _, reverse, six
 from ..models import (EditableFilterEnumeratedAccounts, Answer, Campaign,
     Choice, EditableFilter, Matrix, PortfolioDoubleOptIn,
     Sample, Unit, convert_to_target_unit)
-from ..utils import get_account_model, get_belongs_model, get_question_model
+from ..utils import (get_account_model, get_belongs_model, get_question_model,
+    get_user_serializer)
 
 
 class EnumField(serializers.ChoiceField):
@@ -610,11 +611,30 @@ class CompareQuestionSerializer(QuestionSerializer):
 
 
 class InviteeSerializer(NoModelSerializer):
+    """
+    When a portfoliod grant or request is generated, the target profile
+    (i.e. `PortfolioDoubleOptIn.grantee` and `PortfolioDoubleOptIn.account`
+    respectively), might or might not exist in the database. The information
+    provided will enable to e-mail the grant/request regardless.
 
+    In cases the organization profile primary e-mail address is different
+    from the contacts that should receive the grant/request, these contacts
+    can be specified in the 'recipients' field.
+
+    As a contrete example, John has asked to be notified of requests
+    to complete a sustainability questionnaire, yet the company primary
+    contact is a generic e-mail address (sustainability@example.com).
+    """
     slug = serializers.SlugField()
     full_name = serializers.CharField(required=False)
     email = serializers.EmailField(required=False)
     printable_name = serializers.SerializerMethodField()
+
+    recipients = serializers.ListField(
+        child=get_user_serializer()(
+            help_text=_("Contact to notify about the grant/request")),
+        required=False, default=list,
+        help_text=_("List of contacts to notify about the grant/request"))
 
     @staticmethod
     def get_printable_name(obj):
