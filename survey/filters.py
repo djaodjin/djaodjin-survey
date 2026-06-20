@@ -125,6 +125,10 @@ class SearchFilter(BaseSearchFilter):
         #pylint:disable=protected-access
         model_fields = {
             field.name for field in queryset.model._meta.get_fields()}
+        annotations = getattr(
+            getattr(queryset, 'query', None), 'annotations', None)
+        if annotations:
+            model_fields |= set(annotations.keys())
         # We add all the fields that could be aliases then filter out the ones
         # which are not present in the model.
         alternate_fields = getattr(view, 'alternate_fields', {})
@@ -161,7 +165,11 @@ class SearchFilter(BaseSearchFilter):
                 except FieldDoesNotExist:
                     pass
             elif field_name in model_fields:
-                rel = queryset.model._meta.get_field(field_name).remote_field
+                try:
+                    rel = queryset.model._meta.get_field(
+                        field_name).remote_field
+                except FieldDoesNotExist:
+                    rel = None
                 if not rel:
                     # if it is a relation fields (as a result valid),
                     # we don't want to end-up with a problem later on
