@@ -36,6 +36,7 @@ from django.conf import settings as django_settings
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
+from django.db.models.functions import Cast
 from django.http.request import split_domain_port, validate_host
 from rest_framework.exceptions import ValidationError
 
@@ -118,16 +119,6 @@ def get_engaged_accounts(grantees, campaign=None, aggregate_set=False,
         if campaign:
             filter_params.update({
                 'portfolio_double_optin_accounts__campaign': campaign})
-        if search_terms:
-            if '@' in search_terms:
-                domain = search_terms.split('@')[-1]
-                filter_params.update({
-                    'email__endswith': domain
-                })
-            else:
-                filter_params.update({
-                    'full_name__icontains': search_terms
-                })
         queryset = get_account_model().objects.filter(
             portfolio_double_optin_accounts__grantee__in=grantees,
             portfolio_double_optin_accounts__state__in=(
@@ -141,8 +132,34 @@ def get_engaged_accounts(grantees, campaign=None, aggregate_set=False,
                 grant_key=models.Case(
                 models.When(
                     portfolio_double_optin_accounts__state=0, then=True),
-                output_field=models.BooleanField())
-        ).distinct()
+                output_field=models.BooleanField()),
+                optin_extra_json=Cast(
+                    'portfolio_double_optin_accounts__extra',
+                    output_field=models.JSONField()),
+                optin_tags_str=Cast(
+                    'optin_extra_json__tags', models.TextField()),
+                optin_supplier_key_str=Cast(
+                    'optin_extra_json__supplier_key', models.TextField()),
+                portfolio_extra_json=Cast(
+                    'portfolios__extra',
+                    output_field=models.JSONField()),
+                portfolio_tags_str=Cast(
+                    'portfolio_extra_json__tags', models.TextField()),
+                portfolio_supplier_key_str=Cast(
+                    'portfolio_extra_json__supplier_key', models.TextField()),
+        )
+        if search_terms:
+            if '@' in search_terms:
+                domain = search_terms.split('@')[-1]
+                queryset = queryset.filter(email__endswith=domain)
+            else:
+                queryset = queryset.filter(
+                    models.Q(full_name__icontains=search_terms) |
+                    models.Q(optin_tags_str__icontains='"%s"' % search_terms) |
+                    models.Q(optin_supplier_key_str__icontains=search_terms) |
+                    models.Q(portfolio_tags_str__icontains='"%s"' % search_terms) |
+                    models.Q(portfolio_supplier_key_str__icontains=search_terms))
+        queryset = queryset.distinct()
 
     return queryset
 
