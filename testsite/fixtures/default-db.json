@@ -61,6 +61,21 @@
 },
 {
     "fields": {
+      "date_joined": "2025-01-01T00:00:00+00:00",
+      "email": "steve+5@localhost.localdomain",
+      "first_name": "Steve",
+      "is_active": true,
+      "is_staff": false,
+      "is_superuser": false,
+      "last_login": "2025-01-01T00:00:00+00:00",
+      "last_name": "",
+      "password": "pbkdf2_sha256$10000$z0MBiWn0Rlem$iZdC6uHomlE07qGK/TqfcfxNzKJtFp03c0JILF1frRc=",
+      "username": "steve5"
+    },
+    "model": "auth.User", "pk": 6
+},
+{
+    "fields": {
       "slug": "tspproject",
       "full_name": "TSP"
     },
