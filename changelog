@@ -1,3 +1,10 @@
+0.20.1
+
+  * added tags search functionality
+  * supports multiple receipients when creating a request
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue, 23 Jun 2026 11:40:00 -0700
+
 0.20.0
 
   * replaces sha1 by sha256

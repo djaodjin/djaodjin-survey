@@ -42,11 +42,10 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.20.0
+0.20.1
 
-  * replaces sha1 by sha256
-  * fixes sum in metrics/aggregate API
-  * fixes 500 calling metrics/aggregate API
+  * added tags search functionality
+  * supports multiple receipients when creating a request
 
 [previous release notes](changelog)
 
