@@ -723,7 +723,8 @@ var typeAheadMixin = {
             if( !vm.query ) {
                 return text;
             }
-            let regex = new RegExp(vm.query, "gi"); // search for all instances
+            let regex = new RegExp(RegExp.escape(vm.query), "gi");
+                                                    // search for all instances
             let newText = text.replace(regex, `<mark>$&</mark>`);
             return newText;
         },
@@ -817,6 +818,17 @@ var typeAheadMixin = {
                 vm.current = -1;
                 vm.loading = false;
                 vm.$nextTick(function() {
+                    var dropdowns = vm.$refs.dropdown;
+                    if( dropdowns ) {
+                        if( typeof dropdowns.length != 'undefined' ) {
+                            if( dropdowns.length > 0 ) {
+                                dropdowns[0].scrollTo({
+                                    top: 0, behavior: 'instant'});
+                            }
+                        } else {
+                            dropdowns.scrollTo({top: 0, behavior: 'instant'});
+                        }
+                    }
                     var inputs = vm.$refs.input;
                     if( inputs ) {
                         if( typeof inputs.length != 'undefined' ) {

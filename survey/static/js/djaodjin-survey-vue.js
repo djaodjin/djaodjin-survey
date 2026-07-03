@@ -1236,6 +1236,7 @@ Vue.component('enum-choices-typeahead', {
     ],
     data: function () {
         return {
+            minChars: 2,
             query: this.value ? this.value : '',
             prev: this.value ? this.value : '',
         };
@@ -1258,6 +1259,16 @@ Vue.component('enum-choices-typeahead', {
             // We need to keep the `onHit` selection, if there was an `onHit`.
             vm.query = vm.prev;
         },
+    },
+    watch: {
+        value: {
+            handler(newValue) {
+                this.query = newValue ? newValue : '';
+                this.prev = newValue ? newValue : '';
+            },
+            deep: true, // Forces Vue to watch nested objects/arrays
+            immediate: false // Runs immediately upon component creation
+        }
     }
 });
 
