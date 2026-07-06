@@ -240,6 +240,9 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
             total_count += count
         if total_count < nb_accounts:
             choice_list += [('No response', nb_accounts - total_count, [])]
+        if self.unit == 'percentage' and nb_accounts > 0:
+            choice_list = [(choice, round(count * 100 / nb_accounts), samples)
+                for choice, count, samples in choice_list]
         if start_at:
             values += [(start_at, choice_list)]
         else:
