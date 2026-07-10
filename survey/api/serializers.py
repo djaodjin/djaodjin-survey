@@ -224,8 +224,8 @@ class ChoiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Choice
-        fields = ('text', 'descr', 'rank')
-        read_only_fields = ('text', 'descr', 'rank')
+        fields = ('text', 'descr')
+        read_only_fields = ('text', 'descr')
 
 
 class UnitSerializer(serializers.ModelSerializer):
