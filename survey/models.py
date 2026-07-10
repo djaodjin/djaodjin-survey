@@ -205,8 +205,6 @@ class Choice(models.Model):
     Choice for a multiple choice question, or text blob for `Answer`
     with a 'freetext' unit.
     """
-    NO_RESPONSE_RANK = -1
-
     unit = models.ForeignKey(Unit, on_delete=models.PROTECT,
             related_name='enums')
     question = models.ForeignKey(settings.QUESTION_MODEL,

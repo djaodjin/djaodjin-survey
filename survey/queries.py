@@ -737,8 +737,7 @@ SELECT
   survey_unit.title AS question_default_unit_title,
   survey_unit.system AS question_default_unit_system,
   CASE WHEN survey_unit.system IN (%(enum_systems)s) THEN survey_choice.text
-  ELSE 'present' END AS choice,
-  survey_choice.rank AS choice_rank
+  ELSE 'present' END AS choice
 FROM survey_answer
 INNER JOIN survey_question
   ON survey_answer.question_id = survey_question.id
@@ -760,7 +759,6 @@ SELECT
   question_default_unit_title,
   question_default_unit_system,
   choice,
-  choice_rank,
   %(select_period)s
   answers_by_question_choice.sample_id AS sample_id,
   survey_sample.slug AS sample_slug -- identifier returned to client
@@ -823,8 +821,7 @@ SELECT
   survey_unit.title AS question_default_unit_title,
   survey_unit.system AS question_default_unit_system,
   CASE WHEN survey_unit.system IN (%(enum_systems)s) THEN survey_choice.text
-  ELSE 'present' END AS choice,
-  survey_choice.rank AS choice_rank
+  ELSE 'present' END AS choice
 FROM survey_answer
 INNER JOIN survey_question
   ON survey_answer.question_id = survey_question.id
@@ -846,7 +843,6 @@ SELECT
   question_default_unit_title,
   question_default_unit_system,
   choice,
-  choice_rank,
   %(select_period)s
   COUNT(answers_by_question_choice.sample_id) AS nb_samples
 FROM answers_by_question_choice
@@ -861,8 +857,7 @@ GROUP BY
   question_default_unit_slug,
   question_default_unit_title,
   question_default_unit_system,
-  choice,
-  choice_rank
+  choice
 ORDER BY question_id ASC,%(group_by_period)s choice ASC;""" % {
     'enum_systems': ",".join([str(system) for system in [
         UNIT_SYSTEM_ENUMERATED, UNIT_SYSTEM_DATETIME]]),
