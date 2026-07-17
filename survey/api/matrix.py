@@ -236,16 +236,13 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
             count = choice_d['count']
             if not count:
                 count = len(choice_d['samples'])
-            choice_list += [(choice, count, choice_d['rank'],
-                choice_d['samples'])]
+            choice_list += [(choice, count, choice_d['samples'])]
             total_count += count
         if total_count < nb_accounts:
-            choice_list += [('No response', nb_accounts - total_count,
-                Choice.NO_RESPONSE_RANK, [])]
+            choice_list += [('No response', nb_accounts - total_count, [])]
         if self.unit == 'percentage' and nb_accounts > 0:
-            choice_list = [(choice, round(count * 100 / nb_accounts),
-                rank, samples)
-                for choice, count, rank, samples in choice_list]
+            choice_list = [(choice, round(count * 100 / nb_accounts), samples)
+                for choice, count, samples in choice_list]
         if start_at:
             values += [(start_at, choice_list)]
         else:
@@ -322,7 +319,6 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
                 for question in queryset:
                     question_id = question.pk
                     choice = question.choice
-                    choice_rank = question.choice_rank
                     try:
                         count = question.nb_samples
                     except AttributeError:
@@ -342,9 +338,7 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
                     prev_period_start_at = period_start_at
                     prev_row = question
                     if choice not in choices:
-                        choices.update({choice: {
-                            'count': 0, 'samples': [],
-                            'rank': choice_rank}})
+                        choices.update({choice: {'count': 0, 'samples': []}})
                     if count:
                         choices[choice]['count'] += count
                     if sample_id:

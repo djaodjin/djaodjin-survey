@@ -85,11 +85,11 @@ def attach_answers(units, questions_by_key, queryset,
                     default_unit_dict = {
                         'slug': default_unit.slug,
                         'title': default_unit.title,
-                    'system': default_unit.system,
+                        'system': default_unit.system,
                         'choices':[{
                             'pk': choice.pk,
                             'text': choice.text,
-                    'descr': choice.descr if choice.descr else choice.text
+                            'descr': choice.descr if choice.descr else choice.text
                         } for choice in default_unit.choices]}
                     enum_units[default_unit.pk] = default_unit_dict
             value = {

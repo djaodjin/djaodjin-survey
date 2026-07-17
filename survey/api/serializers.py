@@ -557,7 +557,7 @@ class KeyValueTuple(serializers.ListField):
     # with a (String, String).
 
     min_length = 2
-    max_length = 4
+    max_length = 3
 
 
 class TableSerializer(NoModelSerializer):

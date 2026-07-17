@@ -44,6 +44,7 @@ class MetricsPagination(BasePagination):
             ('unit', getattr(self.view, 'unit', None)),
             ('nb_accounts', getattr(self.view, 'nb_accounts', None)),
             ('labels', getattr(self.view, 'labels', None)),
+            ('units', getattr(self.view, 'units', {})),
             ('count', len(data)),
             ('results', data)
         ]))
