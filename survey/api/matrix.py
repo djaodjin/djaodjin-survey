@@ -54,7 +54,7 @@ from .serializers import (AccountsDateRangeQueryParamSerializer,
     CompareQuestionSerializer,
     EditableFilterSerializer, EditableFilterCreateSerializer,
     EditableFilterUpdateSerializer,
-    MatrixSerializer, SampleBenchmarksSerializer)
+    MatrixSerializer, SampleBenchmarksSerializer, UnitDetailSerializer)
 
 
 LOGGER = logging.getLogger(__name__)
@@ -349,6 +349,17 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
                         self.nb_accounts, extra_fields=extra_fields)
 
             start_at = ends_at
+
+        units = {}
+        for question in questions_by_key.values():
+            default_unit = question.get('default_unit')
+            if default_unit and default_unit.slug not in units:
+                units[default_unit.slug] = default_unit
+        unit_serializer = UnitDetailSerializer()
+        self.units = {
+            slug: unit_serializer.to_representation(unit)
+            for slug, unit in units.items()
+        }
 
         return questions_by_key
 
