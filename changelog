@@ -1,3 +1,11 @@
+0.20.2
+
+  * adds 'units' field to benchmarks API endpoint for stable charts colors
+  * supports percentage unit for benchmarks API endpoint
+  * makes typeahead select dropdown UX more intuitive
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Sat,  1 Aug 2026 22:20:00 -0700
+
 0.20.1
 
   * added tags search functionality

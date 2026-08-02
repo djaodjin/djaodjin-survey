@@ -42,10 +42,11 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.20.1
+0.20.2
 
-  * added tags search functionality
-  * supports multiple receipients when creating a request
+  * adds 'units' field to benchmarks API endpoint for stable charts colors
+  * supports percentage unit for benchmarks API endpoint
+  * makes typeahead select dropdown UX more intuitive
 
 [previous release notes](changelog)
 
