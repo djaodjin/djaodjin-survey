@@ -390,8 +390,8 @@ class CampaignSerializer(serializers.ModelSerializer):
     class Meta(object):
         model = Campaign
         fields = ('slug', 'account', 'title', 'description', 'created_at',
-            'is_active', 'is_commons')
-        read_only_fields = ('slug', 'account', 'created_at')
+            'updated_at', 'is_active', 'is_commons')
+        read_only_fields = ('slug', 'account', 'created_at', 'updated_at')
 
 
 class CampaignCreateSerializer(serializers.ModelSerializer):
