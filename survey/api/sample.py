@@ -112,8 +112,13 @@ def attach_answers(units, questions_by_key, queryset,
             # We have an actual answer to the question,
             # so let's populate it.
             answers = value.get(key, [])
+            # Preserves the `__class__` of numerical values instead of changing
+            # to `str` such that downloads as spreadsheets are useable.
+            measured = (resp.measured
+                if resp.unit.system in Unit.NUMERICAL_SYSTEMS
+                else resp.measured_text)
             answers += [{
-                'measured': resp.measured_text,
+                'measured': measured,
                 'unit': resp.unit,
                 'created_at': resp.created_at,
                 'collected_by': resp.collected_by,
