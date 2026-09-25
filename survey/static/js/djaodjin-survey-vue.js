@@ -681,9 +681,9 @@ Vue.component('query-group-accounts', {
                 vm.selectedItem < vm.items.results.length) ) {
                 const group = vm.items.results[vm.selectedItem];
                 const title = group.title;
-                const url = vm._safeUrl(vm._safeUrl(
+                const url = vm.appendQueryString(vm._safeUrl(vm._safeUrl(
                     vm.$urls.api_benchmarks_index, group.slug),
-                    vm.prefix) + vm.getQueryString();
+                    vm.prefix));
                 const dataset = {title: title, url: url};
                 vm.$emit('updatedataset', dataset);
                 vm.$refs.account.reset();
@@ -735,9 +735,9 @@ var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
             vm.params.campaign = vm.campaign ? vm.campaign : null;
             const title = vm.$el.querySelector(
                 '[value="' + affinityType + '"]').textContent;
-            const url = vm._safeUrl(vm._safeUrl(
+            const url = vm.appendQueryString(vm._safeUrl(vm._safeUrl(
                 vm.$urls.api_benchmarks_index, affinityType),
-                vm.prefix) + vm.getQueryString();
+                vm.prefix));
             return {title: title, url: url};
         },
         validate: function() {
@@ -944,9 +944,9 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
                 vm.selectedItem < vm.items.results.length) ) {
                 const group = vm.items.results[vm.selectedItem];
                 const title = group.title;
-                const url = vm._safeUrl(vm._safeUrl(
+                const url = vm.appendQueryString(vm._safeUrl(vm._safeUrl(
                     vm.$urls.api_benchmarks_index, group.slug
-                ), vm.prefix) + vm.getQueryString();
+                ), vm.prefix));
                 const dataset = {title: title, url: url};
                 vm.$emit('updatedataset', dataset);
             }

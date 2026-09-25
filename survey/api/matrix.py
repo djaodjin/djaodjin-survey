@@ -254,6 +254,9 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
         Returns a dictionnary of questions indexed by `pk` populated
         with aggregated benchmarks.
         """
+        LOGGER.debug(
+            "BenchmarkMixin.get_questions_by_key(prefix=%s, initial=%s)",
+            prefix, initial)
         #pylint:disable=too-many-locals
         questions_by_key = super(BenchmarkMixin, self).get_questions_by_key(
             prefix=prefix, initial=initial)
@@ -1393,6 +1396,9 @@ class CompareAPIView(DateRangeContextMixin, CampaignMixin, AccountMixin,
         Returns a list of questions based on the answers available
         in the compared samples.
         """
+        LOGGER.debug(
+            "CompareAPIView.get_questions_by_key(prefix=%s, initial=%s)",
+            prefix, initial)
         questions_by_key = super(CompareAPIView, self).get_questions_by_key(
             prefix=prefix, initial=initial)
 

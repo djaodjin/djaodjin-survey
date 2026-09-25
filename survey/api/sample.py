@@ -852,6 +852,9 @@ ON answers.id = survey_answercollected.answer_id
         Returns a dictionnary of questions indexed by `pk` populated
         with an 'answers' field.
         """
+        LOGGER.debug(
+            "SampleAnswersMixin.get_questions_by_key(prefix=%s, initial=%s)",
+            prefix, initial)
         extra_fields = getattr(self.serializer_class.Meta, 'extra_fields', [])
         units = {}
         questions_by_key = initial if isinstance(initial, dict) else {}
@@ -981,6 +984,9 @@ class SampleCandidatesMixin(SampleMixin):
         Returns a dictionnary of questions indexed by `pk` populated
         with an 'answers' field (and optionally a 'candidates' field).
         """
+        LOGGER.debug(
+            "SampleCandidatesMixin.get_questions_by_key(prefix=%s, initial=%s)",
+            prefix, initial)
         extra_fields = getattr(self.serializer_class.Meta, 'extra_fields', [])
         units = {}
         questions_by_key = initial if isinstance(initial, dict) else {}

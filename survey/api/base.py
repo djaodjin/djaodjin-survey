@@ -22,10 +22,14 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
 from rest_framework import generics
 
 from .. import settings
 from ..compat import six
+
+LOGGER = logging.getLogger(__name__)
 
 
 class QuestionListAPIView(generics.ListAPIView):
@@ -46,6 +50,9 @@ class QuestionListAPIView(generics.ListAPIView):
 
     def get_questions_by_key(self, prefix=None, initial=None):
         #pylint:disable=unused-argument
+        LOGGER.debug(
+            "QuestionListAPIView.get_questions_by_key(prefix=%s, initial=%s)",
+            prefix, initial)
         return initial if isinstance(initial, dict) else {}
 
 

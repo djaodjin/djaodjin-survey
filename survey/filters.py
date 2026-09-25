@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -34,8 +34,8 @@ from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter, BaseFilterBackend)
 
 from . import settings
-from .compat import force_str, six
-from .helpers import datetime_or_now, timezone_or_utc
+from .compat import force_str, six, timezone_or_utc
+from .helpers import datetime_or_now
 from .models import PortfolioDoubleOptIn
 
 LOGGER = logging.getLogger(__name__)
@@ -98,7 +98,6 @@ class SearchFilter(BaseSearchFilter):
                 for search_field in search_fields
             ]
 
-        base = queryset
         conditions = []
         for search_term in search_terms:
             queries = [
@@ -263,6 +262,28 @@ class SearchFilter(BaseSearchFilter):
         ]
 
 
+class JSONArraySearchFilter(SearchFilter):
+
+    def get_valid_fields(self, request, queryset, view, context=None):
+        fields = super().get_valid_fields(
+            request, queryset, view, context=context)
+        for field in getattr(view, 'json_search_fields', []):
+            if field not in fields:
+                fields = fields + (field,)
+        return fields
+
+    def build_search_query(self, orm_lookup, search_term):
+        json_search_fields = getattr(self, '_json_search_fields', ())
+        for field in json_search_fields:
+            if orm_lookup.startswith(field):
+                return models.Q(**{orm_lookup: f'"{search_term}"'})
+        return super().build_search_query(orm_lookup, search_term)
+
+    def filter_queryset(self, request, queryset, view):
+        self._json_search_fields = getattr(view, 'json_search_fields', ())
+        return super().filter_queryset(request, queryset, view)
+
+
 class OrderingFilter(BaseOrderingFilter):
 
     def get_query_param(self, request, key, default_value=None):
@@ -389,8 +410,8 @@ class DateRangeFilter(BaseFilterBackend):
     forced_date_range = True
     date_field = 'created_at'
     alternate_date_field = 'date_joined'
-    start_at_param = 'start_at'
     ends_at_param = 'ends_at'
+    start_at_param = 'start_at'
 
     def get_params(self, request, view):
         tzinfo = timezone_or_utc(request.GET.get('timezone'))
@@ -603,25 +624,3 @@ class SampleStateFilter(StateFilter):
         (False, 'active'),
         (True, 'completed')
     ]
-
-
-class JSONArraySearchFilter(SearchFilter):
-
-    def get_valid_fields(self, request, queryset, view, context=None):
-        fields = super().get_valid_fields(
-            request, queryset, view, context=context)
-        for field in getattr(view, 'json_search_fields', []):
-            if field not in fields:
-                fields = fields + (field,)
-        return fields
-
-    def build_search_query(self, orm_lookup, search_term):
-        json_search_fields = getattr(self, '_json_search_fields', ())
-        for field in json_search_fields:
-            if orm_lookup.startswith(field):
-                return models.Q(**{orm_lookup: f'"{search_term}"'})
-        return super().build_search_query(orm_lookup, search_term)
-
-    def filter_queryset(self, request, queryset, view):
-        self._json_search_fields = getattr(view, 'json_search_fields', ())
-        return super().filter_queryset(request, queryset, view)
