@@ -39,7 +39,8 @@ from ..mixins import AccountMixin, DateRangeContextMixin
 from ..models import Portfolio, PortfolioDoubleOptIn, Sample
 from .serializers import (PortfolioReceivedSerializer,
     PortfolioOptInSerializer, PortfolioOptInUpdateSerializer,
-    PortfolioGrantCreateSerializer, PortfolioRequestCreateSerializer)
+    PortfolioGrantCreateSerializer, PortfolioRequestCreateSerializer,
+    QueryParamNotifySerializer)
 from ..filters import (CampaignFilter, DateRangeFilter, DoubleOptInStateFilter,
     OrderingFilter, SearchFilter)
 from ..utils import get_account_model
@@ -537,7 +538,7 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
             return PortfolioRequestCreateSerializer
         return super(PortfoliosRequestsAPIView, self).get_serializer_class()
 
-    @extend_schema(responses={
+    @extend_schema(parameters=[QueryParamNotifySerializer], responses={
         200: OpenApiResponse(PortfolioOptInSerializer(many=True)),
         201: OpenApiResponse(PortfolioOptInSerializer(many=True))})
     def post(self, request, *args, **kwargs):
@@ -545,6 +546,8 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
         Initiates request
 
         Initiate a request of data for an account.
+
+        Pass ``?notify=1`` to send an e-mail notification.
 
         **Tags**: portfolios
 
@@ -579,6 +582,8 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
              }
         """
         #pylint:disable=too-many-locals
+        query_serializer = QueryParamNotifySerializer(data=request.query_params)
+        query_serializer.is_valid(raise_exception=True)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         status_code = status.HTTP_200_OK
@@ -661,9 +666,10 @@ class PortfoliosRequestsAPIView(SmartPortfolioListMixin,
         for req in requests_initiated:
             portfolio = req[0]
             recipients = req[1]
-            signals.portfolios_request_initiated.send(sender=__name__,
-                portfolios=[portfolio], recipients=recipients, message=message,
-                request=self.request)
+            if query_serializer.validated_data['notify']:
+                signals.portfolios_request_initiated.send(sender=__name__,
+                    portfolios=[portfolio], recipients=recipients,
+                    message=message, request=self.request)
 
         results = self.serializer_class(many=True,
             context=self.get_serializer_context()).to_representation(
