@@ -125,7 +125,8 @@ WHERE first.sample_id = %(left_sample_id)d AND
 def get_sample_by_accounts_context(campaign=None,
                                    start_at=None, ends_at=None,
                                    segment_prefix=None, segment_title="",
-                                   accounts=None, grantees=None, tags=None):
+                                   accounts=None, grantees=None, tags=None,
+                                   stable=False):
     #pylint:disable=too-many-arguments,too-many-locals
     primary_filters_clause = ""
     secondary_filters_clause = ""
@@ -214,14 +215,16 @@ INNER JOIN survey_question ON survey_answer.question_id = survey_question.id""")
        'prefix_join': prefix_join,
        'grantees_join': grantees_join,
        'sample_primary_filters_clause': primary_filters_clause,
-       'sample_secondary_filters_clause': secondary_filters_clause
+       'sample_secondary_filters_clause': secondary_filters_clause,
+        'order_clause': "ORDER BY created_at DESC" if stable else ""
     }
 
 
 def sql_latest_frozen_by_accounts(campaign=None,
                                   start_at=None, ends_at=None,
                                   segment_prefix=None, segment_title="",
-                                  accounts=None, grantees=None, tags=None):
+                                  accounts=None, grantees=None, tags=None,
+                                  stable=False):
     """
     Returns the most recent frozen sample per account
 
@@ -296,7 +299,7 @@ def sql_latest_frozen_by_accounts(campaign=None,
     context = get_sample_by_accounts_context(
         campaign=campaign, start_at=start_at, ends_at=ends_at,
         segment_prefix=segment_prefix, segment_title=segment_title,
-        accounts=accounts, grantees=grantees, tags=tags)
+        accounts=accounts, grantees=grantees, tags=tags, stable=stable)
 
     sql_query = """SELECT
     survey_sample.*%(prefix_fields)s
@@ -319,6 +322,7 @@ ON survey_sample.account_id = last_updates.account_id AND
    survey_sample.created_at = last_updates.last_updated_at
 WHERE survey_sample.is_frozen
     %(sample_primary_filters_clause)s
+%(order_clause)s
 """ % context
     # We cannot add an `ORDER BY` clause in the above statement otherwise
     # the query cannot be combined in an `UNION` statement by SQLite3 later on.
@@ -328,12 +332,13 @@ WHERE survey_sample.is_frozen
 def sql_latest_frozen_by_accounts_by_period(period='yearly', campaign=None,
                                      start_at=None, ends_at=None,
                                      segment_prefix=None, segment_title="",
-                                     accounts=None, grantees=None, tags=None):
+                                     accounts=None, grantees=None, tags=None,
+                                     stable=False):
     #pylint:disable=too-many-arguments,too-many-locals
     context = get_sample_by_accounts_context(
         campaign=campaign, start_at=start_at, ends_at=ends_at,
         segment_prefix=segment_prefix, segment_title=segment_title,
-        accounts=accounts, grantees=grantees, tags=tags)
+        accounts=accounts, grantees=grantees, tags=tags, stable=stable)
     context.update({
         'as_period': as_sql_date_trunc(
            'survey_sample.created_at', period_type=period)})

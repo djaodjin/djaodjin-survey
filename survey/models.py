@@ -471,7 +471,7 @@ class SampleManager(models.Manager):
                                       start_at=None, ends_at=None,
                                       segment_prefix=None, segment_title="",
                                       accounts=None, grantees=None,
-                                      tags=None):
+                                      tags=None, stable=False):
         """
         Returns the most recent frozen sample per account
 
@@ -502,14 +502,14 @@ class SampleManager(models.Manager):
             start_at=start_at, ends_at=ends_at,
             segment_prefix=segment_prefix, segment_title=segment_title,
             accounts=accounts, grantees=grantees,
-            tags=tags))
+            tags=tags, stable=stable))
 
 
     def get_latest_frozen_by_accounts_by_period(self, period='yearly',
                                 campaign=None, start_at=None, ends_at=None,
                                 segment_prefix=None, segment_title="",
                                 accounts=None, grantees=None,
-                                tags=None):
+                                tags=None, stable=False):
         """
         Returns the most recent frozen sample per account per `period`
 
@@ -540,7 +540,7 @@ class SampleManager(models.Manager):
             start_at=start_at, ends_at=ends_at,
             segment_prefix=segment_prefix, segment_title=segment_title,
             accounts=accounts, grantees=grantees,
-            tags=tags))
+            tags=tags, stable=stable))
 
 
     def get_latest_frozen_by_portfolios(self, campaign=None,
