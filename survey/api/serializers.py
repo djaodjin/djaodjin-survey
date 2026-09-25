@@ -833,6 +833,12 @@ class QueryParamForceSerializer(NoModelSerializer):
         help_text=_("Forces freeze of sample"))
 
 
+class QueryParamNotifySerializer(NoModelSerializer):
+
+    notify = serializers.BooleanField(default=False,
+        help_text=_("Send an e-mail notification."))
+
+
 class ValidationErrorSerializer(NoModelSerializer):
     """
     Details on why collected data is invalid
