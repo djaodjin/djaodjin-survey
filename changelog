@@ -1,3 +1,11 @@
+0.20.3
+
+  * enables warning on invite when last response is before questionnaire update
+  * makes email notification optional on invite (`?notify=1`)
+  * handles base url with query parameters (JS)
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri, 25 Sep 2026 12:15:00 -0700
+
 0.20.2
 
   * adds 'units' field to benchmarks API endpoint for stable charts colors

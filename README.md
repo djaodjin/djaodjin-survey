@@ -42,11 +42,11 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.20.2
+0.20.3
 
-  * adds 'units' field to benchmarks API endpoint for stable charts colors
-  * supports percentage unit for benchmarks API endpoint
-  * makes typeahead select dropdown UX more intuitive
+  * enables warning on invite when last response is before questionnaire update
+  * makes email notification optional on invite (`?notify=1`)
+  * handles base url with query parameters (JS)
 
 [previous release notes](changelog)
 
