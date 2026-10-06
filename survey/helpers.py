@@ -153,11 +153,18 @@ def _construct_weekly_period(at_time, years=0, tzone=None):
         sunday = today + relativedelta(weekday=SU)
 
     week_of_year = sunday.isocalendar()
-    # Implementation note: `%G` was introduced in Python3.6
-    years_shifted_sunday = datetime.datetime.strptime('%04d %02d %d' % (
-        week_of_year[0] + years, week_of_year[1], week_of_year[2]),
-        '%G %V %u').replace(tzinfo=sunday.tzinfo)
-
+    try:
+        # Implementation note: `%G` was introduced in Python3.6
+        years_shifted_sunday = datetime.datetime.strptime('%04d %02d %d' % (
+            week_of_year[0] + years, week_of_year[1], week_of_year[2]),
+            '%G %V %u').replace(tzinfo=sunday.tzinfo)
+    except ValueError:
+        # An ISO week-numbering year has a 53rd week only if the year ends
+        # on a Thursday (or a Friday during a leap year). We need to account
+        # for this when moving up or down a year around Jan 1st.
+        years_shifted_sunday = datetime.datetime.strptime('%04d %02d %d' % (
+            week_of_year[0] + years + 1, 1, week_of_year[2]),
+            '%G %V %u').replace(tzinfo=sunday.tzinfo)
     last_sunday = years_shifted_sunday + relativedelta(weeks=-1, weekday=SU)
     return last_sunday, years_shifted_sunday
 
