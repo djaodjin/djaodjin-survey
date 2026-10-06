@@ -542,18 +542,34 @@ Vue.component('query-individual-account', {
         selectAccount: function(newAccount, dataset) {
             var vm = this;
             vm.account = newAccount;
-            vm.reqGet(vm._safeUrl(
-                vm.$urls.api_version + '/' + vm.account.slug, 'sample'),
+            vm.reqGet(vm.url.replace('{profile}', vm.account.slug),
             function (resp) {
                 for( let idx = 0; idx < resp.results.length; ++idx ) {
                     if( resp.results[idx].is_frozen ) {
                         const title = vm.humanizeDate(resp.results[idx].created_at) + (resp.results[idx].verified_status !== 'no-review' ? " - Verified" : "" );
-                        const url = vm._safeUrl(vm._safeUrl(
-                            vm.$urls.api_version + '/' + vm.account.slug + '/sample/' + resp.results[idx].slug, 'content'), vm.prefix);
                         var data = resp.results[idx];
+                        const url = vm._safeUrl(vm._safeUrl(vm._safeUrl(
+                            vm.$urls.api_sample_base, data.slug), 'content'),
+                            vm.prefix);
                         data.title = title;
                         data.url = url;
                         vm.samples.push(data);
+                    } else if( resp.results[idx].values ) {
+                        for( let jdx = 0;
+                             jdx < resp.results[idx].values.length; ++jdx ) {
+                            if( resp.results[idx].values[jdx].is_frozen ) {
+                                const title = vm.humanizeDate(resp.results[idx].values[jdx].created_at) + (resp.results[idx].values[jdx].state === 'verified' ? " - Verified" : "" );
+
+                                var data = resp.results[idx].values[jdx];
+                                const url = vm._safeUrl(vm._safeUrl(vm._safeUrl(
+                                    vm.$urls.api_sample_base, data.slug),
+                                    'content'),
+                                    vm.prefix);
+                                data.title = title;
+                                data.url = url;
+                                vm.samples.push(data);
+                            }
+                        }
                     }
                 }
             });
@@ -568,8 +584,14 @@ Vue.component('query-individual-account', {
         }
     },
     mounted: function(){
-        if( this.$el.dataset && this.$el.dataset.humanizeDate ) {
-            this.humanizeDate = eval(this.$el.dataset.humanizeDate);
+        var vm = this;
+        if( vm.$el.dataset && vm.$el.dataset.humanizeDate ) {
+            vm.humanizeDate = eval(vm.$el.dataset.humanizeDate);
+        }
+        if( vm.$el.dataset && vm.$el.dataset.url ) {
+            vm.url = vm.$el.dataset.url;
+        } else {
+            vm.url = vm.$urls.api_version + '/{profile}/sample';
         }
     }
 });

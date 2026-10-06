@@ -439,7 +439,7 @@ class SampleSerializer(SampleCreateSerializer):
         read_only=True, required=False,
         help_text=_("Account this sample belongs to"))
     location = serializers.URLField(read_only=True, allow_null=True,
-        help_text=_("URL at which the response is visible"))
+        help_text=_("URL at which the response is visible (HTML)"))
     grantees = serializers.ListField(required=False,
         help_text=_("Profiles with which sample was shared"))
 
@@ -449,10 +449,6 @@ class SampleSerializer(SampleCreateSerializer):
             'updated_at', 'is_frozen', 'location', 'grantees')
         read_only_fields = ('campaign', 'slug', 'account', 'created_at',
             'updated_at', 'is_frozen', 'location', 'grantees')
-
-    @staticmethod
-    def get_location(obj):
-        return getattr(obj, 'location', None)
 
 
 class DatapointSerializer(AnswerSerializer):
