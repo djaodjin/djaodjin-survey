@@ -42,11 +42,11 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.20.3
+0.20.4
 
-  * enables warning on invite when last response is before questionnaire update
-  * makes email notification optional on invite (`?notify=1`)
-  * handles base url with query parameters (JS)
+  * supports portfolio APIs to list samples in compare view
+  * fixes week 53 when comparing with same week in previous years
+  * returns stable list of latest frozen sample by accounts
 
 [previous release notes](changelog)
 

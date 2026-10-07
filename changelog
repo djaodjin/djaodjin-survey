@@ -1,3 +1,12 @@
+0.20.4
+
+  * supports portfolio APIs to list samples in compare view
+  * fixes week 53 when comparing with same week in previous years
+  * returns stable list of latest frozen sample by accounts
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri,  6 Oct 2026 17:38:00 -0700
+
+
 0.20.3
 
   * enables warning on invite when last response is before questionnaire update
