@@ -129,17 +129,10 @@ def get_engaged_accounts(grantees, campaign=None, aggregate_set=False,
                 **filter_params).annotate(
                 requested_at=models.Min(
                     'portfolio_double_optin_accounts__created_at'),
-                grant_key=models.Case(
-                models.When(
-                    portfolio_double_optin_accounts__state=0, then=True),
-                output_field=models.BooleanField()),
-                optin_extra_json=Cast(
-                    'portfolio_double_optin_accounts__extra',
-                    output_field=models.JSONField()),
-                optin_tags_str=Cast(
-                    'optin_extra_json__tags', models.TextField()),
-                optin_supplier_key_str=Cast(
-                    'optin_extra_json__supplier_key', models.TextField()),
+                grant_key=models.Max(models.Case(
+                    models.When(
+                        portfolio_double_optin_accounts__state=0, then=True),
+                    output_field=models.BooleanField())),
                 portfolio_extra_json=Cast(
                     'portfolios__extra',
                     output_field=models.JSONField()),
@@ -154,11 +147,9 @@ def get_engaged_accounts(grantees, campaign=None, aggregate_set=False,
                 queryset = queryset.filter(email__endswith=domain)
             else:
                 queryset = queryset.filter(
-                    models.Q(full_name__icontains=search_terms) |
-                    models.Q(optin_tags_str__icontains='"%s"' % search_terms) |
-                    models.Q(optin_supplier_key_str__icontains=search_terms) |
-                    models.Q(portfolio_tags_str__icontains='"%s"' % search_terms) |
-                    models.Q(portfolio_supplier_key_str__icontains=search_terms))
+                models.Q(full_name__icontains=search_terms) |
+                models.Q(portfolio_tags_str__icontains='"%s"' % search_terms) |
+                models.Q(portfolio_supplier_key_str__icontains=search_terms))
         queryset = queryset.distinct()
 
     return queryset
