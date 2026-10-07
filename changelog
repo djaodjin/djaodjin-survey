@@ -1,10 +1,16 @@
+0.20.5
+
+  * fixes multiple results returned in a Django-generated distinct SQL query
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Wed,  7 Oct 2026 15:55:00 -0700
+
 0.20.4
 
   * supports portfolio APIs to list samples in compare view
   * fixes week 53 when comparing with same week in previous years
   * returns stable list of latest frozen sample by accounts
 
- -- Sebastien Mirolo <smirolo@djaodjin.com>  Fri,  6 Oct 2026 17:38:00 -0700
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Tue,  6 Oct 2026 17:38:00 -0700
 
 
 0.20.3
