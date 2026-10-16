@@ -41,116 +41,209 @@ from django.http.request import split_domain_port, validate_host
 from rest_framework.exceptions import ValidationError
 
 from . import settings
-from .compat import gettext_lazy as _, import_string, urlparse, urlunparse
+from .compat import gettext_lazy as _, import_string, six, urlparse, urlunparse
 from .models import Answer, PortfolioDoubleOptIn, Unit
 #pylint:disable=unused-import
-from .queries import get_account_model, get_content_model, get_question_model
+from .queries import (as_sql_jsonb_agg, get_account_model, get_content_model,
+    get_question_model)
 
 LOGGER = logging.getLogger(__name__)
 
 
-def get_accessible_accounts(grantees, campaign=None, aggregate_set=False,
-                            start_at=None, ends_at=None):
+def get_grantees_aggregate_set(grantees):
+    """
+    Returns an extended set of grantees that are selected by affinity
+    with `grantees`.
+    """
+    if isinstance(settings.GRANTEES_AGGREGATE_SET, six.string_types):
+        try:
+            settings.GRANTEES_AGGREGATE_SET = import_string(
+                settings.GRANTEES_AGGREGATE_SET)
+        except ImportError:
+            pass
+    if callable(settings.GRANTEES_AGGREGATE_SET):
+        return settings.GRANTEES_AGGREGATE_SET(grantees)
+
+    return grantees
+
+
+def get_available_accounts(search_fields=None, search_terms=None):
+    """
+    All available accounts that can be returned by `get_accessible_accounts`
+    or `get_engaged_accounts`.
+    """
+    account_model = get_account_model()
+    queryset = account_model.objects.all()
+
+    if (hasattr(settings, 'AVAILABLE_ACCOUNTS') and
+        settings.AVAILABLE_ACCOUNTS):
+        if isinstance(settings.AVAILABLE_ACCOUNTS, six.string_types):
+            try:
+                settings.AVAILABLE_ACCOUNTS = import_string(
+                    settings.AVAILABLE_ACCOUNTS)
+            except ImportError:
+                pass
+        if callable(settings.AVAILABLE_ACCOUNTS):
+            queryset = settings.AVAILABLE_ACCOUNTS(
+                search_fields=search_fields, search_terms=search_terms)
+
+    return queryset
+
+
+def get_accessible_accounts(grantees, campaign=None,
+                            start_at=None, ends_at=None,
+                            search_fields=None, search_terms=None,
+                            aggregate_set=False):
     """
     All accounts which have elected to share samples with at least one
     account in grantees.
     """
+    #pylint:disable=too-many-arguments,too-many-positional-arguments
+    if aggregate_set:
+        search_terms = None
+
     try:
         iter(grantees)
     except TypeError:
         grantees = [grantees]
 
-    queryset = None
-    if (hasattr(settings, 'ACCESSIBLE_ACCOUNTS_CALLABLE') and
-        settings.ACCESSIBLE_ACCOUNTS_CALLABLE):
-        queryset = import_string(settings.ACCESSIBLE_ACCOUNTS_CALLABLE)(
-            grantees, campaign=campaign, aggregate_set=aggregate_set,
-            start_at=start_at, ends_at=ends_at)
+    if aggregate_set:
+        grantees = get_grantees_aggregate_set(grantees)
 
-    if queryset is None:
-        filter_params = {}
-        if start_at:
-            # XXX not sure anymore why we use double-optin here...
-            filter_params.update({
-                'portfolio_double_optin_accounts__created_at__gte': start_at})
-        account_model = get_account_model()
-        if campaign:
-            queryset = account_model.objects.filter(
-                models.Q(portfolios__campaign=campaign) |
-                models.Q(portfolios__campaign__isnull=True),
-                portfolios__grantee__in=grantees,
-                **filter_params)
-        else:
-            queryset = account_model.objects.filter(
-                portfolios__grantee__in=grantees,
-                **filter_params)
+    queryset = get_available_accounts(
+        search_fields=search_fields, search_terms=search_terms)
 
-        if not aggregate_set:
-            queryset = queryset.annotate(_extra=models.F('portfolios__extra'))
+    filter_params = {}
+    if start_at:
+        # XXX not sure anymore why we use double-optin here...
+        filter_params.update({
+            'portfolio_double_optin_accounts__created_at__gte': start_at})
 
-        queryset = queryset.distinct()
+    account_model = get_account_model()
+    if campaign:
+        queryset = account_model.objects.filter(
+            models.Q(portfolios__campaign=campaign) |
+            models.Q(portfolios__campaign__isnull=True),
+            portfolios__grantee__in=grantees,
+            **filter_params)
+    else:
+        queryset = account_model.objects.filter(
+            portfolios__grantee__in=grantees,
+            **filter_params)
+
+    if search_fields and search_terms:
+        annotations = {}
+        filter_params = None
+        for field_name in search_fields:
+            annotations.update({
+                field_name: Cast('_%s' % field_name, models.TextField())})
+            for search_term in search_terms:
+                search_clause = models.Q(**{
+                    '%s__icontains' % field_name: search_term})
+                if filter_params:
+                    filter_params |= search_clause
+                else:
+                    filter_params = search_clause
+        # `alias` was introduced in Django 3.2
+        queryset = queryset.alias(
+            _extra=Cast('portfolios__extra',
+            output_field=models.JSONField()),
+            **annotations).filter(filter_params)
+
+    queryset = queryset.distinct().annotate(_extra=models.Aggregate(
+            Cast('portfolios__extra', output_field=models.JSONField()),
+            function=as_sql_jsonb_agg()))
 
     return queryset
 
 
-def get_engaged_accounts(grantees, campaign=None, aggregate_set=False,
-                         start_at=None, ends_at=None, search_terms=None):
+def get_engaged_accounts(grantees, campaign=None,
+                         start_at=None, ends_at=None,
+                         search_fields=None, search_terms=None,
+                         aggregate_set=False):
     """
     All accounts which grantee has requested a response from.
     """
-    #pylint:disable=too-many-arguments
-    queryset = None
+    #pylint:disable=too-many-arguments,too-many-positional-arguments
     if aggregate_set:
         search_terms = None
-    if (hasattr(settings, 'ENGAGED_ACCOUNTS_CALLABLE') and
-        settings.ENGAGED_ACCOUNTS_CALLABLE):
-        queryset = import_string(settings.ENGAGED_ACCOUNTS_CALLABLE)(
-            grantees, campaign=campaign, aggregate_set=aggregate_set,
-            start_at=start_at, ends_at=ends_at, search_terms=search_terms)
 
-    if queryset is None:
-        filter_params = {}
-        if start_at:
-            filter_params.update({
-                'portfolio_double_optin_accounts__created_at__gte': start_at})
-        if ends_at:
-            filter_params.update({
-                'portfolio_double_optin_accounts__created_at__lt': ends_at})
-        if campaign:
-            filter_params.update({
-                'portfolio_double_optin_accounts__campaign': campaign})
-        queryset = get_account_model().objects.filter(
-            portfolio_double_optin_accounts__grantee__in=grantees,
-            portfolio_double_optin_accounts__state__in=(
-                PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
-                PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED,
-                PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED,
-                PortfolioDoubleOptIn.OPTIN_REQUEST_EXPIRED),
-                **filter_params).annotate(
-                requested_at=models.Min(
-                    'portfolio_double_optin_accounts__created_at'),
-                grant_key=models.Max(models.Case(
-                    models.When(
-                        portfolio_double_optin_accounts__state=0, then=True),
-                    output_field=models.BooleanField())),
-                portfolio_extra_json=Cast(
-                    'portfolios__extra',
-                    output_field=models.JSONField()),
-                portfolio_tags_str=Cast(
-                    'portfolio_extra_json__tags', models.TextField()),
-                portfolio_supplier_key_str=Cast(
-                    'portfolio_extra_json__supplier_key', models.TextField()),
-        )
-        if search_terms:
-            if '@' in search_terms:
-                domain = search_terms.split('@')[-1]
-                queryset = queryset.filter(email__endswith=domain)
-            else:
-                queryset = queryset.filter(
-                models.Q(full_name__icontains=search_terms) |
-                models.Q(portfolio_tags_str__icontains='"%s"' % search_terms) |
-                models.Q(portfolio_supplier_key_str__icontains=search_terms))
-        queryset = queryset.distinct()
+    try:
+        iter(grantees)
+    except TypeError:
+        grantees = [grantees]
+
+    if aggregate_set:
+        grantees = get_grantees_aggregate_set(grantees)
+
+    queryset = get_available_accounts(
+        search_fields=search_fields, search_terms=search_terms)
+
+    filter_params = {}
+    if start_at:
+        filter_params.update({
+            'portfolio_double_optin_accounts__created_at__gte': start_at})
+    if ends_at:
+        filter_params.update({
+            'portfolio_double_optin_accounts__created_at__lt': ends_at})
+    if campaign:
+        filter_params.update({
+            'portfolio_double_optin_accounts__campaign': campaign})
+    queryset = get_account_model().objects.filter(
+        portfolio_double_optin_accounts__grantee__in=grantees,
+        portfolio_double_optin_accounts__state__in=(
+            PortfolioDoubleOptIn.OPTIN_REQUEST_INITIATED,
+            PortfolioDoubleOptIn.OPTIN_REQUEST_ACCEPTED,
+            PortfolioDoubleOptIn.OPTIN_REQUEST_DENIED,
+            PortfolioDoubleOptIn.OPTIN_REQUEST_EXPIRED),
+            **filter_params).annotate(
+            requested_at=models.Min(
+                'portfolio_double_optin_accounts__created_at'),
+            grant_key=models.Max(models.Case(
+                models.When(
+                    portfolio_double_optin_accounts__state=0, then=1),
+                output_field=models.BooleanField())))
+
+    if search_fields and search_terms:
+        annotations = {}
+        filter_params = None
+        for field_name in search_fields:
+            annotations.update({
+                field_name: Cast('_%s' % field_name, models.TextField()),
+                ('optin_%s' % field_name): Cast('_optin_%s' % field_name,
+                    models.TextField()),
+            })
+            for search_term in search_terms:
+                search_clause = models.Q(**{
+                    '%s__icontains' % field_name: search_term})
+                if filter_params:
+                    filter_params |= search_clause
+                else:
+                    filter_params = search_clause
+                search_clause = models.Q(**{
+                    'optin_%s__icontains' % field_name: search_term})
+                if filter_params:
+                    filter_params |= search_clause
+                else:
+                    filter_params = search_clause
+        # `alias` was introduced in Django 3.2
+        queryset = queryset.alias(
+            _extra=Cast('portfolios__extra',
+            output_field=models.JSONField()),
+            _optin_extra=Cast('portfolio_double_optin_accounts__extra',
+            output_field=models.JSONField()),
+            **annotations).filter(filter_params)
+
+    queryset = queryset.distinct().annotate(
+        _extra=models.Aggregate(
+            Cast('portfolios__extra', output_field=models.JSONField()),
+            function=as_sql_jsonb_agg(),
+            output_field=models.JSONField()),
+        _optin_extra=models.Aggregate(
+            Cast('portfolio_double_optin_accounts__extra',
+                 output_field=models.JSONField()),
+            function=as_sql_jsonb_agg(),
+            output_field=models.JSONField()))
 
     return queryset
 

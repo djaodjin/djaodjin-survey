@@ -28,6 +28,45 @@ from rest_framework.pagination import BasePagination
 from rest_framework.response import Response
 
 
+class ChoicesPagination(BasePagination):
+
+    def paginate_queryset(self, queryset, request, view=None):
+        #pylint:disable=attribute-defined-outside-init
+        self.unit = getattr(view, 'unit', None)
+        return queryset
+
+    def get_paginated_response(self, data):
+        system = EnumField(choices=Unit.SYSTEMS).to_representation(
+            self.unit.system)
+        return Response({
+            'slug': self.unit.slug,
+            'title': self.unit.title,
+            'system': system,
+            'results': data,
+        })
+
+    def get_paginated_response_schema(self, schema):
+        return {
+            'type': 'object',
+            'required': ['slug', 'title', 'system', 'results'],
+            'properties': {
+                'slug': {
+                    'type': 'string',
+                    'example': "yes-no",
+                },
+                'title': {
+                    'type': 'string',
+                    'example': "Yes/No",
+                },
+                'system': {
+                    'type': 'string',
+                    'example': "enum",
+                },
+                'results': schema,
+            },
+        }
+
+
 class MetricsPagination(BasePagination):
     """
     Decorate the results of an API call with unit, scale and title

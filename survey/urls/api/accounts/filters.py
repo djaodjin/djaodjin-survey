@@ -24,13 +24,16 @@
 
 from ....api.matrix import (AccountsFilterDetailAPIView,
     AccountsFilterListAPIView, AccountsFilterEnumeratedAPIView,
-    EditableFilterListAPIView, QuestionsFilterDetailAPIView,
-    QuestionsFilterListAPIView)
+    AffinityFilterAPIView, EditableFilterListAPIView,
+    QuestionsFilterDetailAPIView, QuestionsFilterListAPIView)
 from ....api.metrics import AccountsValuesAPIView, AccountsFilterValuesAPIView
 from ....compat import path
 
 
 urlpatterns = [
+    path('filters/affinity',
+        AffinityFilterAPIView.as_view(),
+        name='survey_api_affinity_filter'),
     path('filters/accounts/values',
         AccountsValuesAPIView.as_view(),
         name='survey_api_accounts_values'),

@@ -83,9 +83,8 @@ class AnswerForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(AnswerForm, self).__init__(*args, **kwargs)
-        if self.instance.question:
-            question = self.instance.question
-        elif 'question' in kwargs.get('initial', {}):
+        question = self.instance.question
+        if not question and 'question' in kwargs.get('initial', {}):
             question = kwargs['initial']['question']
         required = True
         if self.instance.sample and self.instance.sample.campaign:

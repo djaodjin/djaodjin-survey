@@ -460,7 +460,7 @@ class DatapointSerializer(AnswerSerializer):
         help_text=_("Unit the measured field is in"))
     account = serializers.SlugRelatedField(slug_field='slug',
         queryset=get_account_model().objects.all(),
-        help_text=("Account this sample belongs to."))
+        help_text=_("Account this sample belongs to."))
 
     class Meta(object):
         model = AnswerSerializer.Meta.model

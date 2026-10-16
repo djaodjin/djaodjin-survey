@@ -1,4 +1,4 @@
-# Copyright (c) 2021, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -30,8 +30,7 @@ the appropriate settings.
 from django.conf import settings
 
 _SETTINGS = {
-    'ACCESSIBLE_ACCOUNTS_CALLABLE': None,
-    'ENGAGED_ACCOUNTS_CALLABLE': None,
+    'AVAILABLE_ACCOUNTS': None,
     'ACCOUNT_LOOKUP_FIELD': 'username',
     'ACCOUNT_MODEL': getattr(
         settings, 'AUTH_USER_MODEL', 'django.contrib.auth.models.User'),
@@ -51,19 +50,20 @@ _SETTINGS = {
     'DENORMALIZE_FOR_PRECISION': True,
     'EXTRA_FIELD': None,
     'FORCE_ONLY_QUESTION_UNIT': False,
+    'GRANTEES_AGGREGATE_SET': None,
     'NOTIFICATION_SERIALIZER_FIELDS': [],
     'QUESTION_MODEL': 'survey.Question',
     'QUESTION_SERIALIZER': 'survey.api.serializers.QuestionDetailSerializer',
     'SEARCH_FIELDS_PARAM': 'q_f',
+    'SEARCH_PARAM': 'q',
     'USER_SERIALIZER': 'survey.api.serializers_overrides.UserSerializer',
     'USER_DETAIL_SERIALIZER': 'survey.api.serializers_overrides.UserSerializer',
 }
 _SETTINGS.update(getattr(settings, 'SURVEY', {}))
 
-#: overrides the implementation of `survey.utils.get_accessible_accounts`
+#: overrides the implementation of `survey.utils.get_available_accounts`
 #: This function must return an iterable over a set of unique ``ACCOUNT_MODEL``.
-ACCESSIBLE_ACCOUNTS_CALLABLE = _SETTINGS.get('ACCESSIBLE_ACCOUNTS_CALLABLE')
-ENGAGED_ACCOUNTS_CALLABLE = _SETTINGS.get('ENGAGED_ACCOUNTS_CALLABLE')
+AVAILABLE_ACCOUNTS = _SETTINGS.get('AVAILABLE_ACCOUNTS')
 ACCOUNT_LOOKUP_FIELD = _SETTINGS.get('ACCOUNT_LOOKUP_FIELD')
 ACCOUNT_MODEL = _SETTINGS.get('ACCOUNT_MODEL')
 ACCOUNT_SERIALIZER = _SETTINGS.get('ACCOUNT_SERIALIZER')
@@ -100,10 +100,12 @@ EXTRA_FIELD = _SETTINGS.get('EXTRA_FIELD')
 #: When set to `True`, the measure stored in the database are guarenteed
 #: to be in the question's default_unit. defaults to `False`.
 FORCE_ONLY_QUESTION_UNIT = _SETTINGS.get('FORCE_ONLY_QUESTION_UNIT')
+GRANTEES_AGGREGATE_SET = _SETTINGS.get('GRANTEES_AGGREGATE_SET')
 NOTIFICATION_SERIALIZER_FIELDS = _SETTINGS.get('NOTIFICATION_SERIALIZER_FIELDS')
 QUESTION_MODEL = _SETTINGS.get('QUESTION_MODEL')
 QUESTION_SERIALIZER = _SETTINGS.get('QUESTION_SERIALIZER')
 SEARCH_FIELDS_PARAM = _SETTINGS.get('SEARCH_FIELDS_PARAM')
+SEARCH_PARAM = _SETTINGS.get('SEARCH_PARAM')
 USER_SERIALIZER = _SETTINGS.get('USER_SERIALIZER')
 USER_DETAIL_SERIALIZER = _SETTINGS.get('USER_DETAIL_SERIALIZER')
 

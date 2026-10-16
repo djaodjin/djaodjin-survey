@@ -26,7 +26,8 @@ from ....api.matrix import (BenchmarkIndexAPIView,
     BenchmarkAPIView, BenchmarkAllIndexAPIView,
     AccessiblesBenchmarkAPIView, AccessiblesBenchmarkIndexAPIView,
     EngagedBenchmarkAPIView, EngagedBenchmarkIndexAPIView,
-    EditableFilterBenchmarkAPIView, EditableFilterBenchmarkIndexAPIView)
+    EditableFilterBenchmarkAPIView, EditableFilterBenchmarkIndexAPIView,
+    IndividualBenchmarkAPIView, IndividualBenchmarkIndexAPIView)
 from ....compat import path
 
 
@@ -48,12 +49,19 @@ urlpatterns = [
     path('benchmarks/all',
         BenchmarkAllIndexAPIView.as_view(),
         name='survey_api_benchmarks_all_index'),
+    path('benchmarks/individual/<slug:account>/<path:path>',
+        IndividualBenchmarkAPIView.as_view(),
+        name='survey_api_benchmarks_individual'),
+    path('benchmarks/individual/<slug:account>',
+        IndividualBenchmarkIndexAPIView.as_view(),
+        name='survey_api_benchmarks_individual_index'),
     path('benchmarks/<slug:editable_filter>/<path:path>',
         EditableFilterBenchmarkAPIView.as_view(),
         name='survey_api_benchmarks_editable_filter'),
     path('benchmarks/<slug:editable_filter>',
         EditableFilterBenchmarkIndexAPIView.as_view(),
         name='survey_api_benchmarks_editable_filter_index'),
+
     path('benchmarks',
         BenchmarkIndexAPIView.as_view(), name='survey_api_benchmarks_index'),
 ]

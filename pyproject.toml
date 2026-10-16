@@ -20,7 +20,7 @@ classifiers = [
   "License :: OSI Approved :: BSD License"
 ]
 dependencies = [
-  "Django>=2.2",
+  "Django>=3.2",
   "djangorestframework>=3.9",
   "monotonic>=1.1",
   "python-dateutil>=2.2"

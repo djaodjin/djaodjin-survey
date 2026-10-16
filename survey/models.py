@@ -496,7 +496,7 @@ class SampleManager(models.Manager):
         where `extra IS NULL`, otherwise the returned queryset will be samples
         where the extra field contains at least on tag in tags.
         """
-        #pylint:disable=too-many-arguments
+        #pylint:disable=too-many-arguments,too-many-positional-arguments
         return self.raw(sql_latest_frozen_by_accounts(
             campaign=campaign,
             start_at=start_at, ends_at=ends_at,
@@ -534,7 +534,7 @@ class SampleManager(models.Manager):
         where `extra IS NULL`, otherwise the returned queryset will be samples
         where the extra field contains at least on tag in tags.
         """
-        #pylint:disable=too-many-arguments
+        #pylint:disable=too-many-arguments,too-many-positional-arguments
         return self.raw(sql_latest_frozen_by_accounts_by_period(
             period=period, campaign=campaign,
             start_at=start_at, ends_at=ends_at,
@@ -552,7 +552,7 @@ class SampleManager(models.Manager):
         Returns the most recent frozen sample per account,
         decorated with accessibility status
         """
-        #pylint:disable=too-many-arguments
+        #pylint:disable=too-many-arguments,too-many-positional-arguments
         return self.raw(sql_latest_frozen_by_portfolios(
             campaign=campaign, start_at=start_at, ends_at=ends_at,
             segment_prefix=segment_prefix, segment_title=segment_title,
@@ -571,7 +571,7 @@ class SampleManager(models.Manager):
         Returns the most recent frozen sample per account per period,
         decorated with accessibility status
         """
-        #pylint:disable=too-many-arguments
+        #pylint:disable=too-many-arguments,too-many-positional-arguments
         return self.raw(sql_latest_frozen_by_portfolios_by_period(
             period=period, campaign=campaign,
             start_at=start_at, ends_at=ends_at,
@@ -660,11 +660,11 @@ class Sample(models.Model):
         return not(Sample.objects.raw(sql_has_different_answers(self, right)) or
             Sample.objects.raw(sql_has_different_answers(right, self)))
 
-    def save(self, force_insert=False, force_update=False,
+    def save(self, *args, force_insert=False, force_update=False,
              using=None, update_fields=None):
         if not self.slug:
             self.slug = slugify(uuid.uuid4().hex)
-        return super(Sample, self).save(
+        return super(Sample, self).save(*args,
             force_insert=force_insert, force_update=force_update,
             using=using, update_fields=update_fields)
 

@@ -2412,7 +2412,8 @@ class SampleRespondentsAPIView(SampleMixin, generics.ListAPIView):
         "next": null,
         "results": [{
             "slug": "steve",
-            "full_name": "Steve"
+            "full_name": "Steve",
+            "email": "steve@example.com"
          }]
     }
     """
@@ -2457,7 +2458,8 @@ class SampleRespondentsIndexAPIView(SampleRespondentsAPIView):
         "next": null,
         "results": [{
             "slug": "steve",
-            "full_name": "Steve"
+            "full_name": "Steve",
+            "email": "steve@example.com"
          }]
     }
     """

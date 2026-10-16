@@ -54,6 +54,11 @@ def as_sql_date_trunc_year(field_name, db_key=None):
     return "date_trunc('year', %s)" % field_name
 
 
+def as_sql_jsonb_agg(db_key=None):
+    # SQLite v3.45.0 (January 2024) introduced full JSONB binary support.
+    return 'json_group_array' if is_sqlite3(db_key) else 'jsonb_agg'
+
+
 def is_sqlite3(db_key=None):
     if db_key is None:
         db_key = DEFAULT_DB_ALIAS
@@ -127,7 +132,8 @@ def get_sample_by_accounts_context(campaign=None,
                                    segment_prefix=None, segment_title="",
                                    accounts=None, grantees=None, tags=None,
                                    stable=False):
-    #pylint:disable=too-many-arguments,too-many-locals
+    #pylint:disable=too-many-arguments,too-many-positional-arguments
+    #pylint:disable=too-many-locals
     primary_filters_clause = ""
     secondary_filters_clause = ""
     prefix_fields = ""
@@ -295,7 +301,8 @@ def sql_latest_frozen_by_accounts(campaign=None,
         AND survey_sample.campaign_id = %(campaign_id)d
         AND survey_sample.extra IS NULL
     """
-    #pylint:disable=too-many-arguments,too-many-locals
+    #pylint:disable=too-many-arguments,too-many-positional-arguments
+    #pylint:disable=too-many-locals
     context = get_sample_by_accounts_context(
         campaign=campaign, start_at=start_at, ends_at=ends_at,
         segment_prefix=segment_prefix, segment_title=segment_title,
@@ -334,7 +341,8 @@ def sql_latest_frozen_by_accounts_by_period(period='yearly', campaign=None,
                                      segment_prefix=None, segment_title="",
                                      accounts=None, grantees=None, tags=None,
                                      stable=False):
-    #pylint:disable=too-many-arguments,too-many-locals
+    #pylint:disable=too-many-arguments,too-many-positional-arguments
+    #pylint:disable=too-many-locals
     context = get_sample_by_accounts_context(
         campaign=campaign, start_at=start_at, ends_at=ends_at,
         segment_prefix=segment_prefix, segment_title=segment_title,
@@ -382,7 +390,8 @@ def sql_latest_frozen_by_portfolios(campaign=None,
     Returns the most recent frozen sample per account,
     decorated with accessibility status
     """
-    #pylint:disable=too-many-arguments,too-many-locals
+    #pylint:disable=too-many-arguments,too-many-positional-arguments
+    #pylint:disable=too-many-locals
     accessible_samples_sql_query = sql_latest_frozen_by_accounts(
         campaign=campaign,
         start_at=start_at, ends_at=ends_at,
@@ -469,7 +478,8 @@ def sql_latest_frozen_by_portfolios_by_period(period='yearly',
     Returns the most recent frozen sample per account per period,
     decorated with accessibility status
     """
-    #pylint:disable=too-many-arguments,too-many-locals
+    #pylint:disable=too-many-arguments,too-many-positional-arguments
+    #pylint:disable=too-many-locals
     accessible_samples_sql_query = sql_latest_frozen_by_accounts_by_period(
         period=period, campaign=campaign,
         start_at=start_at, ends_at=ends_at,

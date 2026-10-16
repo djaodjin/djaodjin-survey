@@ -525,8 +525,21 @@ Vue.component('query-individual-account', {
     methods: {
         validate: function() {
             var vm = this;
-            vm.samples[vm.selectedSample].title = vm.account.printable_name + "- " + vm.samples[vm.selectedSample].title;
-            vm.$emit('updatedataset', vm.samples[vm.selectedSample]);
+            if( vm.selectedSample >= 0 ) {
+                vm.samples[vm.selectedSample].title = vm.account.printable_name + "- " + vm.samples[vm.selectedSample].title;
+                vm.$emit('updatedataset', vm.samples[vm.selectedSample]);
+            } else {
+                vm.params.start_at = vm.startAt ? vm.startAt : null;
+                vm.params.ends_at = vm.endsAt ? vm.endsAt : null;
+                vm.params.period_type = vm.period ? vm.period : null;
+                vm.params.campaign = vm.campaign ? vm.campaign : null;
+                const title = vm.account.printable_name;
+                const url = vm.appendQueryString(
+                    vm._safeUrl(vm._safeUrl(vm._safeUrl(
+                        vm.$urls.api_benchmarks_index, 'individual'),
+                        vm.account.slug), vm.prefix));
+                vm.$emit('updatedataset', {title: title, url: url});
+            }
             vm.account = null;
             vm.samples = [];
             vm.selectedSample = -1;
@@ -557,7 +570,7 @@ Vue.component('query-individual-account', {
                     } else if( resp.results[idx].values ) {
                         for( let jdx = 0;
                              jdx < resp.results[idx].values.length; ++jdx ) {
-                            if( resp.results[idx].values[jdx].is_frozen ) {
+                            if( resp.results[idx].values[jdx].location ) {
                                 const title = vm.humanizeDate(resp.results[idx].values[jdx].created_at) + (resp.results[idx].values[jdx].state === 'verified' ? " - Verified" : "" );
 
                                 var data = resp.results[idx].values[jdx];
@@ -704,8 +717,8 @@ Vue.component('query-group-accounts', {
                 const group = vm.items.results[vm.selectedItem];
                 const title = group.title;
                 const url = vm.appendQueryString(vm._safeUrl(vm._safeUrl(
-                    vm.$urls.api_benchmarks_index, group.slug),
-                    vm.prefix));
+                        vm.$urls.api_benchmarks_index, group.slug),
+                        vm.prefix));
                 const dataset = {title: title, url: url};
                 vm.$emit('updatedataset', dataset);
                 vm.$refs.account.reset();
@@ -734,6 +747,7 @@ var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
     data: function() {
         return {
             affinityType: "all",
+            affinityFilters: [],
             params: {
                 campaign: null,
                 start_at: null,
@@ -811,11 +825,20 @@ var QueryAccountsByAffinity = Vue.component('query-accounts-by-affinity', {
                 }
             }
         },
+    },
+    mounted: function() {
+        var vm = this;
+        // Lists additional affinity sets available to the profile
+        if( vm.$el.dataset && vm.$el.dataset.affinityFilterUrl ) {
+            vm.reqGet(vm.$el.dataset.affinityFilterUrl, function(resp) {
+                vm.affinityFilters = resp.results;
+            });
+        }
     }
 });
 
 
-var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
+var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', QueryAccountsByAffinity.extend({
     mixins: [
         itemListMixin
     ],
@@ -967,8 +990,8 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
                 const group = vm.items.results[vm.selectedItem];
                 const title = group.title;
                 const url = vm.appendQueryString(vm._safeUrl(vm._safeUrl(
-                    vm.$urls.api_benchmarks_index, group.slug
-                ), vm.prefix));
+                        vm.$urls.api_benchmarks_index, group.slug),
+                        vm.prefix));
                 const dataset = {title: title, url: url};
                 vm.$emit('updatedataset', dataset);
             }
@@ -1031,7 +1054,7 @@ var QueryAccountsByAnswers = Vue.component('query-accounts-by-answers', {
 //            vm.questions = resp.results;
 //        });
     }
-});
+}));
 
 
 // Generic typeahead widgets

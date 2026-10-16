@@ -66,6 +66,20 @@ class AccountsDateRangeMixin(object):
     accounts_ends_at_url_kwarg = 'accounts_ends_at'
 
     @property
+    def accounts_date_range_serializer(self):
+        if not hasattr(self, '_accounts_date_range_serializer'):
+            try:
+                self._accounts_date_range_serializer = \
+                    AccountsDateRangeQueryParamSerializer(
+                        data=self.request.query_params)
+            except AttributeError:
+                self._accounts_date_range_serializer = \
+                    AccountsDateRangeQueryParamSerializer(
+                        data=self.request.GET)
+            self._accounts_date_range_serializer.is_valid(raise_exception=True)
+        return self._accounts_date_range_serializer
+
+    @property
     def accounts_start_at(self):
         if not hasattr(self, '_accounts_start_at'):
             self._accounts_start_at = self.get_query_param(
@@ -86,17 +100,7 @@ class AccountsDateRangeMixin(object):
         return self._accounts_ends_at
 
     def get_query_param(self, key, default_value=None):
-        if not hasattr(self, '_accounts_date_range_serializer'):
-            try:
-                self._accounts_date_range_serializer = \
-                    AccountsDateRangeQueryParamSerializer(
-                        data=self.request.query_params)
-            except AttributeError:
-                self._accounts_date_range_serializer = \
-                    AccountsDateRangeQueryParamSerializer(
-                        data=self.request.GET)
-            self._accounts_date_range_serializer.is_valid(raise_exception=True)
-        param = self._accounts_date_range_serializer.validated_data.get(
+        param = self.accounts_date_range_serializer.validated_data.get(
             key, None)
         if param:
             return param
@@ -105,6 +109,17 @@ class AccountsDateRangeMixin(object):
         except AttributeError:
             pass
         return self.request.GET.get(key, default_value)
+
+    def get_query_param_list(self, request, key, default_value=None):
+        param = self.accounts_date_range_serializer.validated_data.get(
+            key, None)
+        if param:
+            return param.split(',')
+        try:
+            return request.query_params.getlist(key, default_value)
+        except AttributeError:
+            pass
+        return request.GET.getlist(key, default_value)
 
 
 class EditableFilterMixin(AccountMixin, EditableFilterBaseMixin):
@@ -254,6 +269,7 @@ class BenchmarkMixin(DateRangeContextMixin, BenchmarkCampaignMixin):
         Returns a dictionnary of questions indexed by `pk` populated
         with aggregated benchmarks.
         """
+        #pylint:disable=too-many-locals
         LOGGER.debug(
             "BenchmarkMixin.get_questions_by_key(prefix=%s, initial=%s)",
             prefix, initial)
@@ -533,16 +549,23 @@ class AccessiblesAccountsMixin(AccountsDateRangeMixin,
     Query accounts by 'accessibles' affinity
     """
     accounts_set_title = "accessible"
+    search_field_param = settings.SEARCH_FIELDS_PARAM
+    search_param = settings.SEARCH_PARAM
 
     def get_accounts(self):
         """
         Returns accounts accessible by a profile in a specific date range
         specified by `accounts_start_at` and `accounts_ends_at`.
         """
+        search_fields = self.get_query_param_list(
+            self.request, self.search_field_param)
+        search_terms = self.get_query_param_list(
+            self.request, self.search_param)
         show_individual_profiles = True
         accounts_queryset = get_accessible_accounts(
             [self.account], campaign=self.campaign,
-            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at)
+            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
+            search_fields=search_fields, search_terms=search_terms)
         LOGGER.debug("%s - show_individual_profiles=%s",
             accounts_queryset.query, show_individual_profiles)
         return accounts_queryset, show_individual_profiles
@@ -688,16 +711,23 @@ class EngagedAccountsMixin(AccountsDateRangeMixin,
     Query accounts by 'engaged' affinity
     """
     accounts_set_title = "engaged"
+    search_field_param = settings.SEARCH_FIELDS_PARAM
+    search_param = settings.SEARCH_PARAM
 
     def get_accounts(self):
         """
         Returns accounts engaged by a profile in a specific date range
         specified by `accounts_start_at` and `accounts_ends_at`.
         """
+        search_fields = self.get_query_param_list(
+            self.request, self.search_field_param)
+        search_terms = self.get_query_param_list(
+            self.request, self.search_param)
         show_individual_profiles = True
-        accounts_queryset = get_engaged_accounts([self.account],
-            campaign=self.campaign,
-            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at)
+        accounts_queryset = get_engaged_accounts(
+            [self.account], campaign=self.campaign,
+            start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
+            search_fields=search_fields, search_terms=search_terms)
         LOGGER.debug("%s - show_individual_profiles=%s",
             accounts_queryset.query, show_individual_profiles)
         return accounts_queryset, show_individual_profiles
@@ -932,8 +962,8 @@ class EditableFilterBenchmarkAPIView(EditableFilterAccountsMixin,
 
     .. code-block:: http
 
-        GET /api/energy-utility/benchmarks/tier1-suppliers/sustainability\
-esg-strategy-heading/formalized-esg-strategy HTTP/1.1
+        GET /api/energy-utility/benchmarks/tier1-suppliers/\
+sustainability/esg-strategy-heading/formalized-esg-strategy HTTP/1.1
 
     responds
 
@@ -1038,6 +1068,142 @@ class EditableFilterBenchmarkIndexAPIView(EditableFilterBenchmarkAPIView):
         return super(EditableFilterBenchmarkIndexAPIView, self).get(
             request, *args, **kwargs)
 
+
+class IndividualBenchmarkAPIView(AccountMixin, BenchmarkAPIView):
+    """
+    Benchmarks against an individual profile for a subset of questions
+
+    Returns a list of questions whose path is prefixed by `{path}`,
+    decorated with a 'benchmarks' field that contains aggregated statistics
+    accross a single profile selected by the `{account}` filter.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/benchmarks/individual/supplier-1/sustainability\
+esg-strategy-heading/formalized-esg-strategy HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "title": "S1 - Tamerin",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "supplier-1",
+                "title": "S1 - Tamerin",
+                "values": [
+                  ["2018-01-01T00:00:00Z", {"Yes": 1}]
+                ]
+              }]
+           }]
+        }
+    """
+    def get_accounts(self):
+        """
+        Returns accounts either part of a nominative set of accounts,
+        or which have provided a specific answer to a question within
+        the period `accounts_start_at` and `accounts_ends_at`.
+        """
+        show_individual_profiles = True
+        accounts_queryset = get_account_model().objects.filter(
+            slug=self.kwargs.get('account'))
+        return accounts_queryset, show_individual_profiles
+
+    def get_title(self):
+        accounts_queryset, show_individual_profiles = self.get_accounts()
+        account = accounts_queryset.get()
+        return account.printable_name
+
+    @extend_schema(parameters=[AccountsDateRangeQueryParamSerializer,
+        UnitQueryParamSerializer])
+    def get(self, request, *args, **kwargs):
+        return super(IndividualBenchmarkAPIView, self).get(
+            request, *args, **kwargs)
+
+
+class IndividualBenchmarkIndexAPIView(IndividualBenchmarkAPIView):
+    """
+    Benchmarks against an individual profile
+
+    Returns a list of questions whose path is prefixed by `{path}`,
+    decorated with a 'benchmarks' field that contains aggregated statistics
+    accross a single profile selected by the `{account}` filter.
+
+    Aggregation can be done for samples created in the time period
+    [start_at,ends_at[, either as a whole period, or as period
+    trenches (`yearly`, `monthly`).
+
+    When `period_type` is specified, `nb_periods` and `ends_at` can
+    be used instead of `start_at` to filter the samples.
+
+    **Tags**: benchmarks
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/benchmarks/individual/supplier-1 HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "title": "S1 - Tamerin",
+            "unit": "profiles",
+            "scale": 1,
+            "labels": null,
+            "count": 1,
+            "results": [{
+         "path": "/sustainability/esg-strategy-heading/formalized-esg-strategy",
+              "title": "1.1 Does your company have a formalized ESG strategy?",
+              "default_unit": {
+                "slug": "yes-no",
+                "title": "Yes/No",
+                "system": "enum",
+                "choices": []
+              },
+              "benchmarks": [{
+                "slug": "supplier-1",
+                "title": "S1 - Tamerin",
+                "values": [
+                  ["2018-01-01T00:00:00Z", {"Yes": 1}]
+                ]
+              }]
+           }]
+        }
+    """
+
+    @extend_schema(operation_id='individual_benchmark_index',
+        parameters=[AccountsDateRangeQueryParamSerializer,
+            UnitQueryParamSerializer])
+    def get(self, request, *args, **kwargs):
+        return super(IndividualBenchmarkIndexAPIView, self).get(
+            request, *args, **kwargs)
 
 
 class SampleBenchmarkMixin(SampleMixin, BenchmarkMixin):
@@ -2314,6 +2480,45 @@ class AccountsFilterListAPIView(EditableFilterObjectsAPIView):
             }
         """
         return self.create(request, *args, **kwargs)
+
+
+class AffinityFilterAPIView(AccountMixin, generics.ListAPIView):
+    """
+    Lists sets of profiles selected by affinity
+
+    Returns a list of {{PAGE_SIZE}} affinity sets available to `{profile}`.
+
+    The queryset can be further refined to match a search filter (``q``)
+    and sorted on specific fields (``o``).
+
+    **Tags**: cohorts
+
+    **Examples**:
+
+    .. code-block:: http
+
+        GET /api/energy-utility/filters/affinity HTTP/1.1
+
+    responds
+
+    .. code-block:: json
+
+        {
+            "count": 1,
+            "previous": null,
+            "next": null,
+            "results": [
+            {
+               "slug": "all",
+               "title": "All profiles",
+               "extra": null
+           }]
+        }
+    """
+    serializer_class = EditableFilterSerializer
+
+    def get_queryset(self):
+        return []
 
 
 # XXX Question fitlers currently have a shaky definition and should not be used.
