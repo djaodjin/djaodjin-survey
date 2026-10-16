@@ -27,14 +27,12 @@ import logging
 from django.db.models import F
 from rest_framework import generics
 from rest_framework.filters import BaseFilterBackend
-from rest_framework.pagination import BasePagination
-from rest_framework.response import Response
 
 from ..docs import extend_schema
 from ..filters import SearchFilter
 from ..models import Choice, Unit
 from ..pagination import ChoicesPagination
-from .serializers import (ChoiceSerializer, ConvertUnitSerializer, EnumField,
+from .serializers import (ChoiceSerializer, ConvertUnitSerializer,
     UnitSerializer, UnitDetailSerializer)
 
 LOGGER = logging.getLogger(__name__)

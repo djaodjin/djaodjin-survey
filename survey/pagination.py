@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,8 @@ from collections import OrderedDict
 from rest_framework.pagination import BasePagination
 from rest_framework.response import Response
 
+from .api.serializers import EnumField
+from .models import Unit
 
 class ChoicesPagination(BasePagination):
 
