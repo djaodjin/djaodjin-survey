@@ -27,8 +27,8 @@ from collections import OrderedDict
 from rest_framework.pagination import BasePagination
 from rest_framework.response import Response
 
-from .api.serializers import EnumField
 from .models import Unit
+
 
 class ChoicesPagination(BasePagination):
 
@@ -38,8 +38,7 @@ class ChoicesPagination(BasePagination):
         return queryset
 
     def get_paginated_response(self, data):
-        system = EnumField(choices=Unit.SYSTEMS).to_representation(
-            self.unit.system)
+        system = dict(Unit.SYSTEMS).get(self.unit.system)
         return Response({
             'slug': self.unit.slug,
             'title': self.unit.title,
