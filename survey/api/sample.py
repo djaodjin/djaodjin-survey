@@ -131,18 +131,31 @@ def attach_answers(units, questions_by_key, queryset,
     for question in six.itervalues(questions_by_key):
         default_unit = question.get('default_unit')
         if isinstance(default_unit, Unit):
-            default_units = [default_unit.slug]
-            if default_unit.system in Unit.NUMERICAL_SYSTEMS:
-                equiv_qs = UnitEquivalences.objects.filter(
-                    source__slug=default_unit.slug).values_list(
-                    'target__slug', flat=True)
-                default_units += list(equiv_qs)
+            default_unit_slug = default_unit.slug
+            default_unit_system = default_unit.system
         else:
-            default_units = [default_unit.get('slug')]
+            default_unit_slug = default_unit.get('slug')
+            default_unit_system = default_unit.get('system')
+        if (default_unit_system and
+            default_unit_system in Unit.NUMERICAL_SYSTEMS):
+            alt_default_units = set(UnitEquivalences.objects.filter(
+                source__slug=default_unit_slug).values_list(
+                'target__slug', flat=True))
+            default_unit = default_unit.slug
+        else:
+            alt_default_units = set([])
+            default_unit = default_unit_slug
         primary = []
         remainders = []
         for answer in question.get(key, []):
-            if str(answer.get('unit')) in default_units:
+            unit = str(answer.get('unit'))
+            # When dealing with candidate answers, we might have recorded
+            # an answer with `default_unit` one year and with an alternate
+            # unit another. Both would show up as candidates. We want
+            # predictability here.
+            if unit == default_unit:
+                primary = [answer]
+            elif not primary and unit in alt_default_units:
                 primary = [answer]
             else:
                 remainders += [answer]
