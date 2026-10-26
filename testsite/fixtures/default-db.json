@@ -98,7 +98,7 @@
 {
     "fields": {
       "slug": "supplier-1",
-      "full_name": "Supplier 1"
+      "full_name": "S1 - Tamerin (Demo)"
     },
     "model": "testsite.Account", "pk": 6
 },

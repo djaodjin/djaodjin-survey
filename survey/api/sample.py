@@ -46,6 +46,7 @@ from ..mixins import AccountMixin, SampleMixin
 from ..models import (Answer, AnswerCollected, Choice, Portfolio, Sample, Unit,
     UnitEquivalences)
 from ..queries import is_sqlite3
+from ..signals import sample_frozen
 from ..utils import get_question_model, get_user_serializer
 from .base import QuestionListAPIView
 from .serializers import (AnswerSerializer, NoModelSerializer,
@@ -2081,6 +2082,20 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
                 'force', settings.DEFAULT_FORCE_FREEZE)
         return self._force
 
+    @property
+    def prefixes(self):
+        if not hasattr(self, '_prefixes'):
+            #pylint:disable=attribute-defined-outside-init
+            self._prefixes = [self.db_path] if self.db_path else []
+        return self._prefixes
+
+
+    def freeze_sample(self):
+        self.sample.is_frozen = True
+        self.sample.save()
+
+        return self.sample, False
+
 
     def get_required_unanswered_questions(self, prefixes=None):
         """
@@ -2088,12 +2103,9 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
         have no answer.
         """
         if not prefixes:
-            prefixes = self.get_prefixes()
-        return self.sample.get_required_unanswered_questions(prefixes=prefixes)
-
-
-    def get_prefixes(self):
-        return [self.db_path] if self.db_path else []
+            prefixes = self.prefixes
+        return self.sample.get_required_unanswered_questions(
+            prefixes=self.prefixes)
 
 
     def create(self, request, *args, **kwargs):
@@ -2104,17 +2116,24 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
         if self.sample.is_frozen:
             raise ValidationError({'detail': _("sample is already frozen")})
 
-        prefixes = self.get_prefixes()
+        prefixes = self.prefixes
         if not prefixes:
             raise ValidationError({'detail':
-                _("You cannot freeze a sample with no answers")})
+                _("Please answer at least one question.")})
 
         required_unanswered_questions = \
             self.get_required_unanswered_questions(prefixes=prefixes)
         if required_unanswered_questions.exists():
-            raise ValidationError({'detail': _("%d questions with a required"\
-" answer have yet to be answered.") % required_unanswered_questions.count(),
-                'results': list(required_unanswered_questions)})
+            errors = {'detail': _("%d questions with a required"\
+" answer have yet to be answered.") % required_unanswered_questions.count()}
+            for required_unanswered_question in required_unanswered_questions:
+                node_id = required_unanswered_question.path.strip(
+                    settings.DB_PATH_SEP).replace(
+                    settings.DB_PATH_SEP, '-')
+                errors.update({node_id: (
+                    _("\"%(question_title)s\" requires an answer.") % {
+                    'question_title': required_unanswered_question.title})})
+            raise ValidationError(errors)
 
         if not self.force:
             latest_completed = Sample.objects.filter(
@@ -2123,14 +2142,21 @@ class SampleFreezeAPIView(SampleMixin, generics.CreateAPIView):
                 campaign=self.sample.campaign,
                 extra=self.sample.extra).order_by('created_at').first()
             if latest_completed:
-                if self.sample.has_identical_answers(latest_completed):
+                if (False and
+                    self.sample.has_identical_answers(latest_completed)):
+                    # XXX This creates confusion for users
                     raise ValidationError({'detail': _("This sample contains"\
                     "the same answers has the previously frozen sample.")})
 
-        self.sample.is_frozen = True
-        self.sample.save()
-        serializer = self.get_serializer(self.sample)
-        return http.Response(serializer.data)
+        frozen_sample, created = self.freeze_sample()
+
+        # After a sample is frozen, send the signal.
+        sample_frozen.send(sender=self.__class__,
+            sample=frozen_sample, request=request)
+
+        serializer = self.get_serializer(instance=frozen_sample)
+        return http.Response(serializer.data,
+            status=(HTTP_201_CREATED if created else HTTP_200_OK))
 
 
     @extend_schema(parameters=[QueryParamForceSerializer], request=None)

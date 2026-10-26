@@ -1,4 +1,4 @@
-# Copyright (c) 2022, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -42,4 +42,7 @@ portfolio_request_accepted = Signal(
 )
 portfolio_request_denied = Signal(
 #    providing_args=["portfolio", "request"]
+)
+sample_frozen = Signal(
+#providing_args=["sample", "request"]
 )

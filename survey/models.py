@@ -1,4 +1,4 @@
-# Copyright (c) 2025, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -650,10 +650,13 @@ class Sample(models.Model):
         #pylint:disable=attribute-defined-outside-init
         if not hasattr(self, '_nb_required_answers'):
             self._nb_required_answers = Answer.objects.filter(
+                models.Q(unit_id=models.F('question__default_unit_id')) |
+                models.Q(unit_id=models.F(
+                    'question__default_unit__source_equivalences__target_id')),
                 sample=self,
-                question__default_unit=models.F('unit_id'),
                 question__enumeratedquestions__required=True,
-                question__enumeratedquestions__campaign=self.campaign).count()
+                question__enumeratedquestions__campaign=self.campaign
+            ).distinct().count()
         return self._nb_required_answers
 
     def has_identical_answers(self, right):
