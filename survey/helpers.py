@@ -231,18 +231,43 @@ def extra_as_internal(obj):
                 obj.extra = json.loads(obj.extra)
             except (TypeError, ValueError):
                 pass
+        elif isinstance(obj.extra, list):
+            # `as_sql_jsonb_agg` will lead to lists of `dict` and `None` values
+            extra_list = obj.extra
+            obj.extra = {}
+            for extra in extra_list:
+                if isinstance(extra, six.string_types):
+                    try:
+                        extra = json.loads(extra)
+                    except (TypeError, ValueError):
+                        pass
+                if extra:
+                    obj.extra.update(extra)
         return obj.extra
     except AttributeError:
         pass
     try:
-        extra = obj.get('extra', {})
-        if not extra:
+        obj_extra = obj.get('extra', {})
+        if not obj_extra:
             return {}
-        if isinstance(extra, six.string_types):
+        if isinstance(obj_extra, six.string_types):
             try:
-                obj.update({'extra': json.loads(extra)})
+                obj.update({'extra': json.loads(obj_extra)})
             except (TypeError, ValueError):
                 pass
+        elif isinstance(obj_extra, list):
+            # `as_sql_jsonb_agg` will lead to lists of `dict` and `None` values
+            extra_list = obj_extra
+            obj_extra = {}
+            for extra in extra_list:
+                if isinstance(extra, six.string_types):
+                    try:
+                        extra = json.loads(extra)
+                    except (TypeError, ValueError):
+                        pass
+                if extra:
+                    obj_extra.update(extra)
+            obj.update({'extra': obj_extra})
         return obj.get('extra', {})
     except AttributeError:
         pass
@@ -250,14 +275,7 @@ def extra_as_internal(obj):
 
 
 def get_extra(obj, attr_name, default=None):
-    if not hasattr(obj, 'extra'):
-        return default
-    if isinstance(obj.extra, six.string_types):
-        try:
-            obj.extra = json.loads(obj.extra)
-        except (TypeError, ValueError):
-            return default
-    return obj.extra.get(attr_name, default) if obj.extra else default
+    return extra_as_internal(obj).get(attr_name, default)
 
 
 def update_context_urls(context, urls):

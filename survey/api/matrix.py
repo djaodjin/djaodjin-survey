@@ -549,23 +549,23 @@ class AccessiblesAccountsMixin(AccountsDateRangeMixin,
     Query accounts by 'accessibles' affinity
     """
     accounts_set_title = "accessible"
-    search_field_param = settings.SEARCH_FIELDS_PARAM
     search_param = settings.SEARCH_PARAM
+    json_search_fields = (
+        'portfolios__extra__tags',
+    )
 
     def get_accounts(self):
         """
         Returns accounts accessible by a profile in a specific date range
         specified by `accounts_start_at` and `accounts_ends_at`.
         """
-        search_fields = self.get_query_param_list(
-            self.request, self.search_field_param)
         search_terms = self.get_query_param_list(
             self.request, self.search_param)
         show_individual_profiles = True
         accounts_queryset = get_accessible_accounts(
             [self.account], campaign=self.campaign,
             start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
-            search_fields=search_fields, search_terms=search_terms)
+            search_fields=self.json_search_fields, search_terms=search_terms)
         LOGGER.debug("%s - show_individual_profiles=%s",
             accounts_queryset.query, show_individual_profiles)
         return accounts_queryset, show_individual_profiles
@@ -711,23 +711,23 @@ class EngagedAccountsMixin(AccountsDateRangeMixin,
     Query accounts by 'engaged' affinity
     """
     accounts_set_title = "engaged"
-    search_field_param = settings.SEARCH_FIELDS_PARAM
     search_param = settings.SEARCH_PARAM
+    json_search_fields = (
+        'portfolio_double_optin_accounts__extra__tags',
+    )
 
     def get_accounts(self):
         """
         Returns accounts engaged by a profile in a specific date range
         specified by `accounts_start_at` and `accounts_ends_at`.
         """
-        search_fields = self.get_query_param_list(
-            self.request, self.search_field_param)
         search_terms = self.get_query_param_list(
             self.request, self.search_param)
         show_individual_profiles = True
         accounts_queryset = get_engaged_accounts(
             [self.account], campaign=self.campaign,
             start_at=self.accounts_start_at, ends_at=self.accounts_ends_at,
-            search_fields=search_fields, search_terms=search_terms)
+            search_fields=self.json_search_fields, search_terms=search_terms)
         LOGGER.debug("%s - show_individual_profiles=%s",
             accounts_queryset.query, show_individual_profiles)
         return accounts_queryset, show_individual_profiles

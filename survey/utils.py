@@ -1,4 +1,4 @@
-# Copyright (c) 2024, DjaoDjin inc.
+# Copyright (c) 2026, DjaoDjin inc.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,7 +28,8 @@ on importing Django models.
 See helpers.py for functions useful throughout the whole project which do
 not require to import `django` modules.
 """
-import logging, re
+import logging, operator, re
+from functools import reduce
 from importlib import import_module
 
 from django.apps import apps as django_apps
@@ -99,6 +100,7 @@ def get_accessible_accounts(grantees, campaign=None,
     account in grantees.
     """
     #pylint:disable=too-many-arguments,too-many-positional-arguments
+    #pylint:disable=too-many-locals
     if aggregate_set:
         search_terms = None
 
@@ -132,11 +134,23 @@ def get_accessible_accounts(grantees, campaign=None,
             **filter_params)
 
     if search_fields and search_terms:
+        conditions = []
         annotations = {}
-        filter_params = None
-        for field_name in search_fields:
+        json_search_fields = search_fields
+        json_search_fields_prefixes = {}
+        for idx, field_name in enumerate(json_search_fields):
+            try:
+                field_prefix = '__'.join(field_name.split('__')[:2])
+                if field_prefix not in json_search_fields_prefixes:
+                    json_search_fields_prefixes.update({
+                        field_prefix: '_extra_%d' % idx})
+            except IndexError:
+                continue
+            field_name = field_name.replace(field_prefix,
+                json_search_fields_prefixes.get(field_prefix))
             annotations.update({
-                field_name: Cast('_%s' % field_name, models.TextField())})
+                field_name: Cast(field_name, models.TextField())})
+            filter_params = None
             for search_term in search_terms:
                 search_clause = models.Q(**{
                     '%s__icontains' % field_name: search_term})
@@ -144,11 +158,19 @@ def get_accessible_accounts(grantees, campaign=None,
                     filter_params |= search_clause
                 else:
                     filter_params = search_clause
+            conditions.append(filter_params)
         # `alias` was introduced in Django 3.2
-        queryset = queryset.alias(
-            _extra=Cast('portfolios__extra',
-            output_field=models.JSONField()),
-            **annotations).filter(filter_params)
+        if annotations:
+            alias_kwargs = {}
+            for field_prefix, prefix_sql in json_search_fields_prefixes.items():
+                alias_kwargs.update({
+                    prefix_sql: Cast(field_prefix,
+                        output_field=models.JSONField()),
+                })
+            alias_kwargs.update(annotations)
+            queryset = queryset.alias(**alias_kwargs)
+
+        queryset = queryset.filter(reduce(operator.or_, conditions))
 
     queryset = queryset.distinct().annotate(_extra=models.Aggregate(
             Cast('portfolios__extra', output_field=models.JSONField()),
@@ -165,6 +187,7 @@ def get_engaged_accounts(grantees, campaign=None,
     All accounts which grantee has requested a response from.
     """
     #pylint:disable=too-many-arguments,too-many-positional-arguments
+    #pylint:disable=too-many-locals
     if aggregate_set:
         search_terms = None
 
@@ -205,14 +228,23 @@ def get_engaged_accounts(grantees, campaign=None,
                 output_field=models.BooleanField())))
 
     if search_fields and search_terms:
+        conditions = []
         annotations = {}
-        filter_params = None
-        for field_name in search_fields:
+        json_search_fields = search_fields
+        json_search_fields_prefixes = {}
+        for idx, field_name in enumerate(json_search_fields):
+            try:
+                field_prefix = '__'.join(field_name.split('__')[:2])
+                if field_prefix not in json_search_fields_prefixes:
+                    json_search_fields_prefixes.update({
+                        field_prefix: '_extra_%d' % idx})
+            except IndexError:
+                continue
+            field_name = field_name.replace(field_prefix,
+                json_search_fields_prefixes.get(field_prefix))
             annotations.update({
-                field_name: Cast('_%s' % field_name, models.TextField()),
-                ('optin_%s' % field_name): Cast('_optin_%s' % field_name,
-                    models.TextField()),
-            })
+                field_name: Cast(field_name, models.TextField())})
+            filter_params = None
             for search_term in search_terms:
                 search_clause = models.Q(**{
                     '%s__icontains' % field_name: search_term})
@@ -220,19 +252,19 @@ def get_engaged_accounts(grantees, campaign=None,
                     filter_params |= search_clause
                 else:
                     filter_params = search_clause
-                search_clause = models.Q(**{
-                    'optin_%s__icontains' % field_name: search_term})
-                if filter_params:
-                    filter_params |= search_clause
-                else:
-                    filter_params = search_clause
+            conditions.append(filter_params)
         # `alias` was introduced in Django 3.2
-        queryset = queryset.alias(
-            _extra=Cast('portfolios__extra',
-            output_field=models.JSONField()),
-            _optin_extra=Cast('portfolio_double_optin_accounts__extra',
-            output_field=models.JSONField()),
-            **annotations).filter(filter_params)
+        if annotations:
+            alias_kwargs = {}
+            for field_prefix, prefix_sql in json_search_fields_prefixes.items():
+                alias_kwargs.update({
+                    prefix_sql: Cast(field_prefix,
+                        output_field=models.JSONField()),
+                })
+            alias_kwargs.update(annotations)
+            queryset = queryset.alias(**alias_kwargs)
+
+        queryset = queryset.filter(reduce(operator.or_, conditions))
 
     queryset = queryset.distinct().annotate(
         _extra=models.Aggregate(

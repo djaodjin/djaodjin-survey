@@ -28,7 +28,7 @@ from functools import reduce
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db import models
-from django.db.models.functions import TruncMonth, TruncYear
+from django.db.models.functions import Cast, TruncMonth, TruncYear
 from django.db.models.query import RawQuerySet
 from rest_framework.filters import (OrderingFilter as BaseOrderingFilter,
     SearchFilter as BaseSearchFilter, BaseFilterBackend)
@@ -76,6 +76,7 @@ class SearchFilter(BaseSearchFilter):
     search_field_param = settings.SEARCH_FIELDS_PARAM
 
     def filter_queryset(self, request, queryset, view):
+        #pylint:disable=too-many-locals
         search_fields = self.get_valid_fields(request, queryset, view)
         search_terms = self.get_search_terms(request)
         LOGGER.debug("[SearchFilter.filter_queryset] search_terms=%s, "\
@@ -105,14 +106,53 @@ class SearchFilter(BaseSearchFilter):
                 for orm_lookup in orm_lookups
             ]
             conditions.append(reduce(operator.or_, queries))
+
+        annotations = {}
+        json_search_fields = getattr(view, 'json_search_fields', ())
+        json_search_fields_prefixes = {}
+        for idx, field_name in enumerate(json_search_fields):
+            try:
+                field_prefix = '__'.join(field_name.split('__')[:2])
+                if field_prefix not in json_search_fields_prefixes:
+                    json_search_fields_prefixes.update({
+                        field_prefix: '_extra_%d' % idx})
+            except IndexError:
+                continue
+            field_name = field_name.replace(field_prefix,
+                json_search_fields_prefixes.get(field_prefix))
+            annotations.update({
+                field_name: Cast(field_name, models.TextField())})
+            filter_params = None
+            for search_term in search_terms:
+                search_clause = models.Q(**{
+                    '%s__icontains' % field_name: search_term})
+                if filter_params:
+                    filter_params |= search_clause
+                else:
+                    filter_params = search_clause
+            conditions.append(filter_params)
+        # `alias` was introduced in Django 3.2
+        if annotations:
+            alias_kwargs = {}
+            for field_prefix, prefix_sql in json_search_fields_prefixes.items():
+                alias_kwargs.update({
+                    prefix_sql: Cast(field_prefix,
+                        output_field=models.JSONField()),
+                })
+            alias_kwargs.update(annotations)
+            queryset = queryset.alias(**alias_kwargs)
+
         queryset = queryset.filter(reduce(operator.or_, conditions))
 
-        if self.must_call_distinct(queryset, search_fields):
+        must_call_distinct_fields = search_fields + tuple(
+            json_search_fields_prefixes.keys())
+        if self.must_call_distinct(queryset, must_call_distinct_fields):
             # Filtering against a many-to-many field requires us to
             # call queryset.distinct() in order to avoid duplicate items
             # in the resulting queryset.
             # We try to avoid this if possible, for performance reasons.
             queryset = queryset.distinct()
+
         return queryset
 
 
@@ -260,28 +300,6 @@ class SearchFilter(BaseSearchFilter):
                 },
             },
         ]
-
-
-class JSONArraySearchFilter(SearchFilter):
-
-    def get_valid_fields(self, request, queryset, view, context=None):
-        fields = super().get_valid_fields(
-            request, queryset, view, context=context)
-        for field in getattr(view, 'json_search_fields', []):
-            if field not in fields:
-                fields = fields + (field,)
-        return fields
-
-    def build_search_query(self, orm_lookup, search_term):
-        json_search_fields = getattr(self, '_json_search_fields', ())
-        for field in json_search_fields:
-            if orm_lookup.startswith(field):
-                return models.Q(**{orm_lookup: f'"{search_term}"'})
-        return super().build_search_query(orm_lookup, search_term)
-
-    def filter_queryset(self, request, queryset, view):
-        self._json_search_fields = getattr(view, 'json_search_fields', ())
-        return super().filter_queryset(request, queryset, view)
 
 
 class OrderingFilter(BaseOrderingFilter):
