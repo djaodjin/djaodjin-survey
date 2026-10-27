@@ -1,3 +1,13 @@
+0.21.0
+
+  * generalizes `SearchFilter` for JSON fields
+  * adds individual benchmarks API
+  * enables fitler by tags in accessibles/engaged benchmarks API
+  * fixes counting unanswered questions in the presence of unit equivalence
+  * handles candidate answers more predictably
+
+ -- Sebastien Mirolo <smirolo@djaodjin.com>  Mon, 26 Oct 2026 17:05:00 -0700
+
 0.20.5
 
   * fixes multiple results returned in a Django-generated distinct SQL query

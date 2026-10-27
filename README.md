@@ -42,12 +42,13 @@ Tested with
 - **Python:** 3.10, **Django:** 4.2 (legacy)
 - **Python:** 3.9, **Django:** 3.2 (legacy)
 
-0.20.5
+0.21.0
 
-  * fixes multiple results returned in a Django-generated distinct SQL query
-  * supports portfolio APIs to list samples in compare view
-  * fixes week 53 when comparing with same week in previous years
-  * returns stable list of latest frozen sample by accounts
+  * generalizes `SearchFilter` for JSON fields
+  * adds individual benchmarks API
+  * enables fitler by tags in accessibles/engaged benchmarks API
+  * fixes counting unanswered questions in the presence of unit equivalence
+  * handles candidate answers more predictably
 
 [previous release notes](changelog)
 
