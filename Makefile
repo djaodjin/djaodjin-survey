@@ -98,8 +98,8 @@ vendor-assets-prerequisites: $(installTop)/.npm/djaodjin-survey-packages
 $(DESTDIR)$(CONFIG_DIR)/credentials: $(srcDir)/testsite/etc/credentials
 	$(installDirs) $(dir $@)
 	@if [ ! -f $@ ] ; then \
-		sed \
-		-e "s,\%(SECRET_KEY)s,`$(PYTHON) -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'`," \
+		echo "creating $@ ..." ; \
+		sed -e "s,\%(SECRET_KEY)s,`$(PYTHON) -c 'import sys ; from random import choice ; sys.stdout.write("".join([choice("abcdefghijklmnopqrstuvwxyz0123456789!@#$%^*-_=+") for i in range(50)]))'`," \
 		$< > $@ ; \
 	else \
 		echo "warning: We are keeping $@ intact but $< contains updates that might affect behavior of the testsite." ; \
